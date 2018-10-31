@@ -22,15 +22,18 @@ func OpenDBErrorReturnRequired(inner func(*sql.DB) error, driver DriverName, nam
 // assume that a something farther down the chain will return error.  Since this collection
 // may be used nievely in a context where someone is trying to cache things,
 // NotCacheable is used to make sure that we do not cache the open.
+// We use MustConsume and a private type on the open to make sure that if the open happens,
+// the close will happen too.
+type mustCloseDB bool // private type
 var OpenDBCollection = Sequence("open-database",
-	NotCacheable(func(driver DriverName, name DataSourceName) (*sql.DB, TerminalError) {
+	NotCacheable(MustConsume(func(driver DriverName, name DataSourceName) (*sql.DB, mustCloseDB, TerminalError) {
 		db, err := sql.Open(string(driver), string(name))
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		return db, nil
-	}),
-	func(inner func(*sql.DB), db *sql.DB) {
+		return db, false, nil
+	})),
+	func(inner func(*sql.DB), db *sql.DB, _ mustCloseDB) {
 		defer db.Close()
 		inner(db)
 	},
