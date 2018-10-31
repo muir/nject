@@ -593,13 +593,13 @@ func TestRegressionPrior(t *testing.T) {
 					called["CheckAndUpdateQuote"]++
 					return nil, 0, 0
 				}),
-				Provide("/quotes/v1/discovery-0", func(inner func() s048) i021 {
-					called["/quotes/v1/discovery-0"]++
+				Provide("endpoint-0", func(inner func() s048) i021 {
+					called["endpoint-0"]++
 					inner()
 					return nil
 				}), // included
-				Required(Provide("/quotes/v1/discovery-1", func(_ i019, _ s017, _ i020, _ s023, _ i029, _ s050) (s048, error) {
-					called["/quotes/v1/discovery-1"]++
+				Required(Provide("endpoint-1", func(_ i019, _ s017, _ i020, _ s023, _ i029, _ s050) (s048, error) {
+					called["endpoint-1"]++
 					return 0, nil
 				})), // included
 			).Bind(&invoker, &initer))
@@ -751,13 +751,13 @@ func TestRegression7642(t *testing.T) {
 					called["CheckAndUpdateQuote"]++
 					return nil, 0, 0
 				}),
-				Provide("/quotes/v1/discovery-0", func(inner func() s058) i036 {
-					called["/quotes/v1/discovery-0"]++
+				Provide("endpoint-0", func(inner func() s058) i036 {
+					called["endpoint-0"]++
 					inner()
 					return nil
 				}), // included
-				Required(Provide("/quotes/v1/discovery-1", func(_ i034, _ s032, _ i035, _ s038, _ i044, _ s060) (s058, error) {
-					called["/quotes/v1/discovery-1"]++
+				Required(Provide("endpoint-1", func(_ i034, _ s032, _ i035, _ s038, _ i044, _ s060) (s058, error) {
+					called["endpoint-1"]++
 					return 0, nil
 				})), // included
 			).Bind(&invoker, &initer))
