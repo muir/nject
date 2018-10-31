@@ -1,7 +1,6 @@
 # nject & npoint - dependency injection 
 
-nject [![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject/nject?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject/nject) & 
-npoint [![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject/npoint?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject/npoint)
+[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject) 
 
 Install:
 
