@@ -93,3 +93,8 @@ fails, executation of the handler chain is terminated.
 		}
 	}
 
+
+### Minimum version
+
+Due to the use of the "context" package, the mimimum supported Go version is 1.8.
+Support for earlier versions would be easy to add if anyone cares.
