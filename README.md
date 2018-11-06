@@ -1,6 +1,7 @@
 # nject & npoint - dependency injection 
 
 [![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject) 
+[![Build Status](https://travis-ci.org/BlueOwlOpenSource/nject.svg)](https://travis-ci.org/BlueOwlOpenSource/nject)
 
 Install:
 
