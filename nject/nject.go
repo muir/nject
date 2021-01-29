@@ -139,9 +139,8 @@ func (fm *provider) String() string {
 	}
 	if fm.index >= 0 {
 		return fmt.Sprintf("%s%s(%d) [%s]", class, fm.origin, fm.index, t)
-	} else {
-		return fmt.Sprintf("%s%s [%s]", class, fm.origin, t)
 	}
+	return fmt.Sprintf("%s%s [%s]", class, fm.origin, t)
 }
 
 func (fm *provider) errorf(format string, args ...interface{}) error {

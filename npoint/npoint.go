@@ -44,6 +44,8 @@ type ServiceRegistration struct {
 	lock       sync.Mutex
 }
 
+// EndpointRegistration holds endpoint defintions for services
+// that will be started w/o gorilla mux.
 type EndpointRegistration struct {
 	finalFunc  http.HandlerFunc
 	initialize func()
