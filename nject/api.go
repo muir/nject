@@ -13,6 +13,10 @@ type Collection struct {
 	contents []*provider
 }
 
+// Provider is an individual injector (function, constant, or
+// wrapper).  Functions that take injectors, take interface{}.
+// Functions that return invjectors return Provider so that
+// methods can be attached.
 type Provider interface {
 	thing
 }
@@ -349,7 +353,7 @@ func MustRun(name string, providers ...interface{}) {
 	}
 }
 
-// BindSimple binds a collection with an invoke function that takes no
+// MustBindSimple binds a collection with an invoke function that takes no
 // arguments and returns no arguments.  It panic()s if Bind() returns error.
 func MustBindSimple(c *Collection, name string) func() {
 	var invoke func()
