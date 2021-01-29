@@ -1,7 +1,9 @@
 # nject & npoint - dependency injection 
 
-[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject) 
+[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](https://pkg.go.dev/github.com/BlueOwlOpenSource/nject)
 [![Build Status](https://travis-ci.org/BlueOwlOpenSource/nject.svg)](https://travis-ci.org/BlueOwlOpenSource/nject)
+[![report card](https://goreportcard.com/badge/github.com/BlueOwlOpenSource/nject)](https://goreportcard.com/report/github.com/BlueOwlOpenSource/nject)
+
 
 Install:
 
