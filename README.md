@@ -30,9 +30,12 @@ parameters, define custom types.
 
 Type safety is checked before any functions are called.
 
-Functions whose outputs are not used are not called.  Functions may be
+Functions whose outputs are not used are not called.  Functions may
 "wrap" the rest of the list so that they can choose to invoke the
 remaing list zero or more times.
+
+Chains may be pre-compiled into closures so that they have very little
+runtime penealty.
 
 ### nject example
 
@@ -98,7 +101,7 @@ fails, executation of the handler chain is terminated.
 	}
 
 
-### Minimum version
+### Minimum Go version
 
 Due to the use of the "context" package, the mimimum supported Go version is 1.8.
 Support for earlier versions would be easy to add if anyone cares.
