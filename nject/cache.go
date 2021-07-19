@@ -10,6 +10,7 @@ import (
 type in3 [3]interface{}
 type in10 [10]interface{}
 type in30 [30]interface{}
+type in90 [90]interface{}
 
 type cacherFunc func(in []reflect.Value) []reflect.Value
 
@@ -37,6 +38,15 @@ func interfaceOkay(in []reflect.Value) bool {
 	return true
 }
 
+func fillKeyFromInputs(key []interface{}, in []reflect.Value) {
+	for i, v := range in {
+		key[i] = v.Interface()
+	}
+	for i := len(in); i < len(key); i++ {
+		key[i] = ""
+	}
+}
+
 func defineCacher(id int32, fv canCall, l int) cacherFunc {
 	var lock sync.Mutex
 
@@ -50,12 +60,7 @@ func defineCacher(id int32, fv canCall, l int) cacherFunc {
 			lock.Lock()
 			defer lock.Unlock()
 			var key in3
-			for i, v := range in {
-				key[i] = v.Interface()
-			}
-			for i := len(in); i < 3; i++ {
-				key[i] = ""
-			}
+			fillKeyFromInputs(key[:], in)
 			if out, found := cache[key]; found {
 				return out
 			}
@@ -73,12 +78,7 @@ func defineCacher(id int32, fv canCall, l int) cacherFunc {
 			lock.Lock()
 			defer lock.Unlock()
 			var key in10
-			for i, v := range in {
-				key[i] = v.Interface()
-			}
-			for i := len(in); i < 10; i++ {
-				key[i] = ""
-			}
+			fillKeyFromInputs(key[:], in)
 			if out, found := cache[key]; found {
 				return out
 			}
@@ -96,12 +96,25 @@ func defineCacher(id int32, fv canCall, l int) cacherFunc {
 			lock.Lock()
 			defer lock.Unlock()
 			var key in30
-			for i, v := range in {
-				key[i] = v.Interface()
+			fillKeyFromInputs(key[:], in)
+			if out, found := cache[key]; found {
+				return out
 			}
-			for i := len(in); i < 30; i++ {
-				key[i] = ""
+			out := fv.Call(in)
+			cache[key] = out
+			return out
+		}
+
+	case l <= 90:
+		cache := make(map[in90][]reflect.Value)
+		return func(in []reflect.Value) []reflect.Value {
+			if !interfaceOkay(in) {
+				return fv.Call(in)
 			}
+			lock.Lock()
+			defer lock.Unlock()
+			var key in90
+			fillKeyFromInputs(key[:], in)
 			if out, found := cache[key]; found {
 				return out
 			}
