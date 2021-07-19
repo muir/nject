@@ -171,7 +171,7 @@ func generateWrappers(
 	upVmap map[typeCode]int, // value collection map for return values coming up
 	upCount int, // size of value collection to be returned (if it needs to be created)
 ) error {
-	fv := reflect.ValueOf(fm.fn)
+	fv := getCanCall(fm.fn)
 
 	switch fm.class {
 	case finalFunc:
@@ -211,6 +211,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
+		in0Type := getInZero(fv)
 		fm.wrapWrapper = func(downV valueCollection, next func(valueCollection) valueCollection) valueCollection {
 			var upV valueCollection
 			downVCopy := downV.Copy()
@@ -240,7 +241,7 @@ func generateWrappers(
 				return r
 			}
 			in := inMap(downV)
-			in[0] = reflect.MakeFunc(fv.Type().In(0), inner)
+			in[0] = reflect.MakeFunc(in0Type, inner)
 			out := fv.Call(in)
 			if callCount == 0 {
 				upV = zero()

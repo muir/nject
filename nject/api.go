@@ -384,3 +384,83 @@ func MustSetCallback(c *Collection, binderFunction interface{}) {
 		panic(DetailedError(err))
 	}
 }
+
+// Reflective is an alternative provider interface.  Normally, providers are
+// are functions or data elements to be injected.  If the provider is a Reflective
+// then the methods of Reflective will be called to simulate the Reflective
+// being a function.
+type Reflective interface {
+	In(i int) reflect.Type
+	NumIn() int
+	Out(i int) reflect.Type
+	NumOut() int
+	Call(in []reflect.Value) []reflect.Value
+}
+
+type ignore struct{}
+
+// MakeStructBuilder generates a Provider that wants to receive as
+// arguments all of the fields of the struct and returns the struct
+// as what it provides.
+//
+// The input model must be a struct: if not MakeStructFiller
+// will panic.  Model may be a pointer to a struct or a struct.
+// Unexported fields are always ignored.
+// Passing something other than a struct or pointer to a struct to
+// MakeStructBuilder results is an error. Unknown tag values is an error.
+//
+// Struct tags can be used to control the
+// behavior: the argument controls the name of the struct tag used.
+// A struct tag of "-" or "ignore" indicates that the field should not
+// be filled.  A tag of "fill" is accepted but doesn't do anything as it's
+// the default.
+//
+// Embedded structs can either be filled as a whole or they can be
+// filled field-by-field.  Tag with "whole" or "blob" to fill the embedded
+// struct all at once.  Tag with "fields" to fill the fields of the
+// embedded struct individually.  The default is "fields".
+func MakeStructBuilder(model interface{}, tag string) (Provider, error) {
+	filler, needIgnore, err := makeFiller(model, tag, true)
+	if err != nil {
+		return nil, err
+	}
+	if needIgnore {
+		return Sequence(fmt.Sprintf("builder seq for %T", model),
+			ignore{},
+			Provide(fmt.Sprintf("builder for %T", model), filler)), nil
+	}
+	return Provide(fmt.Sprintf("builder for %T", model), filler), nil
+}
+
+// MustMakeStructBuilder wraps a panic around failed
+// MakeStructBuilder calls
+func MustMakeStructBuilder(model interface{}, tag string) Provider {
+	p, err := MakeStructBuilder(model, tag)
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
+}
+
+// MakeFuncFiller is like MakeFuncBuilder except that the generated
+// function takes as input a pointer to the model that
+// needs to be filled out rather than creating a new model.
+// Passing something other than a pointer to a struct to MakeStructFiller
+// results in an immediate panic.
+func MakeStructFiller(model interface{}, tag string) (Provider, error) {
+	filler, _, err := makeFiller(model, tag, false)
+	if err != nil {
+		return nil, err
+	}
+	return Provide(fmt.Sprintf("filler for %T", model), filler), nil
+}
+
+// MustMakeStructFiller wraps a panic around failed
+// MakeStructFiller calls
+func MustMakeStructFiller(model interface{}, tag string) Provider {
+	p, err := MakeStructFiller(model, tag)
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
+}

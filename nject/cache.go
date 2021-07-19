@@ -16,7 +16,7 @@ type cacherFunc func(in []reflect.Value) []reflect.Value
 var cachers = make(map[int32]cacherFunc)
 var lockLock sync.RWMutex
 
-func generateCache(id int32, fv reflect.Value, l int) cacherFunc {
+func generateCache(id int32, fv canCall, l int) cacherFunc {
 	lockLock.Lock()
 	defer lockLock.Unlock()
 	if cacher, ok := cachers[id]; ok {
@@ -37,7 +37,7 @@ func interfaceOkay(in []reflect.Value) bool {
 	return true
 }
 
-func defineCacher(id int32, fv reflect.Value, l int) cacherFunc {
+func defineCacher(id int32, fv canCall, l int) cacherFunc {
 	var lock sync.Mutex
 
 	switch {
