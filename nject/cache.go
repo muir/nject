@@ -15,6 +15,7 @@ type in90 [90]interface{}
 type cacherFunc func(in []reflect.Value) []reflect.Value
 
 var cachers = make(map[int32]cacherFunc)
+var singletons = make(map[int32]cacherFunc)
 var lockLock sync.RWMutex
 
 // canSimpleTypeBeMapKey cannot handle structs or interfaces
@@ -127,6 +128,35 @@ func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 			return true
 		}
 	}
+}
+
+func generateLookup(fm *provider, fv canCall, numInputs int) cacherFunc {
+	if fm.memoized {
+		return generateCache(fm.id, fv, numInputs, fm.mapKeyCheck)
+	}
+	if fm.singleton {
+		return generateSingleton(fm.id, fv)
+	}
+	return nil
+}
+
+func generateSingleton(id int32, fv canCall) cacherFunc {
+	lockLock.Lock()
+	defer lockLock.Unlock()
+	if singleton, ok := singletons[id]; ok {
+		return singleton
+	}
+
+	var once sync.Once
+	var out []reflect.Value
+	singleton := func(in []reflect.Value) []reflect.Value {
+		once.Do(func() {
+			out = fv.Call(in)
+		})
+		return out
+	}
+	singletons[id] = singleton
+	return singleton
 }
 
 func generateCache(id int32, fv canCall, l int, okayCheck func([]reflect.Value) bool) cacherFunc {

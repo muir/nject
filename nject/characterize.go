@@ -118,6 +118,9 @@ func mappable(inputs ...reflect.Type) bool {
 	return ok
 }
 
+// predicate tests a provider.  The message is used when the provider
+// fails that test so the message should be the opposite of what the
+// provider does.
 func predicate(message string, test func(a testArgs) bool) predicateType {
 	return predicateType{
 		message: message,
@@ -136,9 +139,11 @@ var hasOutputs = predicate("does not have outputs", func(a testArgs) bool { retu
 var mustNotMemoize = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
 var markedMemoized = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
 var markedCacheable = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
+var markedSingleton = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
+var notMarkedSingleton = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
 var notMarkedNoCache = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
 var mappableInputs = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
-var possibleMapKey = predicate("type is cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
+var possibleMapKey = predicate("type is not cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
 var returnsTerminalError = predicate("does not return TerminalError", func(a testArgs) bool {
 	for _, out := range typesOut(a.t) {
 		if out == terminalErrorType {
@@ -217,6 +222,49 @@ var handlerRegistry = typeRegistry{
 	},
 
 	{
+		name: "fallable singleton injector",
+		tests: predicates{
+			markedSingleton,
+			isFunc,
+			inStatic,
+			markedCacheable,
+			noAnonymousFuncs,
+			returnsTerminalError,
+			notLast,
+			mappableInputs,
+			notMarkedNoCache,
+			mustNotMemoize,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = staticGroup
+			a.fm.class = fallibleStaticInjectorFunc
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
+		},
+	},
+
+	{
+		name: "singleton injector",
+		tests: predicates{
+			markedSingleton,
+			isFunc,
+			inStatic,
+			markedCacheable,
+			noAnonymousFuncs,
+			notLast,
+			mappableInputs,
+			notMarkedNoCache,
+			mustNotMemoize,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = staticGroup
+			a.fm.class = staticInjectorFunc
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
+		},
+	},
+
+	{
 		name: "fallible memoized static injector",
 		tests: predicates{
 			markedMemoized,
@@ -229,6 +277,7 @@ var handlerRegistry = typeRegistry{
 			mappableInputs,
 			notMarkedNoCache,
 			possibleMapKey,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -253,6 +302,7 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			notMarkedNoCache,
 			possibleMapKey,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -275,7 +325,7 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			mustNotMemoize,
 			notMarkedNoCache,
-			possibleMapKey,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -295,6 +345,7 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -316,6 +367,7 @@ var handlerRegistry = typeRegistry{
 			hasOutputs,
 			mustNotMemoize,
 			notMarkedNoCache,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -333,6 +385,7 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -351,6 +404,7 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			in := typesIn(a.t)
@@ -372,6 +426,7 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = finalGroup

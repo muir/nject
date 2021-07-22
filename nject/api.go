@@ -87,6 +87,23 @@ func Cacheable(fn interface{}) Provider {
 	})
 }
 
+// Singleton marks a provider as a forced singleton.  The provider will be invoked
+// only once even if it is included in multiple different Sequences.  It will be in
+// the the STATIC chain.  There is no check that the input arguments available at the
+// time the provider would be called are consistent from one invocation to the next.
+// The provider will be called exactly once with whatever inputs are provided the
+// in the first chain that invokes the provider.
+//
+// An alternative way to get singleton behavior is with Memoize() combined with
+// MustChace().
+func Singleton(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.singleton = true
+		fm.mustCache = true
+		fm.cacheable = true
+	})
+}
+
 // NotCacheable creates an inject item and annotates it as not allowed to be
 // in the STATIC chain.  With this annotation, Cacheable is ignored and MustCache
 // causes an invalid chain.

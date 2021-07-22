@@ -27,6 +27,7 @@ type provider struct {
 	notCacheable        bool
 	mustConsume         bool
 	consumptionOptional bool
+	singleton           bool
 
 	// added by characterize
 	memoized    bool
@@ -77,9 +78,11 @@ func (fm *provider) copy() *provider {
 		loose:               fm.loose,
 		memoized:            fm.memoized,
 		desired:             fm.desired,
+		singleton:           fm.singleton,
 		mustConsume:         fm.mustConsume,
 		consumptionOptional: fm.consumptionOptional,
 		notCacheable:        fm.notCacheable,
+		mapKeyCheck:         fm.mapKeyCheck,
 		class:               fm.class,
 		group:               fm.group,
 		flows:               fm.flows,

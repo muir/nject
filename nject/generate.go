@@ -309,12 +309,12 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		cacheLookup := generateCache(fm.id, fv, len(inputParams), fm.mapKeyCheck)
+		lookup := generateLookup(fm, fv, len(inputParams))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			in := inMap(v)
 			var out []reflect.Value
-			if fm.memoized {
-				out = cacheLookup(in)
+			if lookup != nil {
+				out = lookup(in)
 			} else {
 				out = fv.Call(in)
 			}
@@ -339,13 +339,13 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		cacheLookup := generateCache(fm.id, fv, len(inputParams), fm.mapKeyCheck)
+		lookup := generateLookup(fm, fv, len(inputParams))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			debugf("RUNNING %s", fm)
 			in := inMap(v)
 			var out []reflect.Value
-			if fm.memoized {
-				out = cacheLookup(in)
+			if lookup != nil {
+				out = lookup(in)
 			} else {
 				out = fv.Call(in)
 			}
