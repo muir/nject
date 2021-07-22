@@ -138,6 +138,7 @@ var markedMemoized = predicate("is not marked Memoized", func(a testArgs) bool {
 var markedCacheable = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
 var notMarkedNoCache = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
 var mappableInputs = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
+var possibleMapKey = predicate("type is cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
 var returnsTerminalError = predicate("does not return TerminalError", func(a testArgs) bool {
 	for _, out := range typesOut(a.t) {
 		if out == terminalErrorType {
@@ -227,6 +228,7 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mappableInputs,
 			notMarkedNoCache,
+			possibleMapKey,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -234,6 +236,7 @@ var handlerRegistry = typeRegistry{
 			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
 			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
 			a.fm.memoized = true
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 
@@ -249,6 +252,7 @@ var handlerRegistry = typeRegistry{
 			mappableInputs,
 			noAnonymousFuncs,
 			notMarkedNoCache,
+			possibleMapKey,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -256,6 +260,7 @@ var handlerRegistry = typeRegistry{
 			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
 			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
 			a.fm.memoized = true
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 
@@ -270,12 +275,14 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			mustNotMemoize,
 			notMarkedNoCache,
+			possibleMapKey,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = fallibleStaticInjectorFunc
 			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
 			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 

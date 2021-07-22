@@ -103,12 +103,19 @@ func NotCacheable(fn interface{}) Provider {
 // input parameter values combination.  This cache is global among
 // all Sequences.  Memoize can only be used on functions
 // whose inputs are valid map keys (interfaces, arrays
-// (not slices), structs, pointers, and primitive types).
+// (not slices), structs, pointers, and primitive types).  It is
+// further restrict that it cannot handle private (not exported)
+// fields inside structs.
 //
-// Memoize is further restricted in that it only works in the
-// STATIC provider set.
+// Memoize only works in the STATIC provider set.
+//
+// Combine Memoize with MustCache to make sure that Memoize can actually
+// function as expected.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
+//
+// As long as consistent injection chains are used Memoize + MustCache can
+// gurantee singletons.
 func Memoize(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.memoize = true

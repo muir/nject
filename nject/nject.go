@@ -34,6 +34,7 @@ type provider struct {
 	group       groupType
 	flows       flowMapType
 	isSynthetic bool
+	mapKeyCheck func([]reflect.Value) bool
 
 	// added during include calculations
 	cannotInclude error
