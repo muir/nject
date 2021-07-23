@@ -20,9 +20,11 @@ and provide that to all your apps.
 
 Let's call that master list `allLibraries`.
 
-	app, err := CreateApp(allLibraries, createAppFunction)
-	err = app.Do(Start)
-	err = app.Do(Stop)
+```go
+app, err := CreateApp("myApp", allLibrariesSequence, createAppFunction)
+err = app.Do(Start)
+err = app.Do(Stop)
+```
 
 ### Hooks
 
@@ -35,18 +37,31 @@ background.
 
 The Start, Stop, and Shutdown hooks are pre-defined:
 
-	var Shutdown NewHook(ReverseOrder)
-	var Stop = NewHook(OnError(Shutdown), ReverseOrder)
-	var Start = NewHook(OnError(Stop), ForwardOrder)
+```go
+var Shutdown = NewHook("shutdown", ReverseOrder)
+var Stop = NewHook("stop", ReverseOrder).OnError(Shutdown).ContinuePastError(true)
+var Start = NewHook("start", ForwardOrder).OnError(Stop)
+```
 
 Hooks can be invoked in registration order (`ForwardOrder`) or in 
 reverse registration order `ReverseOrder`.  
 
+If there is an `OnError` modifier for the hook registration, then that
+hook gets invoked if there is an error returned when the hook is running.
+
 Libraries and applications can register callbacks for hooks by taking an
 `*nserve.App` as as an input parameter and then using that to register callbacks:
 
-	app.On(Start, callbackFunction)
-	app.On(Stop, callbackFunction)
+```go
+func CreateMyLibrary(app *nserve.App) *MyLibrary {
+	lib := &MyLibrary{ ... }
+	app.On(Start, lib.Start)
+	return lib
+}
+func (lib *MyLibrary) Start(app *nserve.App) {
+	app.On(Stop, lib.Stop)
+}
+```
 
 The callback function can be any signature.  If it is a function that can return
 error, then any such error will be become the error return from `app.Do` and if

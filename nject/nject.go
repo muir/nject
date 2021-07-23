@@ -17,6 +17,7 @@ type provider struct {
 	id     int32
 
 	// user annotations
+	nonFinal            bool
 	cacheable           bool
 	mustCache           bool
 	required            bool
@@ -156,6 +157,25 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 
 	afterInit := make([]*provider, 0, len(c.contents))
 	afterInvoke := make([]*provider, 0, len(c.contents))
+
+	// Reorder collection to handle providers marked nonFinal by shifting
+	// the last provider that isn't marked nonFinal to the end of the slice.
+	for i := len(c.contents) - 1; i >= 0; i-- {
+		fm := c.contents[i]
+		if fm.nonFinal {
+			continue
+		}
+		if i == len(c.contents)-1 {
+			// no re-ordering required
+			break
+		}
+		final := c.contents[i]
+		for j := i; j < len(c.contents)-1; j++ {
+			c.contents[j] = c.contents[j+1]
+		}
+		c.contents[len(c.contents)-1] = final
+		break
+	}
 
 	for ii, fm := range c.contents {
 		cc := charContext{

@@ -1,4 +1,4 @@
-module github.com/BlueOwlOpenSource/nject
+module github.com/muir/nject
 
 go 1.13
 

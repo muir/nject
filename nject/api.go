@@ -220,6 +220,20 @@ func Loose(fn interface{}) Provider {
 	})
 }
 
+// NonFinal annotates a provider to say that it shouldn't be considered the
+// final provider in a list of providers.  This is to make it possible to
+// insert a provider into a list of providers late in the chain without
+// actually being the final provider.  It's easy to insert a final at the
+// start of the chain -- you simply list it first.  It's easy to insert a
+// final provider.  Without NonFinal, it's hard or impossible to insert
+// a provider very late in the chain.  If NonFinal providers are invoked,
+// they will be called before the final provider.
+func NonFinal(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.nonFinal = true
+	})
+}
+
 // Bind expects to receive two function pointers for functions
 // that are not yet defined.  Bind defines the functions.  The
 // first function is called to invoke the Collection of providers.
@@ -239,8 +253,12 @@ func Loose(fn interface{}) Provider {
 // function come from the values available after the static portion
 // of the provider chain runs.
 //
-// Bind pre-computes as much as possible so that the invokeFunc is
-// fast.
+// Bind pre-computes as much as possible so that the invokeFunc is fast.
+//
+// Each call to Bind() with unique providers may leak a small amount of memory,
+// creating durable type maps and closures to handle memoization and singletons.
+// Calls to the invokeFunc do not leak memory except where there are new inputs to
+// providers marked Memoize().
 func (c *Collection) Bind(invokeFunc interface{}, initFunc interface{}) error {
 	if err := c.bindFast(invokeFunc, initFunc); err != nil {
 		invokeF := newProvider(invokeFunc, -1, c.name+" invoke func")
@@ -328,6 +346,9 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 //
 // Predefined Collection objects are considered providers along with InjectItems,
 // functions, and literal values.
+//
+// Each call to Run() with unique providers may leak a small amount of memory,
+// creating durable type maps and closures to handle memoization and singletons.
 func Run(name string, providers ...interface{}) error {
 	c := Sequence(name,
 		// include a default error responder so that the
