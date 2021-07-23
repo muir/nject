@@ -115,7 +115,7 @@ func (w *DeferredWriter) Flush() error {
 		amt, err := base.Write(w.buffer[i:])
 		if err != nil {
 			// Is this handling of short writes necessary?  Perhaps
-			// so since a followup write will probably give a
+			// so since a follow-up write will probably give a
 			// more accurate error.
 			if err == io.ErrShortWrite {
 				i += amt
