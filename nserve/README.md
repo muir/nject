@@ -21,9 +21,9 @@ and provide that to all your apps.
 Let's call that master list `allLibraries`.
 
 ```go
-app, err := CreateApp("myApp", allLibrariesSequence, createAppFunction)
-err = app.Do(Start)
-err = app.Do(Stop)
+app, err := nserve.CreateApp("myApp", allLibrariesSequence, createAppFunction)
+err = app.Do(nserve.Start)
+err = app.Do(nserve.Stop)
 ```
 
 ### Hooks
@@ -63,12 +63,8 @@ func (lib *MyLibrary) Start(app *nserve.App) {
 }
 ```
 
-The callback function can be any signature.  If it is a function that can return
+The callback function can be any nject injection chain.  If it ends with a
+function that can return
 error, then any such error will be become the error return from `app.Do` and if
 there is an `OnError` handler for that hook, that handler will be invoked.
-
-### Context
-
-CreateApp injects a context object into the provider list.  That context object
-will be cancelled when the `Shutdown` hook is invoked.
 

@@ -63,12 +63,13 @@ func (app *App) do(h *Hook) error {
 	copy(chains, app.Hooks[h.Id])
 	app.lock.Unlock()
 	var err error
-	do := func(chain nject.Provider) {
-		err = ecw(err, nject.Run("hook-"+h.Name, chain))
+	runChain := func(chain nject.Provider) {
+		e := nject.Run("hook-"+h.Name, app, chain)
+		err = ecw(err, e)
 	}
 	if h.Order == ForwardOrder {
 		for _, chain := range chains {
-			do(chain)
+			runChain(chain)
 			if err != nil && !h.ContinuePast {
 				break
 			}
@@ -76,7 +77,7 @@ func (app *App) do(h *Hook) error {
 	} else {
 		for i := len(chains) - 1; i >= 0; i-- {
 			chain := chains[i]
-			do(chain)
+			runChain(chain)
 			if err != nil && !h.ContinuePast {
 				break
 			}

@@ -1,6 +1,7 @@
 package nserve
 
 import (
+	"sync"
 	"sync/atomic"
 )
 
@@ -18,6 +19,7 @@ type hookId int32
 // Hook is the handle/name for a list of callbacks to invoke.
 type Hook struct {
 	Id            hookId
+	lock          sync.Mutex
 	Name          string
 	Order         hookOrder
 	InvokeOnError []*Hook
@@ -26,6 +28,8 @@ type Hook struct {
 }
 
 func (h *Hook) Copy() *Hook {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	oe := make([]*Hook, len(h.InvokeOnError))
 	copy(oe, h.InvokeOnError)
 	hc := *h
@@ -46,10 +50,12 @@ func NewHook(name string, order hookOrder) *Hook {
 // OnError adds to the set of hooks to invoke when this hook is
 // thows an error.  Call with nil to clear the set of hooks to invoke.
 func (h *Hook) OnError(e *Hook) *Hook {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	if e == nil {
 		h.InvokeOnError = nil
 	} else {
-		h.InvokeOnError = append(h.InvokeOnError, h)
+		h.InvokeOnError = append(h.InvokeOnError, e)
 	}
 	return h
 }
@@ -57,6 +63,8 @@ func (h *Hook) OnError(e *Hook) *Hook {
 // SetErrorCombiner sets a function to combine two errors into one when there
 // is more than one error to return from a invoking all the callbacks
 func (h *Hook) SetErrorCombiner(f func(first, second error) error) *Hook {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	h.ErrorCombiner = f
 	return h
 }
@@ -64,8 +72,14 @@ func (h *Hook) SetErrorCombiner(f func(first, second error) error) *Hook {
 // ContinuePastError sets if callbacks should continue to be invoked
 // if there has already been an error.
 func (h *Hook) ContinuePastError(b bool) *Hook {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	h.ContinuePast = b
 	return h
+}
+
+func (h *Hook) String() string {
+	return "hook " + h.Name
 }
 
 var Shutdown = NewHook("shutdown", ReverseOrder)
