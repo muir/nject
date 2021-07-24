@@ -8,12 +8,11 @@ Install:
 
 ---
 
-This package provides helpers wrapping endpoints.  
-
+This package provides helpers for wrapping endpoints.  
 
 ## Typical chain
 
-A typical endpoint wrapping chan contains some or all of the following
+A typical endpoint wrapping chan contains some or all of the following.
 
 ### Deferred Writer
 
@@ -24,17 +23,14 @@ the output is buffered and copied.
 
 ### Create a logger
 
-A logger will be used by many of the parts later in the chain.  This must be 
-injected wrapped with `nject.Loose` so as to not constain the actual logger.
-
-The logger must implement at least the following interface:
-
-```go
-type MyLogger interface{
-}
-```
+This is an option step that is recommended if you're using request-specific
+loggers.  The encoding provider can use a logger that implements the 
+nvelope.Logger interface.
 
 ### Grab the request body
+
+The request body is more convieniently handled as a []byte .  This is also
+where API enforcement can be done.
 
 ### Marshal response
 
