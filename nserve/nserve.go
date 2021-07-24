@@ -29,7 +29,9 @@ func CreateApp(name string, providers ...interface{}) (*App, error) {
 }
 
 // On registers a callback to be invoked on hook invocation.  This can be used during
-// callbacks, for example a start callback, can register a stop callback.
+// callbacks, for example a start callback, can register a stop callback.  Each call
+// to On() adds one nject provider chain.  By default, only the last function will
+// be called and nject annotations can be used to control the behavior.
 func (app *App) On(h *Hook, providers ...interface{}) {
 	app.lock.Lock()
 	defer app.lock.Unlock()
@@ -37,7 +39,7 @@ func (app *App) On(h *Hook, providers ...interface{}) {
 }
 
 // Do invokes the callbacks for a hook.  It returns only the first error reported
-// unless the hook provides an error combiner.
+// unless the hook provides an error combiner that preserves the other errors.
 func (app *App) Do(h *Hook) error {
 	app.runLock.Lock()
 	defer app.runLock.Unlock()
