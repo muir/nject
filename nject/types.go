@@ -89,3 +89,5 @@ const (
 var terminalErrorType = reflect.TypeOf((*TerminalError)(nil)).Elem()
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
+
+var ignoreType = reflect.TypeOf((*ignore)(nil)).Elem()

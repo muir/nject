@@ -22,9 +22,10 @@ type characterization struct {
 type typeRegistry []characterization
 
 type testArgs struct {
-	cc charContext
-	fm *provider
-	v  reflect.Value
+	cc    charContext
+	fm    *provider
+	t     reflectType
+	isNil bool
 }
 
 type predicateType struct {
@@ -43,7 +44,7 @@ func hasAnonymousFuncs(params []reflect.Type, ignoreFirst bool) bool {
 	return false
 }
 
-func typesIn(t reflect.Type) []reflect.Type {
+func typesIn(t reflectType) []reflect.Type {
 	if t.Kind() != reflect.Func {
 		return nil
 	}
@@ -54,7 +55,7 @@ func typesIn(t reflect.Type) []reflect.Type {
 	return in
 }
 
-func typesOut(t reflect.Type) []reflect.Type {
+func typesOut(t reflectType) []reflect.Type {
 	if t.Kind() != reflect.Func {
 		return nil
 	}
@@ -117,6 +118,9 @@ func mappable(inputs ...reflect.Type) bool {
 	return ok
 }
 
+// predicate tests a provider.  The message is used when the provider
+// fails that test so the message should be the opposite of what the
+// provider does.
 func predicate(message string, test func(a testArgs) bool) predicateType {
 	return predicateType{
 		message: message,
@@ -124,21 +128,24 @@ func predicate(message string, test func(a testArgs) bool) predicateType {
 	}
 }
 
-var notNil = predicate("is nil", func(a testArgs) bool { return !a.v.IsNil() })
-var notFunc = predicate("is a function", func(a testArgs) bool { return a.v.Type().Kind() != reflect.Func })
-var isFunc = predicate("is not a function", func(a testArgs) bool { return a.v.Type().Kind() == reflect.Func })
+var notNil = predicate("is nil", func(a testArgs) bool { return !a.isNil })
+var notFunc = predicate("is a function", func(a testArgs) bool { return a.t.Kind() != reflect.Func })
+var isFunc = predicate("is not a function", func(a testArgs) bool { return a.t.Kind() == reflect.Func })
 var isLast = predicate("is not the final item in the provider chain", func(a testArgs) bool { return a.cc.isLast })
 var notLast = predicate("must not be last", func(a testArgs) bool { return !a.cc.isLast })
 var unstaticOkay = predicate("is marked MustCache", func(a testArgs) bool { return !a.fm.mustCache })
 var inStatic = predicate("is after invoke", func(a testArgs) bool { return a.cc.inputsAreStatic })
-var hasOutputs = predicate("does not have outputs", func(a testArgs) bool { return a.v.Type().NumOut() != 0 })
+var hasOutputs = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
 var mustNotMemoize = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
 var markedMemoized = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
 var markedCacheable = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
+var markedSingleton = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
+var notMarkedSingleton = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
 var notMarkedNoCache = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
-var mappableInputs = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.v.Type())...) })
+var mappableInputs = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
+var possibleMapKey = predicate("type is not cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
 var returnsTerminalError = predicate("does not return TerminalError", func(a testArgs) bool {
-	for _, out := range typesOut(a.v.Type()) {
+	for _, out := range typesOut(a.t) {
 		if out == terminalErrorType {
 			return true
 		}
@@ -146,19 +153,19 @@ var returnsTerminalError = predicate("does not return TerminalError", func(a tes
 	return false
 })
 var noAnonymousFuncs = predicate("has an untyped functional argument", func(a testArgs) bool {
-	return !hasAnonymousFuncs(typesIn(a.v.Type()), false) &&
-		!hasAnonymousFuncs(typesOut(a.v.Type()), false)
+	return !hasAnonymousFuncs(typesIn(a.t), false) &&
+		!hasAnonymousFuncs(typesOut(a.t), false)
 })
 var noAnonymousExceptFirstInput = predicate("has extra untyped functional arguments", func(a testArgs) bool {
-	return !hasAnonymousFuncs(typesIn(a.v.Type()), true) &&
-		!hasAnonymousFuncs(typesOut(a.v.Type()), false)
+	return !hasAnonymousFuncs(typesIn(a.t), true) &&
+		!hasAnonymousFuncs(typesOut(a.t), false)
 })
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
-	t := a.v.Type()
+	t := a.t
 	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
 })
 var isFuncPointer = predicate("is not a pointer to a function", func(a testArgs) bool {
-	t := a.v.Type()
+	t := a.t
 	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func
 })
 
@@ -173,8 +180,8 @@ var invokeRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = initFunc
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.v.Type().Elem()))
-			a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.v.Type().Elem()))
+			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
+			a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.t.Elem()))
 			a.fm.required = true
 			a.fm.isSynthetic = true
 		},
@@ -189,8 +196,8 @@ var invokeRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = invokeFunc
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.v.Type().Elem()))
-			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.v.Type().Elem()))
+			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
+			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.t.Elem()))
 			a.fm.required = true
 			a.fm.isSynthetic = true
 		},
@@ -208,7 +215,52 @@ var handlerRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = literalGroup
 			a.fm.class = literalValue
-			a.fm.flows[outputParams] = toTypeCodes([]reflect.Type{a.v.Type()})
+			// the cast is safe because when the value is a Reflective, we look like
+			// like a func and this code only runs for non-funcs.
+			a.fm.flows[outputParams] = toTypeCodes([]reflect.Type{a.t.(reflect.Type)})
+		},
+	},
+
+	{
+		name: "fallable singleton injector",
+		tests: predicates{
+			markedSingleton,
+			isFunc,
+			inStatic,
+			markedCacheable,
+			noAnonymousFuncs,
+			returnsTerminalError,
+			notLast,
+			mappableInputs,
+			notMarkedNoCache,
+			mustNotMemoize,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = staticGroup
+			a.fm.class = fallibleStaticInjectorFunc
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
+		},
+	},
+
+	{
+		name: "singleton injector",
+		tests: predicates{
+			markedSingleton,
+			isFunc,
+			inStatic,
+			markedCacheable,
+			noAnonymousFuncs,
+			notLast,
+			mappableInputs,
+			notMarkedNoCache,
+			mustNotMemoize,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = staticGroup
+			a.fm.class = staticInjectorFunc
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
 		},
 	},
 
@@ -224,13 +276,16 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mappableInputs,
 			notMarkedNoCache,
+			possibleMapKey,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = fallibleStaticInjectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.v.Type())))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
 			a.fm.memoized = true
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 
@@ -246,13 +301,16 @@ var handlerRegistry = typeRegistry{
 			mappableInputs,
 			noAnonymousFuncs,
 			notMarkedNoCache,
+			possibleMapKey,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = staticInjectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.v.Type()))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
 			a.fm.memoized = true
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 
@@ -267,12 +325,14 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			mustNotMemoize,
 			notMarkedNoCache,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = fallibleStaticInjectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.v.Type())))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(remapTerminalError(typesOut(a.t)))
+			_, a.fm.mapKeyCheck = canBeMapKey(typesIn(a.t))
 		},
 	},
 
@@ -285,12 +345,13 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
 			a.fm.class = fallibleInjectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(redactTerminalError(typesOut(a.v.Type())))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(redactTerminalError(typesOut(a.t)))
 			a.fm.flows[returnParams] = toTypeCodes([]reflect.Type{errorType})
 		},
 	},
@@ -306,12 +367,13 @@ var handlerRegistry = typeRegistry{
 			hasOutputs,
 			mustNotMemoize,
 			notMarkedNoCache,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = staticInjectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.v.Type()))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
 		},
 	},
 
@@ -323,12 +385,13 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
 			a.fm.class = injectorFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.v.Type()))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
 		},
 	},
 
@@ -341,16 +404,17 @@ var handlerRegistry = typeRegistry{
 			notLast,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
-			in := typesIn(a.v.Type())
+			in := typesIn(a.t)
 			in[0] = reflect.TypeOf(noTypeExampleValue)
 			a.fm.group = runGroup
 			a.fm.class = wrapperFunc
 			a.fm.flows[inputParams] = toTypeCodes(in)
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.v.Type().In(0)))
-			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.v.Type()))
-			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.v.Type().In(0)))
+			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.In(0)))
+			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
+			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.t.In(0)))
 		},
 	},
 
@@ -362,12 +426,13 @@ var handlerRegistry = typeRegistry{
 			noAnonymousFuncs,
 			mustNotMemoize,
 			unstaticOkay,
+			notMarkedSingleton,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = finalGroup
 			a.fm.class = finalFunc
-			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.v.Type()))
-			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.v.Type()))
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
 			a.fm.required = true
 		},
 	},
@@ -376,10 +441,27 @@ var handlerRegistry = typeRegistry{
 // characterizeFuncDetails returns an annotated copy of the incoming *provider.
 func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*provider, error) {
 	var rejectReasons []string
-	a := testArgs{
-		fm: fm.copy(),
-		v:  reflect.ValueOf(fm.fn),
-		cc: cc,
+	var a testArgs
+	if r, ok := fm.fn.(Reflective); ok {
+		a = testArgs{
+			fm:    fm.copy(),
+			t:     reflectiveWrapper{r},
+			isNil: false,
+			cc:    cc,
+		}
+	} else {
+		v := reflect.ValueOf(fm.fn)
+		var isNil bool
+		switch v.Type().Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+			isNil = v.IsNil()
+		}
+		a = testArgs{
+			fm:    fm.copy(),
+			t:     v.Type(),
+			cc:    cc,
+			isNil: isNil,
+		}
 	}
 
 Match:
@@ -398,7 +480,7 @@ Match:
 	}
 
 	// panic(fmt.Sprintf("%s: %s - %s", fm.describe(), t, strings.Join(rejectReasons, "; ")))
-	return nil, fm.errorf("Could not type %s to any prototype: %s", a.v.Type(), strings.Join(rejectReasons, "; "))
+	return nil, fm.errorf("Could not type %s to any prototype: %s", a.t, strings.Join(rejectReasons, "; "))
 }
 
 func characterizeInitInvoke(fm *provider, context charContext) (*provider, error) {

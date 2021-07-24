@@ -87,6 +87,23 @@ func Cacheable(fn interface{}) Provider {
 	})
 }
 
+// Singleton marks a provider as a forced singleton.  The provider will be invoked
+// only once even if it is included in multiple different Sequences.  It will be in
+// the the STATIC chain.  There is no check that the input arguments available at the
+// time the provider would be called are consistent from one invocation to the next.
+// The provider will be called exactly once with whatever inputs are provided the
+// in the first chain that invokes the provider.
+//
+// An alternative way to get singleton behavior is with Memoize() combined with
+// MustChace().
+func Singleton(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.singleton = true
+		fm.mustCache = true
+		fm.cacheable = true
+	})
+}
+
 // NotCacheable creates an inject item and annotates it as not allowed to be
 // in the STATIC chain.  With this annotation, Cacheable is ignored and MustCache
 // causes an invalid chain.
@@ -103,12 +120,19 @@ func NotCacheable(fn interface{}) Provider {
 // input parameter values combination.  This cache is global among
 // all Sequences.  Memoize can only be used on functions
 // whose inputs are valid map keys (interfaces, arrays
-// (not slices), structs, pointers, and primitive types).
+// (not slices), structs, pointers, and primitive types).  It is
+// further restrict that it cannot handle private (not exported)
+// fields inside structs.
 //
-// Memoize is further restricted in that it only works in the
-// STATIC provider set.
+// Memoize only works in the STATIC provider set.
+//
+// Combine Memoize with MustCache to make sure that Memoize can actually
+// function as expected.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
+//
+// As long as consistent injection chains are used Memoize + MustCache can
+// gurantee singletons.
 func Memoize(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.memoize = true
@@ -404,4 +428,84 @@ func MustSetCallback(c *Collection, binderFunction interface{}) {
 	if err != nil {
 		panic(DetailedError(err))
 	}
+}
+
+// Reflective is an alternative provider interface.  Normally, providers are
+// are functions or data elements to be injected.  If the provider is a Reflective
+// then the methods of Reflective will be called to simulate the Reflective
+// being a function.
+type Reflective interface {
+	In(i int) reflect.Type
+	NumIn() int
+	Out(i int) reflect.Type
+	NumOut() int
+	Call(in []reflect.Value) []reflect.Value
+}
+
+type ignore struct{}
+
+// MakeStructBuilder generates a Provider that wants to receive as
+// arguments all of the fields of the struct and returns the struct
+// as what it provides.
+//
+// The input model must be a struct: if not MakeStructFiller
+// will panic.  Model may be a pointer to a struct or a struct.
+// Unexported fields are always ignored.
+// Passing something other than a struct or pointer to a struct to
+// MakeStructBuilder results is an error. Unknown tag values is an error.
+//
+// Struct tags can be used to control the
+// behavior: the argument controls the name of the struct tag used.
+// A struct tag of "-" or "ignore" indicates that the field should not
+// be filled.  A tag of "fill" is accepted but doesn't do anything as it's
+// the default.
+//
+// Embedded structs can either be filled as a whole or they can be
+// filled field-by-field.  Tag with "whole" or "blob" to fill the embedded
+// struct all at once.  Tag with "fields" to fill the fields of the
+// embedded struct individually.  The default is "fields".
+func MakeStructBuilder(model interface{}, tag string) (Provider, error) {
+	filler, needIgnore, err := makeFiller(model, tag, true)
+	if err != nil {
+		return nil, err
+	}
+	if needIgnore {
+		return Sequence(fmt.Sprintf("builder seq for %T", model),
+			ignore{},
+			Provide(fmt.Sprintf("builder for %T", model), filler)), nil
+	}
+	return Provide(fmt.Sprintf("builder for %T", model), filler), nil
+}
+
+// MustMakeStructBuilder wraps a panic around failed
+// MakeStructBuilder calls
+func MustMakeStructBuilder(model interface{}, tag string) Provider {
+	p, err := MakeStructBuilder(model, tag)
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
+}
+
+// MakeFuncFiller is like MakeFuncBuilder except that the generated
+// function takes as input a pointer to the model that
+// needs to be filled out rather than creating a new model.
+// Passing something other than a pointer to a struct to MakeStructFiller
+// results in an immediate panic.
+func MakeStructFiller(model interface{}, tag string) (Provider, error) {
+	filler, _, err := makeFiller(model, tag, false)
+	if err != nil {
+		return nil, err
+	}
+	return Provide(fmt.Sprintf("filler for %T", model), filler), nil
+}
+
+// MustMakeStructFiller wraps a panic around failed
+// MakeStructFiller calls
+func MustMakeStructFiller(model interface{}, tag string) Provider {
+	p, err := MakeStructFiller(model, tag)
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
 }
