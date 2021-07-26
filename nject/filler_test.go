@@ -39,11 +39,11 @@ func TestFiller(t *testing.T) {
 		func() FillSubStruct {
 			return FillSubStruct{y: 8, S3: "j"}
 		},
-		MustMakeStructBuilder(FillStruct{}, ""),
-		MustMakeStructBuilder(&FillStruct2{}, "t1"),
-		MustMakeStructFiller(&FillStruct3{}, ""),
-		MustMakeStructBuilder(&FillStruct4{}, "t2"),
-		MustMakeStructBuilder(&FillStruct5{}, "t3"),
+		MustMakeStructBuilder(FillStruct{}, WithTag("")),
+		MustMakeStructBuilder(&FillStruct2{}, WithTag("t1")),
+		MustMakeStructFiller(&FillStruct3{}, WithTag("")),
+		MustMakeStructBuilder(&FillStruct4{}, WithTag("t2")),
+		MustMakeStructBuilder(&FillStruct5{}, WithTag("t3")),
 		func(f1 FillStruct, f2 *FillStruct2, f3 *FillStruct3, f4 *FillStruct4, f5 *FillStruct5) {
 			called = true
 			assert.Equal(t, s0(""), f1.s0, "f1.s0 not filled")

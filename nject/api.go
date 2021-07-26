@@ -463,12 +463,6 @@ type Reflective interface {
 
 type ignore struct{}
 
-type fillerOptions struct {
-	tag            string
-	postMethodName string
-	fieldFiller    map[string]interface{}
-}
-
 // FillerFuncArg is a functional argument for
 // MakeStructBuilder and MakeStructFiller.
 type FillerFuncArg func(*fillerOptions)
@@ -542,8 +536,8 @@ func WithFieldFiller(tagValue string, function interface{}) FillerFuncArg {
 // filled field-by-field.  Tag with "whole" or "blob" to fill the embedded
 // struct all at once.  Tag with "fields" to fill the fields of the
 // embedded struct individually.  The default is "fields".
-func MakeStructBuilder(model interface{}, tag string) (Provider, error) {
-	filler, needIgnore, err := makeFiller(model, tag, true)
+func MakeStructBuilder(model interface{}, opts ...FillerFuncArg) (Provider, error) {
+	filler, needIgnore, err := makeFiller(model, true, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -557,8 +551,8 @@ func MakeStructBuilder(model interface{}, tag string) (Provider, error) {
 
 // MustMakeStructBuilder wraps a panic around failed
 // MakeStructBuilder calls
-func MustMakeStructBuilder(model interface{}, tag string) Provider {
-	p, err := MakeStructBuilder(model, tag)
+func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
+	p, err := MakeStructBuilder(model, opts...)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -570,8 +564,8 @@ func MustMakeStructBuilder(model interface{}, tag string) Provider {
 // needs to be filled out rather than creating a new model.
 // Passing something other than a pointer to a struct to MakeStructFiller
 // results in an immediate panic.
-func MakeStructFiller(model interface{}, tag string) (Provider, error) {
-	filler, _, err := makeFiller(model, tag, false)
+func MakeStructFiller(model interface{}, opts ...FillerFuncArg) (Provider, error) {
+	filler, _, err := makeFiller(model, false, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -580,8 +574,8 @@ func MakeStructFiller(model interface{}, tag string) (Provider, error) {
 
 // MustMakeStructFiller wraps a panic around failed
 // MakeStructFiller calls
-func MustMakeStructFiller(model interface{}, tag string) Provider {
-	p, err := MakeStructFiller(model, tag)
+func MustMakeStructFiller(model interface{}, opts ...FillerFuncArg) Provider {
+	p, err := MakeStructFiller(model, opts...)
 	if err != nil {
 		panic(err.Error())
 	}

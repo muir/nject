@@ -61,9 +61,21 @@ func getInZero(cc canCall) reflect.Type {
 	return nil
 }
 
+type fillerOptions struct {
+	tag            string
+	postMethodName string
+	fieldFiller    map[string]interface{}
+}
+
 // makeFiller creates an object that implements Reflective.  It is used by
 // MakeStructBuilder and MakeStructFiller
-func makeFiller(model interface{}, tag string, create bool) (Reflective, bool, error) {
+func makeFiller(model interface{}, create bool, optArgs []FillerFuncArg) (Reflective, bool, error) {
+	options := fillerOptions{
+		tag: "nject",
+	}
+	for _, f := range optArgs {
+		f(&options)
+	}
 	t := reflect.TypeOf(model)
 	if debugFiller {
 		fmt.Println("filler type", t.String())
@@ -110,8 +122,8 @@ func makeFiller(model interface{}, tag string, create bool) (Reflective, bool, e
 			}
 			var skip bool
 			var whole bool
-			if tag != "" {
-				ps := field.Tag.Get(tag)
+			if options.tag != "" {
+				ps := field.Tag.Get(options.tag)
 				if ps != "" {
 					for _, tv := range strings.Split(ps, ",") {
 						switch tv {
