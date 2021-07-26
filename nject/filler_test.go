@@ -41,7 +41,7 @@ func TestFiller(t *testing.T) {
 		},
 		MustMakeStructBuilder(FillStruct{}, WithTag("")),
 		MustMakeStructBuilder(&FillStruct2{}, WithTag("t1")),
-		MustMakeStructFiller(&FillStruct3{}, WithTag("")),
+		MustMakeStructBuilder(&FillStruct3{}, WithTag(""), FillExisting),
 		MustMakeStructBuilder(&FillStruct4{}, WithTag("t2")),
 		MustMakeStructBuilder(&FillStruct5{}, WithTag("t3")),
 		func(f1 FillStruct, f2 *FillStruct2, f3 *FillStruct3, f4 *FillStruct4, f5 *FillStruct5) {

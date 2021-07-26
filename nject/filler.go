@@ -65,16 +65,49 @@ type fillerOptions struct {
 	tag            string
 	postMethodName string
 	fieldFiller    map[string]interface{}
+	create         bool
 }
 
-// makeFiller creates an object that implements Reflective.  It is used by
-// MakeStructBuilder and MakeStructFiller
-func makeFiller(model interface{}, create bool, optArgs []FillerFuncArg) (Reflective, bool, error) {
+var reservedTags = map[string]struct{}{
+	"fill":   {},
+	"-":      {},
+	"whole":  {},
+	"blob":   {},
+	"fields": {},
+}
+
+// MakeStructBuilder generates a Provider that wants to receive as
+// arguments all of the fields of the struct and returns the struct
+// as what it provides.
+//
+// The input model must be a struct: if not MakeStructFiller
+// will panic.  Model may be a pointer to a struct or a struct.
+// Unexported fields are always ignored.
+// Passing something other than a struct or pointer to a struct to
+// MakeStructBuilder results is an error. Unknown tag values is an error.
+//
+// Struct tags can be used to control the
+// behavior: the argument controls the name of the struct tag used.
+// A struct tag of "-" or "ignore" indicates that the field should not
+// be filled.  A tag of "fill" is accepted but doesn't do anything as it's
+// the default.
+//
+// Embedded structs can either be filled as a whole or they can be
+// filled field-by-field.  Tag with "whole" or "blob" to fill the embedded
+// struct all at once.  Tag with "fields" to fill the fields of the
+// embedded struct individually.  The default is "fields".
+func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	options := fillerOptions{
-		tag: "nject",
+		tag:    "nject",
+		create: true,
 	}
 	for _, f := range optArgs {
 		f(&options)
+	}
+	for tag := range options.fieldFiller {
+		if _, ok := reservedTags[tag]; ok {
+			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by WithFieldFiller", tag)
+		}
 	}
 	t := reflect.TypeOf(model)
 	if debugFiller {
@@ -87,18 +120,18 @@ func makeFiller(model interface{}, create bool, optArgs []FillerFuncArg) (Reflec
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
-		return nil, false, fmt.Errorf("MakeStructFiller must be called with a struct or pointer to struct, not %T", model)
+		return nil, fmt.Errorf("MakeStructFiller must be called with a struct or pointer to struct, not %T", model)
 	}
 	f.typ = t
 	f.inputs = make([]inputDisposition, 0, t.NumField()+1)
 	var addIgnore bool
-	if !create {
+	if !options.create {
 		f.inputs = append(f.inputs, inputDisposition{
 			typ: ot,
 		})
 		f.copy = true
 		if !f.pointer {
-			return nil, false, fmt.Errorf("Cannot fill an existing struct that is not a pointer.  Called with %T", model)
+			return nil, fmt.Errorf("Cannot fill an existing struct that is not a pointer.  Called with %T", model)
 		}
 	} else if t.NumField() > 0 && t.Field(0).Type.Kind() == reflect.Func {
 		// uh, oh, we don't want to take a function
@@ -146,7 +179,10 @@ func makeFiller(model interface{}, create bool, optArgs []FillerFuncArg) (Reflec
 									tv, field.Name, field.Type)
 							}
 						default:
+							// if fun, ok := options.fieldFiller[tv]; ok {
+							// } else {
 							return fmt.Errorf("Invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
+							// }
 						}
 					}
 				}
@@ -173,9 +209,14 @@ func makeFiller(model interface{}, create bool, optArgs []FillerFuncArg) (Reflec
 	}
 	err := mapStruct(t, []int{})
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return &f, addIgnore, nil
+	if addIgnore {
+		return Sequence(fmt.Sprintf("builder seq for %T", model),
+			ignore{},
+			Provide(fmt.Sprintf("builder for %T", model), &f)), nil
+	}
+	return Provide(fmt.Sprintf("builder for %T", model), &f), nil
 }
 
 func (f *filler) In(i int) reflect.Type {
