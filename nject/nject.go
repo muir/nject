@@ -29,6 +29,7 @@ type provider struct {
 	mustConsume         bool
 	consumptionOptional bool
 	singleton           bool
+	cluster             int32
 
 	// added by characterize
 	memoized    bool
@@ -55,6 +56,7 @@ type provider struct {
 	upVmapCount                int
 	downVmapCount              int
 
+	// added when generating
 	wrapWrapper          func(valueCollection, func(valueCollection) valueCollection) valueCollection // added in generate
 	wrapStaticInjector   func(valueCollection) error                                                  // added in generate
 	wrapFallibleInjector func(valueCollection) (bool, valueCollection)                                // added in generate
@@ -80,6 +82,7 @@ func (fm *provider) copy() *provider {
 		memoized:            fm.memoized,
 		desired:             fm.desired,
 		singleton:           fm.singleton,
+		cluster:             fm.cluster,
 		mustConsume:         fm.mustConsume,
 		consumptionOptional: fm.consumptionOptional,
 		notCacheable:        fm.notCacheable,

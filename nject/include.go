@@ -12,10 +12,12 @@ type includeWorkingData struct {
 	usedByDetail    map[flowType]map[typeCode][]*provider
 	mustConsumeFlow map[flowType]bool
 	excluded        error
+	clusterMembers  []*provider
+	wantedInCluster bool
 }
 
 //
-// Figuring out which providers is done in multiple steps:
+// Figuring out which providers to use is done in multiple steps:
 //
 // Combine MustConsume and ConsumptionOptional into the
 // per flow directions.  fm.d.mustConsumeFlow set in
@@ -64,8 +66,18 @@ type includeWorkingData struct {
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	debugln("initial set of functions")
+	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
+		if fm.cluster != 0 {
+			if leader, ok := clusterLeaders[fm.cluster]; ok {
+				leader.d.clusterMembers = append(leader.d.clusterMembers, fm)
+				fm.d.clusterMembers = nil
+			} else {
+				clusterLeaders[fm.cluster] = fm
+				fm.d.clusterMembers = []*provider{fm}
+			}
+		}
 		fm.d.mustConsumeFlow = make(map[flowType]bool)
 		if fm.mustConsume {
 			fm.d.mustConsumeFlow[outputParams] = true
@@ -79,6 +91,9 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 			fm.whyIncluded = "desired"
 		} else if fm.flows[outputParams] != nil && len(fm.flows[outputParams]) == 0 {
 			fm.whyIncluded = "auto-desired (injector with no outputs)"
+			if fm.cluster != 0 {
+				fm.d.wantedInCluster = true
+			}
 			fm.wanted = true
 		}
 	}
@@ -104,21 +119,56 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 
 	eliminateUnused(funcs)
 
+	tryWithout := func(without ...*provider) bool {
+		if len(without) == 1 {
+			if without[0].wanted && without[0].d.wantedInCluster {
+				// working around a bug: don't try to eliminate single
+				// wanted functions from clusters
+				return false
+			}
+			debugf("check chain validity, excluding %s", without[0])
+		} else {
+			debugf("check chain validity, excluding %d in cluster %s", len(without), without[0])
+		}
+		for _, fm := range without {
+			fm.d.excluded = fmt.Errorf("excluded to see what happens")
+			if len(without) > 1 {
+				if fm.d.wantedInCluster {
+					fm.wanted = false
+				}
+			}
+		}
+		debugf("lenth of without before: %d", len(without))
+		err := validateChainMarkIncludeExclude(funcs, false)
+		debugf("lenth of without after: %d", len(without))
+		for _, fm := range without {
+			if err == nil {
+				fm.d.excluded = fmt.Errorf("not required, not desired, not necessary")
+			} else {
+				fm.whyIncluded = fmt.Sprintf("if excluded then: %s", err)
+				fm.d.excluded = nil
+			}
+			if len(without) > 1 {
+				if fm.d.wantedInCluster {
+					fm.wanted = true
+				}
+			}
+		}
+		return err == nil
+	}
+
 	// Attempt to eliminate providers
 	postCheck := make([]*provider, 0, len(funcs))
 	for _, fm := range proposeEliminations(funcs) {
 		if fm.d.excluded != nil {
 			continue
 		}
-		debugf("check chain validity, excluding %s", fm)
-		fm.d.excluded = fmt.Errorf("excluded to see what happens")
-		err := validateChainMarkIncludeExclude(funcs, false)
-		if err == nil {
-			fm.d.excluded = fmt.Errorf("not required, not desired, not necessary")
-		} else {
-			fm.whyIncluded = fmt.Sprintf("if excluded then: %s", err)
-			fm.d.excluded = nil
+		if fm.d.clusterMembers != nil {
+			if tryWithout(fm.d.clusterMembers...) {
+				continue
+			}
 		}
+		tryWithout(fm)
 	}
 
 	eliminateUnused(postCheck)
@@ -413,7 +463,7 @@ func proposeEliminations(funcs []*provider) []*provider {
 			if fm.d.excluded != nil {
 				continue
 			}
-			if fm.required || fm.desired || fm.wanted {
+			if fm.required || fm.desired || (fm.wanted && !fm.d.wantedInCluster) {
 				toKeep = append(toKeep, fm)
 			}
 		}

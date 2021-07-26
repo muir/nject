@@ -5,6 +5,7 @@ package nject
 import (
 	"fmt"
 	"reflect"
+	"sync/atomic"
 )
 
 // Collection holds a sequence of providers and sub-collections
@@ -42,6 +43,24 @@ type Provider interface {
 // with *Provider, named functions, anoymous functions, and literal values.
 func Sequence(name string, providers ...interface{}) *Collection {
 	return newCollection(name, providers...)
+}
+
+var clusterId int32 = 1
+
+// Cluster is a variation on Sequence() with the additional behavior
+// that all of the providers in the in the cluster will be included
+// or excluded as a group.  This doesn't apply to providers that cannot
+// be included at all.  It also downgrades providers that are in the
+// cluster that would normally be considered desired because they don't
+// return anything and aren't wrappers: they're no longer considered
+// desired.
+func Cluster(name string, providers ...interface{}) *Collection {
+	c := newCollection(name, providers...)
+	id := atomic.AddInt32(&clusterId, 1)
+	for _, fm := range c.contents {
+		fm.cluster = id
+	}
+	return c
 }
 
 // Append appends additional providers onto an existing collection
@@ -443,6 +462,65 @@ type Reflective interface {
 }
 
 type ignore struct{}
+
+type fillerOptions struct {
+	tag            string
+	postMethodName string
+	fieldFiller    map[string]interface{}
+}
+
+// FillerFuncArg is a functional argument for
+// MakeStructBuilder and MakeStructFiller.
+type FillerFuncArg func(*fillerOptions)
+
+// WithTag sets the struct tag to use for per-struct-field
+// directives in MakeStructBuilder and MakeStructFiller.  The
+// default tag is "nject"
+func WithTag(tag string) FillerFuncArg {
+	return func(o *fillerOptions) {
+		o.tag = tag
+	}
+}
+
+// WithPostMethod looks up a method on the struct being
+// filled or built and adds a method invocation to the
+// dependency chain.  The method can be any kind of function
+// provider (the last function, a wrapper, etc).  If there
+// is no method of that name, then MakeStructBuilder or
+// MakeStructFiller will return error.
+func WithPostMethod(methodName string) FillerFuncArg {
+	// Implementation note:
+	// We'll use a Reflective to invoke the method using the
+	// the version of the method that takes an explicit
+	// receiver.
+	return func(o *fillerOptions) {
+		o.postMethodName = methodName
+	}
+}
+
+// WithFieldFiller establishes a tag value that indicates that
+// after the struct is built or filled, a function should be called
+// passing a pointer to the tagged field to the function.  The
+// function must take as an input parameter a pointer to the type
+// of the field or it must take as an input paraemter an interface
+// type that the field implements.  interface{} is allowed.
+// This function will be added to the injection chain after the
+// function that builds or fills the struct.  If there is also a
+// PostMethod, this function will run before that.
+func WithFieldFiller(tagValue string, function interface{}) FillerFuncArg {
+	// Implementation note:
+	// There could be more than one field using the same type so
+	// the normal chain parameter passing methods won't work.
+	// To get around that, we'll create a Reflective that is a
+	// thin wrapper around a function.  We'll select the closest
+	// match between the function input and the field and replace
+	// that type in the list of inputs with the struct being filled.
+	// The actuall Call() we will grab the field from the struct
+	// using it's index and use that to call the function.
+	return func(o *fillerOptions) {
+		o.fieldFiller[tagValue] = function
+	}
+}
 
 // MakeStructBuilder generates a Provider that wants to receive as
 // arguments all of the fields of the struct and returns the struct
