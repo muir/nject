@@ -98,8 +98,9 @@ var reservedTags = map[string]struct{}{
 // embedded struct individually.  The default is "fields".
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	options := fillerOptions{
-		tag:    "nject",
-		create: true,
+		tag:         "nject",
+		create:      true,
+		fieldFiller: make(map[string]interface{}),
 	}
 	for _, f := range optArgs {
 		f(&options)
@@ -113,7 +114,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	if debugFiller {
 		fmt.Println("filler type", t.String())
 	}
-	ot := t
+	originalType := t
 	f := filler{}
 	if t.Kind() == reflect.Ptr {
 		f.pointer = true
@@ -127,7 +128,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	var addIgnore bool
 	if !options.create {
 		f.inputs = append(f.inputs, inputDisposition{
-			typ: ot,
+			typ: originalType,
 		})
 		f.copy = true
 		if !f.pointer {
@@ -141,6 +142,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 		addIgnore = true
 	}
 	var mapStruct func(t reflect.Type, path []int) error
+	var additionalReflectives []interface{}
 	mapStruct = func(t reflect.Type, path []int) error {
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
@@ -179,10 +181,15 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 									tv, field.Name, field.Type)
 							}
 						default:
-							// if fun, ok := options.fieldFiller[tv]; ok {
-							// } else {
-							return fmt.Errorf("Invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
-							// }
+							if fun, ok := options.fieldFiller[tv]; ok {
+								ap, err := addFieldFiller(np, field, originalType, fun, tv)
+								if err != nil {
+									return err
+								}
+								additionalReflectives = append(additionalReflectives, ap)
+							} else {
+								return fmt.Errorf("Invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
+							}
 						}
 					}
 				}
@@ -211,12 +218,17 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	if err != nil {
 		return nil, err
 	}
+	p := Provide(fmt.Sprintf("builder for %T", model), &f)
+	var chain []interface{}
 	if addIgnore {
-		return Sequence(fmt.Sprintf("builder seq for %T", model),
-			ignore{},
-			Provide(fmt.Sprintf("builder for %T", model), &f)), nil
+		chain = append(chain, ignore{})
 	}
-	return Provide(fmt.Sprintf("builder for %T", model), &f), nil
+	chain = append(chain, p)
+	chain = append(chain, additionalReflectives...)
+	if len(chain) == 1 {
+		return p, nil
+	}
+	return Cluster(fmt.Sprintf("builder seq for %T", model), chain...), nil
 }
 
 func (f *filler) In(i int) reflect.Type {
@@ -322,4 +334,102 @@ func copyIntSlice(in []int) []int {
 	c := make([]int, len(in), len(in)+1)
 	copy(c, in)
 	return c
+}
+
+type thinReflective struct {
+	inputs  []reflect.Type
+	outputs []reflect.Type
+	fun     func([]reflect.Value) []reflect.Value
+}
+
+var _ Reflective = thinReflective{}
+
+func (r thinReflective) In(i int) reflect.Type                   { return r.inputs[i] }
+func (r thinReflective) NumIn() int                              { return len(r.inputs) }
+func (r thinReflective) Out(i int) reflect.Type                  { return r.outputs[i] }
+func (r thinReflective) NumOut() int                             { return len(r.outputs) }
+func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
+
+// addFIeldFiller creates a Reflective that wraps a closure that
+// unpacks the recently filled struct and extracts the relevant field
+// from that struct and substitutes that into the inputs to
+// the provided function to be called on a field of the struct
+// post-filling.
+func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.Type, fun interface{}, tagValue string) (Provider, error) {
+	funcAsValue := reflect.ValueOf(fun)
+	if !funcAsValue.IsValid() {
+		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s was called with something other than a function",
+			tagValue, outerStruct)
+	}
+	t := funcAsValue.Type()
+	if t.Kind() != reflect.Func {
+		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s was called with a %s instead of with a function",
+			tagValue, outerStruct, t)
+	}
+	inputs := typesIn(t)
+	const bad = 1000000 // a number larger than the number of Methods that an interface might have
+	const convert = 750000
+	const assign = 500000
+	var score int = bad // negative is best
+	var inputIndex int
+	var addressOf bool
+	var needConvert bool
+	for i, in := range inputs {
+		check := func(t reflect.Type, aOf bool) {
+			var s int
+			var c bool
+			switch {
+			case in == t:
+				s = -1
+			case t.AssignableTo(in):
+				if in.Kind() != reflect.Interface {
+					s = assign
+				} else {
+					s = in.NumMethod()
+				}
+			case t.ConvertibleTo(in):
+				s = convert
+				c = true
+			default:
+				return
+			}
+			if s >= score {
+				return
+			}
+			score = s
+			inputIndex = i
+			addressOf = aOf
+			needConvert = c
+		}
+		check(field.Type, false)
+		check(reflect.PtrTo(field.Type), true)
+	}
+	if score == bad {
+		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s, no match found between field type %s and function inputs",
+			tagValue, outerStruct, field.Type)
+	}
+	targetType := inputs[inputIndex]
+	inputs[inputIndex] = outerStruct
+	structIsPtr := outerStruct.Kind() == reflect.Ptr
+
+	return Provide(fmt.Sprintf("fill-%s-of-%s", field.Name, outerStruct),
+		thinReflective{
+			inputs:  inputs,
+			outputs: typesOut(t),
+			fun: func(in []reflect.Value) []reflect.Value {
+				strct := in[inputIndex]
+				if structIsPtr {
+					strct = strct.Elem()
+				}
+				v := strct.FieldByIndex(path)
+				if addressOf {
+					v = v.Addr()
+				}
+				if needConvert {
+					v = v.Convert(targetType)
+				}
+				in[inputIndex] = v
+				return funcAsValue.Call(in)
+			},
+		}), nil
 }
