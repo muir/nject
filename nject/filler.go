@@ -64,7 +64,7 @@ func getInZero(cc canCall) reflect.Type {
 type fillerOptions struct {
 	tag            string
 	postMethodName string
-	fieldFiller    map[string]interface{}
+	postAction     map[string]interface{}
 	create         bool
 }
 
@@ -98,16 +98,16 @@ var reservedTags = map[string]struct{}{
 // embedded struct individually.  The default is "fields".
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	options := fillerOptions{
-		tag:         "nject",
-		create:      true,
-		fieldFiller: make(map[string]interface{}),
+		tag:        "nject",
+		create:     true,
+		postAction: make(map[string]interface{}),
 	}
 	for _, f := range optArgs {
 		f(&options)
 	}
-	for tag := range options.fieldFiller {
+	for tag := range options.postAction {
 		if _, ok := reservedTags[tag]; ok {
-			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by WithFieldFiller", tag)
+			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by PostAction", tag)
 		}
 	}
 	t := reflect.TypeOf(model)
@@ -181,7 +181,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 									tv, field.Name, field.Type)
 							}
 						default:
-							if fun, ok := options.fieldFiller[tv]; ok {
+							if fun, ok := options.postAction[tv]; ok {
 								ap, err := addFieldFiller(np, field, originalType, fun, tv)
 								if err != nil {
 									return err
@@ -358,12 +358,12 @@ func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(
 func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.Type, fun interface{}, tagValue string) (Provider, error) {
 	funcAsValue := reflect.ValueOf(fun)
 	if !funcAsValue.IsValid() {
-		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s was called with something other than a function",
+		return nil, fmt.Errorf("PostAction(%s, func) for filling %s was called with something other than a function",
 			tagValue, outerStruct)
 	}
 	t := funcAsValue.Type()
 	if t.Kind() != reflect.Func {
-		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s was called with a %s instead of with a function",
+		return nil, fmt.Errorf("PostAction(%s, func) for filling %s was called with a %s instead of with a function",
 			tagValue, outerStruct, t)
 	}
 	inputs := typesIn(t)
@@ -405,14 +405,14 @@ func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.T
 		check(reflect.PtrTo(field.Type), true)
 	}
 	if score == bad {
-		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s, no match found between field type %s and function inputs",
+		return nil, fmt.Errorf("PostAction(%s, func) for filling %s, no match found between field type %s and function inputs",
 			tagValue, outerStruct, field.Type)
 	}
 	targetType := inputs[inputIndex]
 	inputs[inputIndex] = outerStruct
 	structIsPtr := outerStruct.Kind() == reflect.Ptr
 	if needConvert && addressOf {
-		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s, matched %s to input %s (converting) but that cannot be combined with conversion to a pointer",
+		return nil, fmt.Errorf("PostAction(%s, func) for filling %s, matched %s to input %s (converting) but that cannot be combined with conversion to a pointer",
 			tagValue, outerStruct, field.Type, targetType)
 	}
 

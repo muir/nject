@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func ExampleWithFieldFiller() {
+func ExamplePostAction() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
@@ -12,7 +12,7 @@ func ExampleWithFieldFiller() {
 		func() int {
 			return 4
 		},
-		MustMakeStructBuilder(&S{}, WithFieldFiller("square-me", func(i *int) {
+		MustMakeStructBuilder(&S{}, PostAction("square-me", func(i *int) {
 			*i *= *i
 		})),
 		func(s *S) {
@@ -22,7 +22,7 @@ func ExampleWithFieldFiller() {
 	// Output: 16
 }
 
-func ExampleWithFieldFiller_wihtoutPointers() {
+func ExamplePostAction_wihtoutPointers() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
@@ -30,7 +30,7 @@ func ExampleWithFieldFiller_wihtoutPointers() {
 		func() int {
 			return 4
 		},
-		MustMakeStructBuilder(S{}, WithFieldFiller("square-me", func(i int) {
+		MustMakeStructBuilder(S{}, PostAction("square-me", func(i int) {
 			fmt.Println(i * i)
 		})),
 		func(s S) {
@@ -41,7 +41,7 @@ func ExampleWithFieldFiller_wihtoutPointers() {
 	// 4
 }
 
-func ExampleWithFieldFiller_conversion() {
+func ExamplePostAction_conversion() {
 	type S struct {
 		I int32 `nject:"rollup"`
 		J int32 `nject:"rolldown"`
@@ -55,10 +55,10 @@ func ExampleWithFieldFiller_conversion() {
 			return &x
 		},
 		MustMakeStructBuilder(S{},
-			WithFieldFiller("rollup", func(i int, a *[]int) {
+			PostAction("rollup", func(i int, a *[]int) {
 				*a = append(*a, i+1)
 			}),
-			WithFieldFiller("rolldown", func(i int64, a *[]int) {
+			PostAction("rolldown", func(i int64, a *[]int) {
 				*a = append(*a, int(i)-1)
 			}),
 		),

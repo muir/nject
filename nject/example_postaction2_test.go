@@ -23,7 +23,7 @@ func (err MyError) Unwrap() error {
 
 var _ Causer = MyError{}
 
-func ExampleWithFieldFiller_withInterfaces() {
+func ExamplePostAction_withInterfaces() {
 	type S struct {
 		Error Causer `nject:"print-error,print-cause"`
 	}
@@ -35,10 +35,10 @@ func ExampleWithFieldFiller_withInterfaces() {
 			return MyError{err: err}
 		},
 		MustMakeStructBuilder(S{},
-			WithFieldFiller("print-error", func(err error) {
+			PostAction("print-error", func(err error) {
 				fmt.Println(err)
 			}),
-			WithFieldFiller("print-cause", func(err Causer) {
+			PostAction("print-cause", func(err Causer) {
 				fmt.Println("Cause:", err.Unwrap())
 			}),
 		),

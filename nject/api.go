@@ -482,6 +482,7 @@ func WithTag(tag string) FillerFuncArg {
 // provider (the last function, a wrapper, etc).  If there
 // is no method of that name, then MakeStructBuilder or
 // MakeStructFiller will return error.
+// XXX not yet implemented
 func WithPostMethod(methodName string) FillerFuncArg {
 	// Implementation note:
 	// We'll use a Reflective to invoke the method using the
@@ -492,7 +493,7 @@ func WithPostMethod(methodName string) FillerFuncArg {
 	}
 }
 
-// WithFieldFiller establishes a tag value that indicates that
+// PostAction establishes a tag value that indicates that
 // after the struct is built or filled, a function should be called
 // passing a pointer to the tagged field to the function.  The
 // function must take as an input parameter a pointer to the type
@@ -501,7 +502,7 @@ func WithPostMethod(methodName string) FillerFuncArg {
 // This function will be added to the injection chain after the
 // function that builds or fills the struct.  If there is also a
 // PostMethod, this function will run before that.
-func WithFieldFiller(tagValue string, function interface{}) FillerFuncArg {
+func PostAction(tagValue string, function interface{}) FillerFuncArg {
 	// Implementation note:
 	// There could be more than one field using the same type so
 	// the normal chain parameter passing methods won't work.
@@ -512,7 +513,7 @@ func WithFieldFiller(tagValue string, function interface{}) FillerFuncArg {
 	// The actuall Call() we will grab the field from the struct
 	// using it's index and use that to call the function.
 	return func(o *fillerOptions) {
-		o.fieldFiller[tagValue] = function
+		o.postAction[tagValue] = function
 	}
 }
 
