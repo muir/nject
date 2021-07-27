@@ -411,6 +411,10 @@ func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.T
 	targetType := inputs[inputIndex]
 	inputs[inputIndex] = outerStruct
 	structIsPtr := outerStruct.Kind() == reflect.Ptr
+	if needConvert && addressOf {
+		return nil, fmt.Errorf("WithFieldFiller(%s, func) for filling %s, matched %s to input %s (converting) but that cannot be combined with conversion to a pointer",
+			tagValue, outerStruct, field.Type, targetType)
+	}
 
 	return Provide(fmt.Sprintf("fill-%s-of-%s", field.Name, outerStruct),
 		thinReflective{
