@@ -65,7 +65,8 @@ func Cluster(name string, providers ...interface{}) *Collection {
 
 // Append appends additional providers onto an existing collection
 // to create a new collection.  The additional providers may be
-// value literals, functions, Providers, or *Collections.
+// value literals, functions, Providers, or *Collections.  The original
+// collection is not modified.
 func (c *Collection) Append(name string, funcs ...interface{}) *Collection {
 	nc := newCollection(name, funcs...)
 	nc.contents = append(c.contents, nc.contents...)
@@ -476,20 +477,19 @@ func WithTag(tag string) FillerFuncArg {
 	}
 }
 
-// WithPostMethod looks up a method on the struct being
+// WithMethodCall looks up a method on the struct being
 // filled or built and adds a method invocation to the
 // dependency chain.  The method can be any kind of function
 // provider (the last function, a wrapper, etc).  If there
-// is no method of that name, then MakeStructBuilder or
-// MakeStructFiller will return error.
-// XXX not yet implemented
-func WithPostMethod(methodName string) FillerFuncArg {
+// is no method of that name, then MakeStructBuilder will
+// return an error.
+func WithMethodCall(methodName string) FillerFuncArg {
 	// Implementation note:
 	// We'll use a Reflective to invoke the method using the
 	// the version of the method that takes an explicit
 	// receiver.
 	return func(o *fillerOptions) {
-		o.postMethodName = methodName
+		o.postMethodName = append(o.postMethodName, methodName)
 	}
 }
 

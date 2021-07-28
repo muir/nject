@@ -2,7 +2,7 @@
 
 ## api.go
 
-Defines the public APIs.  Functions transform raw providers into
+Defines most of the public APIs.  Functions transform raw providers into
 annotated provider objects.
 
 ## nject.go

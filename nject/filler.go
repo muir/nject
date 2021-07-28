@@ -63,7 +63,7 @@ func getInZero(cc canCall) reflect.Type {
 
 type fillerOptions struct {
 	tag            string
-	postMethodName string
+	postMethodName []string
 	postAction     map[string]interface{}
 	create         bool
 }
@@ -225,6 +225,13 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	}
 	chain = append(chain, p)
 	chain = append(chain, additionalReflectives...)
+	for _, name := range options.postMethodName {
+		m, err := generatePostMethod(originalType, name)
+		if err != nil {
+			return nil, err
+		}
+		chain = append(chain, m)
+	}
 	if len(chain) == 1 {
 		return p, nil
 	}
@@ -436,4 +443,37 @@ func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.T
 				return funcAsValue.Call(in)
 			},
 		}), nil
+}
+
+func generatePostMethod(modelType reflect.Type, methodName string) (Provider, error) {
+	method, ok := modelType.MethodByName(methodName)
+	if !ok {
+		return nil, fmt.Errorf("WIthPostMethod(%s) on %s: no such method exists", methodName, modelType)
+	}
+	desc := fmt.Sprintf("%s.%s()", modelType, methodName)
+	mt := method.Func.Type()
+	switch {
+	case mt.In(0) == modelType:
+		return Provide(desc, thinReflective{
+			inputs:  typesIn(mt),
+			outputs: typesOut(mt),
+			fun: func(in []reflect.Value) []reflect.Value {
+				return method.Func.Call(in)
+			},
+		}), nil
+	case modelType.Kind() == reflect.Ptr && mt.In(0) == modelType.Elem():
+		inputs := typesIn(mt)
+		inputs[0] = modelType
+		return Provide(desc, thinReflective{
+			inputs:  inputs,
+			outputs: typesOut(mt),
+			fun: func(in []reflect.Value) []reflect.Value {
+				in[0] = in[0].Elem()
+				return method.Func.Call(in)
+			},
+		}), nil
+	default:
+		return nil, fmt.Errorf("internal error #36: no match betwen model %s and method input %s",
+			modelType, method.Type.In(0))
+	}
 }
