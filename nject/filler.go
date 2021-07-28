@@ -99,6 +99,7 @@ var reservedTags = map[string]struct{}{
 // struct all at once.  Tag with "fields" to fill the fields of the
 // embedded struct individually.  The default is "fields".
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
+	// Options handling
 	options := fillerOptions{
 		tag:              "nject",
 		create:           true,
@@ -113,6 +114,17 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by PostAction", tag)
 		}
 	}
+	byType := make(map[typeCode][]interface{})
+	for _, fun := range options.postActionByType {
+		v := reflect.ValueOf(fun)
+		if !v.IsValid() || v.Type().Kind() != reflect.Func || v.Type().NumIn() == 0 {
+			return nil, fmt.Errorf("PostActionByType for %T called with an invalid value: %T", model, fun)
+		}
+		in0 := getTypeCode(v.Type().In(0))
+		byType[in0] = append(byType[in0], fun)
+	}
+
+	// Type verification
 	t := reflect.TypeOf(model)
 	if debugFiller {
 		fmt.Println("filler type", t.String())
@@ -128,6 +140,8 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	}
 	f.typ = t
 	f.inputs = make([]inputDisposition, 0, t.NumField()+1)
+
+	// model creation
 	var addIgnore bool
 	if !options.create {
 		f.inputs = append(f.inputs, inputDisposition{
@@ -144,8 +158,11 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 		})
 		addIgnore = true
 	}
-	var mapStruct func(t reflect.Type, path []int) error
+
+	// Field handling.  A closure so that it can be invoked recursively
+	// since that's how you have to traverse nested structures.
 	var additionalReflectives []interface{}
+	var mapStruct func(t reflect.Type, path []int) error
 	mapStruct = func(t reflect.Type, path []int) error {
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
@@ -184,6 +201,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 									tv, field.Name, field.Type)
 							}
 						default:
+							// PostActionByTag
 							if fun, ok := options.postActionByTag[tv]; ok {
 								ap, err := addTagFieldFiller(np, field, originalType, fun, tv)
 								if err != nil {
@@ -197,12 +215,30 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 					}
 				}
 			}
+
+			// PostActionByName
 			if fun, ok := options.postActionByName[field.Name]; ok {
 				ap, err := addNameFieldFiller(np, field, originalType, fun)
 				if err != nil {
 					return err
 				}
 				additionalReflectives = append(additionalReflectives, ap)
+			}
+
+			// PostActionByType
+			fieldTypes := []reflect.Type{field.Type}
+			if f.pointer {
+				fieldTypes = []reflect.Type{reflect.PtrTo(field.Type), field.Type}
+			}
+			for _, typ := range fieldTypes {
+				for _, fun := range byType[getTypeCode(typ)] {
+					ap, err := addFieldFiller(np, field, originalType, fun,
+						fmt.Sprintf("PostActionByType(%s) for %s", fun, originalType))
+					if err != nil {
+						return err
+					}
+					additionalReflectives = append(additionalReflectives, ap)
+				}
 			}
 			if skip {
 				continue
@@ -228,6 +264,8 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	if err != nil {
 		return nil, err
 	}
+
+	// Build the Provider/Cluster
 	p := Provide(fmt.Sprintf("builder for %T", model), &f)
 	var chain []interface{}
 	if addIgnore {

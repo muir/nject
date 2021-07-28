@@ -98,3 +98,35 @@ func ExamplePostActionByName() {
 	// Output: [11 9]
 	// <nil>
 }
+
+func ExamplePostActionByType() {
+	type S struct {
+		I int32
+		J int64
+	}
+	fmt.Println(Run("example",
+		func() int32 {
+			return 10
+		},
+		func() int64 {
+			return 20
+		},
+		func() *[]int {
+			var x []int
+			return &x
+		},
+		MustMakeStructBuilder(&S{},
+			PostActionByType(func(i int32, a *[]int) {
+				*a = append(*a, int(i))
+			}),
+			PostActionByType(func(i *int32, a *[]int) {
+				*i += 5
+			}),
+		),
+		func(s *S, a *[]int) {
+			fmt.Println(*a, s.I, s.J)
+		},
+	))
+	// Output: [15] 15 20
+	// <nil>
+}
