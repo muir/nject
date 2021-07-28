@@ -493,7 +493,7 @@ func WithMethodCall(methodName string) FillerFuncArg {
 	}
 }
 
-// PostAction establishes a tag value that indicates that
+// PostActionByTag establishes a tag value that indicates that
 // after the struct is built or filled, a function should be called
 // passing a pointer to the tagged field to the function.  The
 // function must take as an input parameter a pointer to the type
@@ -501,8 +501,8 @@ func WithMethodCall(methodName string) FillerFuncArg {
 // type that the field implements.  interface{} is allowed.
 // This function will be added to the injection chain after the
 // function that builds or fills the struct.  If there is also a
-// PostMethod, this function will run before that.
-func PostAction(tagValue string, function interface{}) FillerFuncArg {
+// WithMethodCall, this function will run before that.
+func PostActionByTag(tagValue string, function interface{}) FillerFuncArg {
 	// Implementation note:
 	// There could be more than one field using the same type so
 	// the normal chain parameter passing methods won't work.
@@ -513,7 +513,30 @@ func PostAction(tagValue string, function interface{}) FillerFuncArg {
 	// The actuall Call() we will grab the field from the struct
 	// using it's index and use that to call the function.
 	return func(o *fillerOptions) {
-		o.postAction[tagValue] = function
+		o.postActionByTag[tagValue] = function
+	}
+}
+
+// PostActionByType arranges to call a function for every field in
+// struct that is being filled where the type of the field in
+// the struct exactly matches the first input parameter of the
+// provided function.  PostActionByType calls are made after
+// PostActionByTag calls, but before WithMethodCall invocations.
+//
+// If there is no match to the type of the function, then the function
+// is not invoked.
+func PostActionByType(function interface{}) FillerFuncArg {
+	return func(o *fillerOptions) {
+		o.postActionByType = append(o.postActionByType, function)
+	}
+}
+
+// PostActionByName arranges to call a function passing in the field that
+// has a matching name.  PostActionByName happens before PostActionByType
+// and after PostActionByTag calls.
+func PostActionByName(name string, function interface{}) FillerFuncArg {
+	return func(o *fillerOptions) {
+		o.postActionByName[name] = function
 	}
 }
 
