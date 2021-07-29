@@ -64,18 +64,21 @@ func getInZero(cc canCall) reflect.Type {
 type fillerOptions struct {
 	tag              string
 	postMethodName   []string
-	postActionByTag  map[string]interface{}
-	postActionByName map[string]interface{}
-	postActionByType []interface{}
+	postActionByTag  map[string]postActionOption
+	postActionByName map[string]postActionOption
+	postActionByType []postActionOption
 	create           bool
 }
 
 var reservedTags = map[string]struct{}{
-	"fill":   {},
-	"-":      {},
 	"whole":  {},
 	"blob":   {},
 	"fields": {},
+	"field":  {},
+	"-":      {},
+	"skip":   {},
+	"nofill": {},
+	"fill":   {},
 }
 
 // MakeStructBuilder generates a Provider that wants to receive as
@@ -90,21 +93,35 @@ var reservedTags = map[string]struct{}{
 //
 // Struct tags can be used to control the
 // behavior: the argument controls the name of the struct tag used.
-// A struct tag of "-" or "ignore" indicates that the field should not
-// be filled.  A tag of "fill" is accepted but doesn't do anything as it's
-// the default.
 //
-// Embedded structs can either be filled as a whole or they can be
-// filled field-by-field.  Tag with "whole" or "blob" to fill the embedded
-// struct all at once.  Tag with "fields" to fill the fields of the
-// embedded struct individually.  The default is "fields".
+// The following struct tags are pre-defined.  User-created struct tags
+// (created with PostActionByTag) may not uses these names:
+//
+// "whole" & "blob": indicate that an embedded struct should be filled as
+// a blob rather thatn field-by-field.
+//
+// "field" & "fields": indicates that an embedded struct should be filled
+// field-by-field.  This is the default and the tag exists for clarity.
+//
+// "-" & "skip": the field should not be filled and it should should ignore a
+// PostActionByType and PostActionByName matches.
+// PostActionByTag would still apply.
+//
+// "nofill": the field should not be filled, but all PostActions still
+// apply.  "nofill" overrides other behviors including defaults set with
+// post-actions.
+//
+// "fill": normally if there is a PostActionByTag match, then the field
+// will not be filled from the provider chain.  "fill" overrides that
+// behavior.  "fill" overrides other behaviors including defaults set with
+// post-actions.
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	// Options handling
 	options := fillerOptions{
 		tag:              "nject",
 		create:           true,
-		postActionByTag:  make(map[string]interface{}),
-		postActionByName: make(map[string]interface{}),
+		postActionByTag:  make(map[string]postActionOption),
+		postActionByName: make(map[string]postActionOption),
 	}
 	for _, f := range optArgs {
 		f(&options)
@@ -114,9 +131,9 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by PostAction", tag)
 		}
 	}
-	byType := make(map[typeCode][]interface{})
+	byType := make(map[typeCode][]postActionOption)
 	for _, fun := range options.postActionByType {
-		v := reflect.ValueOf(fun)
+		v := reflect.ValueOf(fun.function)
 		if !v.IsValid() || v.Type().Kind() != reflect.Func || v.Type().NumIn() == 0 {
 			return nil, fmt.Errorf("PostActionByType for %T called with an invalid value: %T", model, fun)
 		}
@@ -176,16 +193,43 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 				continue
 			}
 			var skip bool
+			var noSkip bool
 			var whole bool
+			var hardSkip bool
+			handleFieldFiller := func(fun postActionOption, description string) error {
+				if hardSkip {
+					return nil
+				}
+				ap, filledWithPtr, err := addFieldFiller(np, field, originalType, fun.function, description)
+				if err != nil {
+					return err
+				}
+				if fun.fillSet {
+					if !noSkip {
+						skip = !fun.fill
+					}
+				} else if filledWithPtr {
+					if !noSkip {
+						skip = true
+					}
+				}
+				additionalReflectives = append(additionalReflectives, ap)
+				return nil
+			}
+
 			if options.tag != "" {
 				ps := field.Tag.Get(options.tag)
 				if ps != "" {
 					for _, tv := range strings.Split(ps, ",") {
 						switch tv {
+						case "nofill":
+							skip = true
 						case "fill":
 							skip = false
-						case "-", "ignore":
+							noSkip = true
+						case "-", "skip":
 							skip = true
+							hardSkip = true
 						case "whole", "blob":
 							if field.Type.Kind() == reflect.Struct {
 								whole = true
@@ -203,11 +247,11 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 						default:
 							// PostActionByTag
 							if fun, ok := options.postActionByTag[tv]; ok {
-								ap, err := addTagFieldFiller(np, field, originalType, fun, tv)
+								err := handleFieldFiller(fun, fmt.Sprintf(
+									"PostActionByTag(%s, func) for %s", tv, originalType))
 								if err != nil {
 									return err
 								}
-								additionalReflectives = append(additionalReflectives, ap)
 							} else {
 								return fmt.Errorf("Invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
 							}
@@ -216,13 +260,12 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 				}
 			}
 
-			// PostActionByName
 			if fun, ok := options.postActionByName[field.Name]; ok {
-				ap, err := addNameFieldFiller(np, field, originalType, fun)
+				err := handleFieldFiller(fun, fmt.Sprintf(
+					"PostActionByName(%s, func) for %s", field.Name, originalType))
 				if err != nil {
 					return err
 				}
-				additionalReflectives = append(additionalReflectives, ap)
 			}
 
 			// PostActionByType
@@ -232,12 +275,11 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 			}
 			for _, typ := range fieldTypes {
 				for _, fun := range byType[getTypeCode(typ)] {
-					ap, err := addFieldFiller(np, field, originalType, fun,
-						fmt.Sprintf("PostActionByType(%s) for %s", fun, originalType))
+					err := handleFieldFiller(fun,
+						fmt.Sprintf("PostActionByType(%s) for %s", fun.function, originalType))
 					if err != nil {
 						return err
 					}
-					additionalReflectives = append(additionalReflectives, ap)
 				}
 			}
 			if skip {
@@ -405,28 +447,25 @@ func (r thinReflective) Out(i int) reflect.Type                  { return r.outp
 func (r thinReflective) NumOut() int                             { return len(r.outputs) }
 func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
 
-func addTagFieldFiller(path []int, field reflect.StructField, outerStruct reflect.Type, fun interface{}, tagValue string) (Provider, error) {
-	return addFieldFiller(path, field, outerStruct, fun,
-		fmt.Sprintf("PostActionByTag(%s, func) for %s", tagValue, outerStruct))
-}
-func addNameFieldFiller(path []int, field reflect.StructField, outerStruct reflect.Type, fun interface{}) (Provider, error) {
-	return addFieldFiller(path, field, outerStruct, fun,
-		fmt.Sprintf("PostActionByName(%s, func) for %s", field.Name, outerStruct))
-}
-
 // addFieldFiller creates a Reflective that wraps a closure that
 // unpacks the recently filled struct and extracts the relevant field
 // from that struct and substitutes that into the inputs to
 // the provided function to be called on a field of the struct
 // post-filling.
-func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.Type, fun interface{}, context string) (Provider, error) {
+func addFieldFiller(
+	path []int,
+	field reflect.StructField,
+	outerStruct reflect.Type,
+	fun interface{},
+	context string,
+) (Provider, bool, error) {
 	funcAsValue := reflect.ValueOf(fun)
 	if !funcAsValue.IsValid() {
-		return nil, fmt.Errorf("%s was called with something other than a function", context)
+		return nil, false, fmt.Errorf("%s was called with something other than a function", context)
 	}
 	t := funcAsValue.Type()
 	if t.Kind() != reflect.Func {
-		return nil, fmt.Errorf("%s was called with a %s instead of with a function", context, t)
+		return nil, false, fmt.Errorf("%s was called with a %s instead of with a function", context, t)
 	}
 	inputs := typesIn(t)
 	const bad = 1000000 // a number larger than the number of Methods that an interface might have
@@ -467,14 +506,14 @@ func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.T
 		check(reflect.PtrTo(field.Type), true)
 	}
 	if score == bad {
-		return nil, fmt.Errorf("%s no match found between field type %s and function inputs",
+		return nil, false, fmt.Errorf("%s no match found between field type %s and function inputs",
 			context, field.Type)
 	}
 	targetType := inputs[inputIndex]
 	inputs[inputIndex] = outerStruct
 	structIsPtr := outerStruct.Kind() == reflect.Ptr
 	if needConvert && addressOf {
-		return nil, fmt.Errorf(" %s, matched %s to input %s (converting) but that cannot be combined with conversion to a pointer",
+		return nil, false, fmt.Errorf(" %s, matched %s to input %s (converting) but that cannot be combined with conversion to a pointer",
 			context, field.Type, targetType)
 	}
 
@@ -497,7 +536,7 @@ func addFieldFiller(path []int, field reflect.StructField, outerStruct reflect.T
 				in[inputIndex] = v
 				return funcAsValue.Call(in)
 			},
-		}), nil
+		}), addressOf, nil
 }
 
 func generatePostMethod(modelType reflect.Type, methodName string) (Provider, error) {

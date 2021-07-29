@@ -558,7 +558,7 @@ func WithMethodCall(methodName string) FillerFuncArg {
 // This function will be added to the injection chain after the
 // function that builds or fills the struct.  If there is also a
 // WithMethodCall, this function will run before that.
-func PostActionByTag(tagValue string, function interface{}) FillerFuncArg {
+func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
 	// Implementation note:
 	// There could be more than one field using the same type so
 	// the normal chain parameter passing methods won't work.
@@ -568,8 +568,9 @@ func PostActionByTag(tagValue string, function interface{}) FillerFuncArg {
 	// that type in the list of inputs with the struct being filled.
 	// The actuall Call() we will grab the field from the struct
 	// using it's index and use that to call the function.
+	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
-		o.postActionByTag[tagValue] = function
+		o.postActionByTag[tagValue] = options
 	}
 }
 
@@ -581,18 +582,20 @@ func PostActionByTag(tagValue string, function interface{}) FillerFuncArg {
 //
 // If there is no match to the type of the function, then the function
 // is not invoked.
-func PostActionByType(function interface{}) FillerFuncArg {
+func PostActionByType(function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
+	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
-		o.postActionByType = append(o.postActionByType, function)
+		o.postActionByType = append(o.postActionByType, options)
 	}
 }
 
 // PostActionByName arranges to call a function passing in the field that
 // has a matching name.  PostActionByName happens before PostActionByType
 // and after PostActionByTag calls.
-func PostActionByName(name string, function interface{}) FillerFuncArg {
+func PostActionByName(name string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
+	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
-		o.postActionByName[name] = function
+		o.postActionByName[name] = options
 	}
 }
 
@@ -601,6 +604,40 @@ func PostActionByName(name string, function interface{}) FillerFuncArg {
 // provider chain rather than starting fresh with a new structure.
 func FillExisting(o *fillerOptions) {
 	o.create = false
+}
+
+type PostActionFuncArg func(*postActionOption)
+
+type postActionOption struct {
+	function interface{}
+	fill     bool
+	fillSet  bool
+}
+
+func makePostActionOption(function interface{}, userOpts []PostActionFuncArg, typeOpts ...PostActionFuncArg) postActionOption {
+	options := postActionOption{
+		function: function,
+	}
+	for _, opt := range typeOpts {
+		opt(&options)
+	}
+	for _, opt := range userOpts {
+		opt(&options)
+	}
+	return options
+}
+
+// TODO: add example
+
+// WithFill overrides the default behaviors of PostActionByType, PostActionByName,
+// and PostActionByTag with respect to the field being automatically filled.
+// By default, if there is a post-action that that recevies a pointer to the
+// field, then the field will not be filled from the injection chain.
+func WithFill(b bool) PostActionFuncArg {
+	return func(o *postActionOption) {
+		o.fill = b
+		o.fillSet = true
+	}
 }
 
 // MustMakeStructBuilder wraps a panic around failed
@@ -615,8 +652,7 @@ func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
 
 // TODO: add example
 
-// ProvideRequireGap identifies types that are required but are not
-// provided.
+// ProvideRequireGap identifies types that are required but are not provided.
 func ProvideRequireGap(provided []reflect.Type, required []reflect.Type) []reflect.Type {
 	have := make(map[typeCode]struct{})
 	for _, t := range provided {

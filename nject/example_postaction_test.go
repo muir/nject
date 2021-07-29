@@ -16,7 +16,7 @@ func ExamplePostActionByTag() {
 		},
 		nject.MustMakeStructBuilder(&S{}, nject.PostActionByTag("square-me", func(i *int) {
 			*i *= *i
-		})),
+		}, nject.WithFill(true))),
 		func(s *S) {
 			fmt.Println(s.I)
 		},
@@ -120,10 +120,10 @@ func ExamplePostActionByType() {
 		nject.MustMakeStructBuilder(&S{},
 			nject.PostActionByType(func(i int32, a *[]int) {
 				*a = append(*a, int(i))
-			}),
+			}, nject.WithFill(true)),
 			nject.PostActionByType(func(i *int32, a *[]int) {
 				*i += 5
-			}),
+			}, nject.WithFill(true)),
 		),
 		func(s *S, a *[]int) {
 			fmt.Println(*a, s.I, s.J)

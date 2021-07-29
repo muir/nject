@@ -10,9 +10,9 @@ import (
 type FillStruct struct {
 	x   int
 	s0  s0            `t1:"-"`
-	s1  s1            `t1:"ignore"`
+	s1  s1            `t1:"nofill"`
 	S2  s2            `t1:"fill"`
-	Sub FillSubStruct `t1:"fields" t2:"whole" t3:"ignore"`
+	Sub FillSubStruct `t1:"fields" t2:"whole" t3:"nofill"`
 }
 
 type FillSubStruct struct {
