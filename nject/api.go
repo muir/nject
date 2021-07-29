@@ -8,7 +8,9 @@ import (
 	"sync/atomic"
 )
 
-// Collection holds a sequence of providers and sub-collections
+// Collection holds a sequence of providers and sub-collections.  A Collection
+// implements the Provider interface and can be used anywhere a Provider is
+// required.
 type Collection struct {
 	name     string
 	contents []*provider
@@ -332,14 +334,20 @@ func (c *Collection) bindFast(invokeFunc interface{}, initFunc interface{}) erro
 	return doBind(c, invokeF, initF, true)
 }
 
-// TODO: add an example
-
 // SetCallback expects to receive a function as an argument.  SetCallback() will call
 // that function.  That function in turn should take one or two functions
 // as arguments.  The first argument must be an invoke function (see Bind).
 // The second argument (if present) must be an init function.  The invoke func
 // (and the init func if present) will be created by SetCallback() and passed
 // to the function SetCallback calls.
+//
+// If there is an init function, it must be called once before the invoke function
+// is ever called.  Calling the invoke function will invoke the the sequence of
+// providers.
+//
+// Whatever arguments the invoke and init functions take will be passed into the
+// chain.  Whatever values the invoke function returns must be produced by the
+// injection chain.
 func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 	setter := reflect.ValueOf(setCallbackFunc)
 	setterType := setter.Type()
@@ -374,6 +382,14 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 		}
 	}
 	return err
+}
+
+// ForEachProvider iterates over the Providers within a Collection
+// invoking a function.
+func (c Collection) ForEachProvider(f func(Provider)) {
+	for _, fm := range c.contents {
+		f(fm)
+	}
 }
 
 // Run is different from bind: the provider chain is run, not bound
@@ -462,15 +478,36 @@ type Reflective interface {
 	Call(in []reflect.Value) []reflect.Value
 }
 
+// GeneratedFromInjectionChain is a special kind of provider that inspects the rest of the
+// injection chain to replace itself with a regular provider.  The ReplaceSelf method will
+// be called only once.
+type generatedFromInjectionChain interface {
+	ReplaceSelf(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error)
+}
+
+var _ generatedFromInjectionChain = gfic{}
+
+type gfic struct {
+	f func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error)
+}
+
+func (g gfic) ReplaceSelf(before Collection, after Collection) (selfReplacement Provider, err error) {
+	return g.f(before, after)
+}
+
+func GenerateFromInjectionChain(
+	f func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error),
+) generatedFromInjectionChain {
+	return gfic{f}
+}
+
 type ignore struct{}
 
-// FillerFuncArg is a functional argument for
-// MakeStructBuilder and MakeStructFiller.
+// FillerFuncArg is a functional argument for MakeStructBuilder
 type FillerFuncArg func(*fillerOptions)
 
 // WithTag sets the struct tag to use for per-struct-field
-// directives in MakeStructBuilder and MakeStructFiller.  The
-// default tag is "nject"
+// directives in MakeStructBuilder.  The default tag is "nject"
 func WithTag(tag string) FillerFuncArg {
 	return func(o *fillerOptions) {
 		o.tag = tag
@@ -555,4 +592,21 @@ func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
 		panic(err.Error())
 	}
 	return p
+}
+
+// ProvideRequireGap identifies types that are required but are not
+// provided.
+func ProvideRequireGap(provided []reflect.Type, required []reflect.Type) []reflect.Type {
+	have := make(map[typeCode]struct{})
+	for _, t := range provided {
+		have[getTypeCode(t)] = struct{}{}
+	}
+	var missing []reflect.Type
+	for _, t := range required {
+		if _, ok := have[getTypeCode(t)]; ok {
+			continue
+		}
+		missing = append(missing, t)
+	}
+	return missing
 }

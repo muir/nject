@@ -1,7 +1,9 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 // Singleton providers get run only once even if their arguments are different.
@@ -9,12 +11,12 @@ func ExampleSingleton() {
 	type aStruct struct {
 		ValueInStruct int
 	}
-	structProvider := Singleton(func(s string, i int) *aStruct {
+	structProvider := nject.Singleton(func(s string, i int) *aStruct {
 		return &aStruct{
 			ValueInStruct: len(s) * i,
 		}
 	})
-	_ = Run("chain1",
+	_ = nject.Run("chain1",
 		"four",
 		4,
 		structProvider,
@@ -22,7 +24,7 @@ func ExampleSingleton() {
 			fmt.Printf("inputs are %s and %d, value is %d\n", s, i, a.ValueInStruct)
 		},
 	)
-	_ = Run("chain2",
+	_ = nject.Run("chain2",
 		"seven",
 		5,
 		structProvider,

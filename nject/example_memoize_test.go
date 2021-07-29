@@ -1,7 +1,9 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 // Memoize implies Chacheable.  To make sure that Memoize can actually function
@@ -13,14 +15,14 @@ func ExampleMemoize() {
 	type aStruct struct {
 		ValueInStruct int
 	}
-	structProvider := Memoize(func(ip *int, i int) *aStruct {
+	structProvider := nject.Memoize(func(ip *int, i int) *aStruct {
 		return &aStruct{
 			ValueInStruct: i * *ip,
 		}
 	})
 	exampleInt := 7
 	ip := &exampleInt
-	_ = Run("chain1",
+	_ = nject.Run("chain1",
 		2,
 		ip,
 		structProvider,
@@ -29,7 +31,7 @@ func ExampleMemoize() {
 			s.ValueInStruct = 22
 		},
 	)
-	_ = Run("chain2",
+	_ = nject.Run("chain2",
 		3,
 		ip,
 		structProvider,
@@ -38,7 +40,7 @@ func ExampleMemoize() {
 		},
 	)
 	exampleInt = 33
-	_ = Run("chain3",
+	_ = nject.Run("chain3",
 		2,
 		ip,
 		structProvider,

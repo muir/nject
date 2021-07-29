@@ -1,7 +1,9 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 type S struct {
@@ -17,11 +19,13 @@ func (s S) Print() {
 }
 
 func ExampleMethodCall() {
-	Run("example",
+	nject.Run("example",
 		func() int {
 			return 4
 		},
-		MustMakeStructBuilder(&S{}, WithMethodCall("Square"), WithMethodCall("Print")),
+		nject.MustMakeStructBuilder(&S{},
+			nject.WithMethodCall("Square"),
+			nject.WithMethodCall("Print")),
 		func(s *S) {
 			fmt.Println("end")
 		},

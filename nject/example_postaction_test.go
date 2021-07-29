@@ -1,18 +1,20 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 func ExamplePostActionByTag() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
-	Run("example",
+	nject.Run("example",
 		func() int {
 			return 4
 		},
-		MustMakeStructBuilder(&S{}, PostActionByTag("square-me", func(i *int) {
+		nject.MustMakeStructBuilder(&S{}, nject.PostActionByTag("square-me", func(i *int) {
 			*i *= *i
 		})),
 		func(s *S) {
@@ -26,11 +28,11 @@ func ExamplePostActionByTag_wihtoutPointers() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
-	Run("example",
+	nject.Run("example",
 		func() int {
 			return 4
 		},
-		MustMakeStructBuilder(S{}, PostActionByTag("square-me", func(i int) {
+		nject.MustMakeStructBuilder(S{}, nject.PostActionByTag("square-me", func(i int) {
 			fmt.Println(i * i)
 		})),
 		func(s S) {
@@ -46,7 +48,7 @@ func ExamplePostActionByTag_conversion() {
 		I int32 `nject:"rollup"`
 		J int32 `nject:"rolldown"`
 	}
-	fmt.Println(Run("example",
+	fmt.Println(nject.Run("example",
 		func() int32 {
 			return 10
 		},
@@ -54,11 +56,11 @@ func ExamplePostActionByTag_conversion() {
 			var x []int
 			return &x
 		},
-		MustMakeStructBuilder(S{},
-			PostActionByTag("rollup", func(i int, a *[]int) {
+		nject.MustMakeStructBuilder(S{},
+			nject.PostActionByTag("rollup", func(i int, a *[]int) {
 				*a = append(*a, i+1)
 			}),
-			PostActionByTag("rolldown", func(i int64, a *[]int) {
+			nject.PostActionByTag("rolldown", func(i int64, a *[]int) {
 				*a = append(*a, int(i)-1)
 			}),
 		),
@@ -75,7 +77,7 @@ func ExamplePostActionByName() {
 		I int32
 		J int32
 	}
-	fmt.Println(Run("example",
+	fmt.Println(nject.Run("example",
 		func() int32 {
 			return 10
 		},
@@ -83,11 +85,11 @@ func ExamplePostActionByName() {
 			var x []int
 			return &x
 		},
-		MustMakeStructBuilder(S{},
-			PostActionByName("I", func(i int, a *[]int) {
+		nject.MustMakeStructBuilder(S{},
+			nject.PostActionByName("I", func(i int, a *[]int) {
 				*a = append(*a, i+1)
 			}),
-			PostActionByName("J", func(i int64, a *[]int) {
+			nject.PostActionByName("J", func(i int64, a *[]int) {
 				*a = append(*a, int(i)-1)
 			}),
 		),
@@ -104,7 +106,7 @@ func ExamplePostActionByType() {
 		I int32
 		J int64
 	}
-	fmt.Println(Run("example",
+	fmt.Println(nject.Run("example",
 		func() int32 {
 			return 10
 		},
@@ -115,11 +117,11 @@ func ExamplePostActionByType() {
 			var x []int
 			return &x
 		},
-		MustMakeStructBuilder(&S{},
-			PostActionByType(func(i int32, a *[]int) {
+		nject.MustMakeStructBuilder(&S{},
+			nject.PostActionByType(func(i int32, a *[]int) {
 				*a = append(*a, int(i))
 			}),
-			PostActionByType(func(i *int32, a *[]int) {
+			nject.PostActionByType(func(i *int32, a *[]int) {
 				*i += 5
 			}),
 		),

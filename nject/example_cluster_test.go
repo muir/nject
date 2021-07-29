@@ -1,15 +1,17 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 func ExampleCluster() {
-	chain := Sequence("overall",
+	chain := nject.Sequence("overall",
 		func() string {
 			return "example string"
 		},
-		Cluster("first-cluster",
+		nject.Cluster("first-cluster",
 			func(s string) int32 {
 				return int32(len(s))
 			},
@@ -20,7 +22,7 @@ func ExampleCluster() {
 				return int64(i)
 			},
 		),
-		Cluster("second-cluster",
+		nject.Cluster("second-cluster",
 			func(s string) uint32 {
 				return uint32(len(s))
 			},
@@ -32,13 +34,13 @@ func ExampleCluster() {
 			},
 		),
 	)
-	_ = Run("does not consume uint64",
+	_ = nject.Run("does not consume uint64",
 		chain,
 		func(s string) {
 			fmt.Println("no need for data from clusters")
 		},
 	)
-	_ = Run("consumes uint64",
+	_ = nject.Run("consumes uint64",
 		chain,
 		func(u uint64) {
 			fmt.Println("got value that needed both chains -", u)

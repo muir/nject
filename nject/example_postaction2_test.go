@@ -1,7 +1,9 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 type Causer interface {
@@ -27,18 +29,18 @@ func ExamplePostActionByTag_withInterfaces() {
 	type S struct {
 		Error Causer `nject:"print-error,print-cause"`
 	}
-	fmt.Println(Run("example",
+	fmt.Println(nject.Run("example",
 		func() error {
 			return fmt.Errorf("an injected error")
 		},
 		func(err error) Causer {
 			return MyError{err: err}
 		},
-		MustMakeStructBuilder(S{},
-			PostActionByTag("print-error", func(err error) {
+		nject.MustMakeStructBuilder(S{},
+			nject.PostActionByTag("print-error", func(err error) {
 				fmt.Println(err)
 			}),
-			PostActionByTag("print-cause", func(err Causer) {
+			nject.PostActionByTag("print-cause", func(err Causer) {
 				fmt.Println("Cause:", err.Unwrap())
 			}),
 		),

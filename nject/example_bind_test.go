@@ -1,12 +1,14 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 // Bind does as much work before invoke as possible.
 func ExampleCollection_Bind() {
-	providerChain := Sequence("example sequence",
+	providerChain := nject.Sequence("example sequence",
 		func(s string) int {
 			return len(s)
 		},
