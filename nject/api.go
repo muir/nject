@@ -25,8 +25,8 @@ type Provider interface {
 }
 
 // Sequence creates a Collection of providers.  Each collection must
-// have a name.  The providers can be: functions, variables, or
-// *Collections, or *Providers.
+// have a name.  The providers can be: functions, variables, literal values,
+// Collections, *Collections, or Providers.
 //
 // Functions must match one of the expected patterns.
 //
@@ -54,8 +54,8 @@ var clusterId int32 = 1
 // or excluded as a group.  This doesn't apply to providers that cannot
 // be included at all.  It also downgrades providers that are in the
 // cluster that would normally be considered desired because they don't
-// return anything and aren't wrappers: they're no longer considered
-// desired.
+// return anything and aren't wrappers: they're no longer automatically
+// considered desired.
 func Cluster(name string, providers ...interface{}) *Collection {
 	c := newCollection(name, providers...)
 	id := atomic.AddInt32(&clusterId, 1)
@@ -65,13 +65,16 @@ func Cluster(name string, providers ...interface{}) *Collection {
 	return c
 }
 
-// Append appends additional providers onto an existing collection
+// Append adds additional providers onto an existing collection
 // to create a new collection.  The additional providers may be
 // value literals, functions, Providers, or *Collections.  The original
 // collection is not modified.
 func (c *Collection) Append(name string, funcs ...interface{}) *Collection {
 	nc := newCollection(name, funcs...)
-	nc.contents = append(c.contents, nc.contents...)
+	contents := make([]*provider, 0, len(c.contents)+len(nc.contents))
+	contents = append(contents, c.contents...)
+	contents = append(contents, nc.contents...)
+	nc.contents = contents
 	return nc
 }
 
@@ -88,6 +91,8 @@ func Provide(name string, fn interface{}) Provider {
 	})
 }
 
+// TODO: add example
+
 // MustCache creates an Inject item and annotates it as required to be
 // in the STATIC set.  If it cannot be placed in the STATIC set
 // then any collection that includes it is invalid.
@@ -97,6 +102,8 @@ func MustCache(fn interface{}) Provider {
 		fm.cacheable = true
 	})
 }
+
+// TODO: add example
 
 // Cacheable creates an inject item and annotates it as allowed to be
 // in the STATIC chain.  Without this annotation, MustCache, or
@@ -162,6 +169,8 @@ func Memoize(fn interface{}) Provider {
 	})
 }
 
+// TODO: add example
+
 // Required creates a new provider and annotates it as
 // required: it will be included in the provider chain even
 // if its outputs are not used.
@@ -172,6 +181,8 @@ func Required(fn interface{}) Provider {
 		fm.required = true
 	})
 }
+
+// TODO: add example
 
 // Desired creates a new provider and annotates it as
 // desired: it will be included in the provider chain
@@ -186,6 +197,8 @@ func Desired(fn interface{}) Provider {
 		fm.desired = true
 	})
 }
+
+// TODO: add example
 
 // MustConsume creates a new provider and annotates it as
 // needing to have all of its output values consumed.  If
@@ -221,6 +234,8 @@ func MustConsume(fn interface{}) Provider {
 	})
 }
 
+// TODO: add example
+
 // ConsumptionOptional creates a new provider and annotates it as
 // allowed to have some of its return values ignored.
 // Without this annotation, a wrap function will not be included
@@ -251,6 +266,8 @@ func callsInner(fn interface{}) Provider {
 	})
 }
 
+// TODO: add example
+
 // Loose annotates a wrap function to indicate that when trying
 // to match types against the outputs and return values from this
 // provider, an in-exact match is acceptable.  This matters when inputs and
@@ -265,6 +282,8 @@ func Loose(fn interface{}) Provider {
 		fm.loose = true
 	})
 }
+
+// TODO: add example
 
 // NonFinal annotates a provider to say that it shouldn't be considered the
 // final provider in a list of providers.  This is to make it possible to
@@ -593,6 +612,8 @@ func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
 	}
 	return p
 }
+
+// TODO: add example
 
 // ProvideRequireGap identifies types that are required but are not
 // provided.

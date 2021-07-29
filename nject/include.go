@@ -196,6 +196,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	if err != nil {
 		return fmt.Errorf("internal error: uh oh #2")
 	}
+
 	return nil
 }
 
