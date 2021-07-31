@@ -200,7 +200,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 				if hardSkip {
 					return nil
 				}
-				ap, filledWithPtr, err := addFieldFiller(np, field, originalType, fun.function, description)
+				ap, filledWithPtr, err := addFieldFiller(np, field, originalType, fun, description)
 				if err != nil {
 					return err
 				}
@@ -456,10 +456,10 @@ func addFieldFiller(
 	path []int,
 	field reflect.StructField,
 	outerStruct reflect.Type,
-	fun interface{},
+	option postActionOption,
 	context string,
 ) (Provider, bool, error) {
-	funcAsValue := reflect.ValueOf(fun)
+	funcAsValue := reflect.ValueOf(option.function)
 	if !funcAsValue.IsValid() {
 		return nil, false, fmt.Errorf("%s was called with something other than a function", context)
 	}
@@ -475,6 +475,7 @@ func addFieldFiller(
 	var inputIndex int
 	var addressOf bool
 	var needConvert bool
+	var countEmptyInterfaces int
 	for i, in := range inputs {
 		check := func(t reflect.Type, aOf bool) {
 			var s int
@@ -502,8 +503,19 @@ func addFieldFiller(
 			addressOf = aOf
 			needConvert = c
 		}
+		if option.matchToInterface {
+			if in == emptyInterfaceType {
+				countEmptyInterfaces++
+				inputIndex = i
+				addressOf = true
+			}
+			continue
+		}
 		check(field.Type, false)
 		check(reflect.PtrTo(field.Type), true)
+	}
+	if option.matchToInterface && countEmptyInterfaces != 1 {
+		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in fucntion", context)
 	}
 	if score == bad {
 		return nil, false, fmt.Errorf("%s no match found between field type %s and function inputs",
