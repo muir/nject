@@ -433,6 +433,19 @@ func copyIntSlice(in []int) []int {
 	return c
 }
 
+// MakeReflective is a simple wrapper to create a Reflective
+func MakeReflective(
+	inputs []reflect.Type,
+	outputs []reflect.Type,
+	function func([]reflect.Value) []reflect.Value,
+) Reflective {
+	return thinReflective{
+		inputs:  inputs,
+		outputs: outputs,
+		fun:     function,
+	}
+}
+
 type thinReflective struct {
 	inputs  []reflect.Type
 	outputs []reflect.Type
