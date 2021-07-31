@@ -96,7 +96,15 @@ func (fm *provider) copy() *provider {
 type thing interface {
 	modify(func(*provider)) thing
 	flatten() []*provider
+
+	// For single providers, DownFlows includes all inputs and
+	// all outputs.  For collections, Downflows only includes
+	// the net inputs and net outputs.
 	DownFlows() (inputs []reflect.Type, outputs []reflect.Type)
+
+	// For single providers, Upflows includes all consumes and
+	// all returns.  For collections, Upflows only includes
+	// the net consumes and returns.
 	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
@@ -340,31 +348,49 @@ func effectiveOutputs(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	return inputs, typesIn(i0)
 }
 
-func (c Collection) dedupeAcrossContents(f func(fm *provider) []reflect.Type) []reflect.Type {
-	seen := make(map[typeCode]struct{})
-	unique := make([]reflect.Type, 0, len(c.contents)*4)
+func (c Collection) netFlows(f func(fm *provider) ([]reflect.Type, []reflect.Type)) ([]reflect.Type, []reflect.Type) {
+	seenIn := make(map[reflect.Type]struct{})
+	uniqueIn := make([]reflect.Type, 0, len(c.contents)*4)
+	seenOut := make(map[reflect.Type]struct{})
+	uniqueOut := make([]reflect.Type, 0, len(c.contents)*4)
 	for _, fm := range c.contents {
-		types := f(fm)
-		for _, t := range types {
-			tc := getTypeCode(t)
-			if _, ok := seen[tc]; ok {
+		inputs, outputs := f(fm)
+		inputsByType := make(map[reflect.Type]struct{})
+		for _, input := range inputs {
+			inputsByType[input] = struct{}{}
+			if _, ok := seenOut[input]; ok {
 				continue
 			}
-			seen[tc] = struct{}{}
-			unique = append(unique, t)
+			if _, ok := seenIn[input]; ok {
+				continue
+			}
+			seenIn[input] = struct{}{}
+			uniqueIn = append(uniqueIn, input)
+		}
+		for _, output := range outputs {
+			if _, ok := inputsByType[output]; ok {
+				continue
+			}
+			if _, ok := seenIn[output]; ok {
+				continue
+			}
+			if _, ok := seenOut[output]; ok {
+				continue
+			}
+			seenOut[output] = struct{}{}
+			uniqueOut = append(uniqueOut, output)
 		}
 	}
-	return unique
+	return uniqueIn, uniqueOut
 }
 
+// DownFlows provides the net unresolved flows down the injection chain.
+// If a type is used both as input and as output for the same provider,
+// then that type counts as an input only.
 func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
-	return c.dedupeAcrossContents(func(fm *provider) []reflect.Type {
-			inputs, _ := fm.DownFlows()
-			return inputs
-		}), c.dedupeAcrossContents(func(fm *provider) []reflect.Type {
-			_, outputs := fm.DownFlows()
-			return outputs
-		})
+	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
+		return fm.DownFlows()
+	})
 }
 
 func (p provider) UpFlows() ([]reflect.Type, []reflect.Type) {
@@ -396,14 +422,14 @@ func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	return typesOut(i0), typesOut(fn)
 }
 
+// DownFlows provides the net unresolved flows up the injection chain.
+// If a type is used both as value it consumes as a return value and also
+// as a value that it in turn returns, then the up flow for that provider will
+// be counted only by what it consumes.
 func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
-	return c.dedupeAcrossContents(func(fm *provider) []reflect.Type {
-			consumes, _ := fm.UpFlows()
-			return consumes
-		}), c.dedupeAcrossContents(func(fm *provider) []reflect.Type {
-			_, returns := fm.UpFlows()
-			return returns
-		})
+	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
+		return fm.UpFlows()
+	})
 }
 
 // Reorder collection to handle providers marked nonFinal by shifting
