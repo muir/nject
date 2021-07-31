@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/BlueOwlOpenSource/nject/npoint"
 	"github.com/gorilla/mux"
+	"github.com/muir/nject/npoint"
 )
 
 // The npoint framework distinguishes parameters based on their types.

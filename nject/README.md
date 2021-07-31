@@ -1,10 +1,10 @@
 # nject - dependency injection 
 
-[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject/nject?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject/nject)
+[![GoDoc](https://godoc.org/github.com/muir/nject/nject?status.png)](http://godoc.org/github.com/muir/nject/nject)
 
 Install:
 
-	go get github.com/BlueOwlOpenSource/nject
+	go get github.com/muir/nject
 
 ---
 

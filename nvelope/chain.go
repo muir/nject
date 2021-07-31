@@ -3,8 +3,8 @@ package nvelope
 import (
 	"encoding/json"
 	"encoding/xml"
-	"net/http"
 	"io"
+	"net/http"
 
 	"github.com/muir/nject/nject"
 )
@@ -159,18 +159,3 @@ func nil204(inner func() (Response, error), w DeferredWriter) {
 		w.Flush()
 	}
 }
-
-var ReadBody = nject.Provide("read-body", readBody)
-
-func readBody(r *http.Requet) ([]byte, nject.TerminalError) {
-	defer r.Body.Close()
-	return io.ReadAll(r.Body)
-}
-
-var AutoHandler = MakeHandlerGenerator(SupportXML, SupportJSON)
-
-func MakeHandlerGenerator(args ...HandlerGeneratorArgs) func(interface{}) interface{} {
-	
-
-AutoHandler(LookupThing)
-func LookupThing(req MyRequ, log Log, etc)

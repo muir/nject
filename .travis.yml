@@ -5,6 +5,6 @@ go:
   - "1.14"
   - "1.15"
 
-go_import_path: github.com/BlueOwlOpenSource/nject
+go_import_path: github.com/muir/nject
 
 

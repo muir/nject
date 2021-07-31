@@ -48,7 +48,7 @@ endpoints can be registered to the service and the service can be started.
 A simpler way to use endpoint is to use the CreateEndpoint function.  It
 converts a list of handlers into an http.HandlerFunc.  This bypasses service
 creation and endpoint registration.
-See https://github.com/BlueOwlOpenSource/npoint/blob/master/README.md
+See https://github.com/muir/npoint/blob/master/README.md
 for an example.
 
 Terminology
@@ -85,7 +85,7 @@ definition of the endpoint.
 Handlers
 
 The handlers are defined using the nject framework:
-See https://github.com/BlueOwlOpenSource/nject/blob/master/README.md
+See https://github.com/muir/nject/blob/master/README.md
 
 A list of handlers will be invoked from left-to-right.  The first
 handler in the list is invoked first and the last one (the endpoint)

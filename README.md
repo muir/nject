@@ -1,14 +1,14 @@
 # nject & npoint - dependency injection 
 
-[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](https://pkg.go.dev/github.com/BlueOwlOpenSource/nject)
-[![Build Status](https://travis-ci.org/BlueOwlOpenSource/nject.svg)](https://travis-ci.org/BlueOwlOpenSource/nject)
-[![report card](https://goreportcard.com/badge/github.com/BlueOwlOpenSource/nject)](https://goreportcard.com/report/github.com/BlueOwlOpenSource/nject)
-[![Coverage](http://gocover.io/_badge/github.com/BlueOwlOpenSource/nject/nject)](https://gocover.io/github.com/BlueOwlOpenSource/nject/nject)
-[![Coverage](http://gocover.io/_badge/github.com/BlueOwlOpenSource/nject/npoint)](https://gocover.io/github.com/BlueOwlOpenSource/nject/npoint)
+[![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
+[![Build Status](https://travis-ci.org/muir/nject.svg)](https://travis-ci.org/muir/nject)
+[![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/nject)](https://gocover.io/github.com/muir/nject/nject)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/npoint)](https://gocover.io/github.com/muir/nject/npoint)
 
 Install:
 
-	go get github.com/BlueOwlOpenSource/nject
+	go get github.com/muir/nject
 
 ---
 

@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/BlueOwlOpenSource/nject/nject"
+	"github.com/muir/nject/nject"
 )
 
 // Service allows a group of related endpoints to be started
