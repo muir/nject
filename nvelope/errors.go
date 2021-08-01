@@ -1,8 +1,13 @@
 package nvelope
 
-import (
-	"errors"
-)
+type causer interface {
+	error
+	Cause() error
+}
+type unwraper interface {
+	error
+	Unwrap() error
+}
 
 // ReturnCode associates an HTTP return code with a error.
 // if err is nil, then nil is returned.
@@ -22,7 +27,7 @@ func (err returnCode) Cause() error {
 	return err.cause
 }
 
-func (err returnCode) Error() error {
+func (err returnCode) Error() string {
 	return err.Error()
 }
 
@@ -51,8 +56,12 @@ func GetReturnCode(err error) int {
 		if rc, ok := err.(returnCode); ok {
 			return rc.code
 		}
-		if c, ok := err.(Cause); ok {
+		if c, ok := err.(causer); ok {
 			err = c.Cause()
+			continue
+		}
+		if u, ok := err.(unwraper); ok {
+			err = u.Unwrap()
 			continue
 		}
 		return 500

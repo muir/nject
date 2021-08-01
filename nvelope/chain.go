@@ -3,7 +3,6 @@ package nvelope
 import (
 	"encoding/json"
 	"encoding/xml"
-	"io"
 	"net/http"
 
 	"github.com/muir/nject/nject"
@@ -22,11 +21,11 @@ type Logger interface {
 	Warn(msg string, fields ...map[string]interface{})
 }
 
-// JSON is a JSON encoder manufactured by MakeEncoder with default options.
-var JSON = MakeEncoder("JSON", json.Marshal, nil, nil)
+// EncodeJSON is a JSON encoder manufactured by MakeEncoder with default options.
+var EncodeJSON = MakeResponseEncoder("JSON", json.Marshal)
 
-// XML is a XML encoder manufactured by MakeEncoder with default options.
-var JSON = MakeEncoder("XML", xml.Marshal, nil, nil)
+// EncodeXML is a XML encoder manufactured by MakeEncoder with default options.
+var EncodeXML = MakeResponseEncoder("XML", xml.Marshal)
 
 type encoderOptions struct {
 	errorEncoder func(Logger, error) []byte
@@ -60,7 +59,7 @@ func WithAPIEnforcer(apiEnforcer func(enc []byte, r *http.Request) error) Respon
 // errors.  If no logger is specified, no logging will be done.
 func WithLogger(log Logger) ResponseEncoderFuncArg {
 	return func(o *encoderOptions) {
-		o.logger = logger
+		o.log = log
 	}
 }
 
@@ -83,7 +82,7 @@ func MakeResponseEncoder(
 	encoderFuncArgs ...ResponseEncoderFuncArg,
 ) nject.Provider {
 	o := encoderOptions{
-		errorEncoder: func(_ Logger, err error) []byte { return []byte(err.Error) },
+		errorEncoder: func(_ Logger, err error) []byte { return []byte(err.Error()) },
 		apiEnforcer:  func(_ []byte, _ *http.Request) error { return nil },
 		log:          nilLogger{},
 	}
@@ -101,14 +100,13 @@ func MakeResponseEncoder(
 			if w.Done() {
 				return
 			}
-			var enc []byte
 			if err != nil {
 				model = err
 			}
 			enc, err := marshaller(model)
 			if err != nil {
 				w.WriteHeader(500)
-				w.Write(o.errorEncoder(err))
+				w.Write(o.errorEncoder(log, err))
 				o.log.Error("Cannot marshal response",
 					map[string]interface{}{
 						"error":  err.Error(),
@@ -120,7 +118,7 @@ func MakeResponseEncoder(
 			err = o.apiEnforcer(enc, r)
 			if err != nil {
 				w.WriteHeader(500)
-				w.Write(errorEncoder(err))
+				w.Write(o.errorEncoder(log, err))
 				o.log.Error("Invalid API response",
 					map[string]interface{}{
 						"error":  err.Error(),
@@ -132,7 +130,7 @@ func MakeResponseEncoder(
 			if e, ok := model.(error); ok {
 				w.WriteHeader(GetReturnCode(e))
 			}
-			err = w.Write()
+			err = w.Flush()
 			if err != nil {
 				o.log.Warn("Cannot write response",
 					map[string]interface{}{

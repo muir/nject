@@ -1,6 +1,7 @@
 package nvelope
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -11,14 +12,14 @@ import (
 // reset.  When it's time to actually write, use Flush().
 type DeferredWriter struct {
 	base        http.ResponseWriter
-	passthough  bool
+	passthrough bool
 	header      http.Header
 	buffer      []byte
 	status      int
 	resetHeader http.Header
 }
 
-func NewDeferredWriter(w http.ResponseWrite) *DeferredWriter {
+func NewDeferredWriter(w http.ResponseWriter) *DeferredWriter {
 	return &DeferredWriter{
 		base:        w,
 		header:      w.Header().Clone(),
@@ -30,7 +31,7 @@ func NewDeferredWriter(w http.ResponseWrite) *DeferredWriter {
 // Header is the same as http.ResponseWriter.Header
 func (w *DeferredWriter) Header() http.Header {
 	if w.passthrough {
-		return w.base
+		return w.base.Header()
 	}
 	return w.header
 }
@@ -51,7 +52,7 @@ func (w *DeferredWriter) WriteHeader(statusCode int) {
 	if w.passthrough {
 		w.base.WriteHeader(statusCode)
 	} else {
-		status = statusCode
+		w.status = statusCode
 	}
 }
 
@@ -80,7 +81,7 @@ func (w *DeferredWriter) PreserveHeader() {
 // switches to passthrough mode: all future calls to Write(),
 // Header(), etc are passed through to the http.ResponseWriter that
 // was used to initialize the DeferredWrited.
-func (w *deferredWrite) UnderlyingWriter() http.ResponseWriter {
+func (w *DeferredWriter) UnderlyingWriter() http.ResponseWriter {
 	w.passthrough = true
 	h := w.base.Header()
 	for k := range h {
@@ -123,15 +124,22 @@ func (w *DeferredWriter) Flush() error {
 			}
 			return errors.Wrap(err, "flush buffered writer")
 		}
-		return nil
+		break
 	}
+	return nil
 }
 
-// FlushIfNotFlushed calls Flush if the DeferredWriter is not in
+// TODO: make this public or remove it
+// flushIfNotFlushed calls Flush if the DeferredWriter is not in
 // passthrough mode.
-func (w *DeferredWriter) FlushIfNotFlushed() error {
+func (w *DeferredWriter) flushIfNotFlushed() error {
 	if !w.passthrough {
 		return w.Flush()
 	}
 	return nil
+}
+
+// Done returns true if the DeferredWriter is in passthrough mode.
+func (w *DeferredWriter) Done() bool {
+	return w.passthrough
 }

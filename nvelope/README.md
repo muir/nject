@@ -30,7 +30,8 @@ nvelope.Logger interface.
 ### Grab the request body
 
 The request body is more convieniently handled as a []byte .  This is also
-where API enforcement can be done.
+where API enforcement can be done.  The type nvelope.Body is provided by
+nvelope.ReadBody via injection to any provider that wants it.
 
 ### Marshal response
 
@@ -44,6 +45,19 @@ A JSON marshaller is provided: `nvelope.JSON`.
 This is a user-provided optional step that can be used to double-check
 that what is being sent matches the API defintion.
 
+### Decode the request body
+
+The request body needs to be unpacked with an unmarshaller of some kind.
+nvelope.GenerateDecoder creates decoders that examine the injection chain
+looking for models that are consumed but not provided.  If it finds any,
+it examines those models for struct tags that indicate that nvelope should
+create and fill the model.
+
+If so, it generates a provider that fills the model from the request.
+This includes filling fields for the main decoded request body and also
+includes filling fields from URL path elements, URL query parameters, and
+HTTP headers.
+
 ### Check for errors
 
 How to handle errors is likely to be customized so the error responder
@@ -51,6 +65,7 @@ provided with `nvelope` is very simple and should probably be overridden.
 
 Here's what's provded:
 
+XXX
 ```go
 var CatchErrors = nject.Provide("catch-errors", 
 	func(inner func() (Any, error), w DeferredWriter) Any {
