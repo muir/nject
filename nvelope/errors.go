@@ -4,6 +4,7 @@ type causer interface {
 	error
 	Cause() error
 }
+
 type unwraper interface {
 	error
 	Unwrap() error

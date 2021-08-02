@@ -3,6 +3,7 @@ package nvelope
 import (
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"net/http"
 
 	"github.com/muir/nject/nject"
@@ -15,12 +16,6 @@ var InjectWriter = nject.Provide("writer", NewDeferredWriter)
 // from endpoints.
 type Response interface{}
 
-// Logger
-type Logger interface {
-	Error(msg string, fields ...map[string]interface{})
-	Warn(msg string, fields ...map[string]interface{})
-}
-
 // EncodeJSON is a JSON encoder manufactured by MakeEncoder with default options.
 var EncodeJSON = MakeResponseEncoder("JSON", json.Marshal)
 
@@ -28,9 +23,8 @@ var EncodeJSON = MakeResponseEncoder("JSON", json.Marshal)
 var EncodeXML = MakeResponseEncoder("XML", xml.Marshal)
 
 type encoderOptions struct {
-	errorEncoder func(Logger, error) []byte
+	errorEncoder func(BasicLogger, error) []byte
 	apiEnforcer  func(enc []byte, r *http.Request) error
-	log          Logger
 }
 
 type ResponseEncoderFuncArg func(*encoderOptions)
@@ -38,7 +32,7 @@ type ResponseEncoderFuncArg func(*encoderOptions)
 // WithErrorEncoder specifies how to encode error responses.  The default
 // encoding is to simply send err.Error() as plain text.  Error encoding
 // is not allowed to return error itself nor is it allowed to panic.
-func WithErrorEncoder(errorEncoder func(Logger, error) []byte) ResponseEncoderFuncArg {
+func WithErrorEncoder(errorEncoder func(BasicLogger, error) []byte) ResponseEncoderFuncArg {
 	return func(o *encoderOptions) {
 		o.errorEncoder = errorEncoder
 	}
@@ -55,21 +49,6 @@ func WithAPIEnforcer(apiEnforcer func(enc []byte, r *http.Request) error) Respon
 	}
 }
 
-// WithLogger provides a logger for the API encoder to use for logging
-// errors.  If no logger is specified, no logging will be done.
-func WithLogger(log Logger) ResponseEncoderFuncArg {
-	return func(o *encoderOptions) {
-		o.log = log
-	}
-}
-
-type nilLogger struct{}
-
-var _ Logger = nilLogger{}
-
-func (_ nilLogger) Error(msg string, fields ...map[string]interface{}) { return }
-func (_ nilLogger) Warn(msg string, fields ...map[string]interface{})  { return }
-
 // MakeEncoder generates an nject Provider to encode API responses.
 //
 // The generated provider is a wrapper that invokes the rest of the
@@ -82,9 +61,8 @@ func MakeResponseEncoder(
 	encoderFuncArgs ...ResponseEncoderFuncArg,
 ) nject.Provider {
 	o := encoderOptions{
-		errorEncoder: func(_ Logger, err error) []byte { return []byte(err.Error()) },
+		errorEncoder: func(_ BasicLogger, err error) []byte { return []byte(err.Error()) },
 		apiEnforcer:  func(_ []byte, _ *http.Request) error { return nil },
-		log:          nilLogger{},
 	}
 	for _, fa := range encoderFuncArgs {
 		fa(&o)
@@ -92,11 +70,13 @@ func MakeResponseEncoder(
 	return nject.Provide("marshal-"+name,
 		func(
 			inner func() (Response, error),
-			w DeferredWriter,
-			log Logger,
+			w *DeferredWriter,
+			log BasicLogger,
 			r *http.Request,
 		) {
 			model, err := inner()
+			fmt.Println("XXX ENCODE model", model)
+			fmt.Println("XXX ENCODE err", err)
 			if w.Done() {
 				return
 			}
@@ -107,7 +87,7 @@ func MakeResponseEncoder(
 			if err != nil {
 				w.WriteHeader(500)
 				w.Write(o.errorEncoder(log, err))
-				o.log.Error("Cannot marshal response",
+				log.Error("Cannot marshal response",
 					map[string]interface{}{
 						"error":  err.Error(),
 						"method": r.Method,
@@ -119,7 +99,7 @@ func MakeResponseEncoder(
 			if err != nil {
 				w.WriteHeader(500)
 				w.Write(o.errorEncoder(log, err))
-				o.log.Error("Invalid API response",
+				log.Error("Invalid API response",
 					map[string]interface{}{
 						"error":  err.Error(),
 						"method": r.Method,
@@ -130,9 +110,10 @@ func MakeResponseEncoder(
 			if e, ok := model.(error); ok {
 				w.WriteHeader(GetReturnCode(e))
 			}
+			w.Write(enc)
 			err = w.Flush()
 			if err != nil {
-				o.log.Warn("Cannot write response",
+				log.Warn("Cannot write response",
 					map[string]interface{}{
 						"error":  err.Error(),
 						"method": r.Method,

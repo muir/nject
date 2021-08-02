@@ -3,6 +3,7 @@ package nvelope
 import (
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -29,9 +30,9 @@ func readBody(r *http.Request) (Body, nject.TerminalError) {
 	return Body(body), err
 }
 
-// DecodeOnlyJSON is is a pre-defined special nject.Provider
+// DecodeJSON is is a pre-defined special nject.Provider
 // created with GenerateDecoder for decoding JSON requests.
-var DecodeOnlyJSON = GenerateDecoder(
+var DecodeJSON = GenerateDecoder(
 	WithDecoder("application/json", json.Unmarshal),
 	WithDefaultDecoder(json.Unmarshal),
 )
@@ -250,12 +251,13 @@ func GenerateDecoder(
 			}
 
 			inputs := []reflect.Type{httpRequestType}
-			outputs := []reflect.Type{returnType, terminalErrorType}
 			if len(bodyFillers) != 0 {
 				inputs = append(inputs, bodyType)
 			}
+			outputs := []reflect.Type{returnType, terminalErrorType}
 
 			reflective := nject.MakeReflective(inputs, outputs, func(in []reflect.Value) []reflect.Value {
+				fmt.Println("XXX begin decode")
 				r := in[0].Interface().(*http.Request)
 				mp := reflect.New(nonPointer)
 				model := mp.Elem()
@@ -266,7 +268,7 @@ func GenerateDecoder(
 					}
 				}
 				if len(bodyFillers) != 0 {
-					body := in[1].Interface().([]byte)
+					body := []byte(in[1].Interface().(Body))
 					for _, bf := range bodyFillers {
 						setError(bf(model, body, r))
 					}
@@ -287,6 +289,7 @@ func GenerateDecoder(
 					}
 				}
 				ev := reflect.ValueOf(err)
+				fmt.Println("XXX end decode", err)
 				if returnAddress {
 					return []reflect.Value{mp, ev}
 				} else {
@@ -347,6 +350,15 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 				return errors.Wrapf(err, "decode %s %s", from, name)
 			}
 			target.SetUint(i)
+			return nil
+		}, nil
+	case reflect.Float32, reflect.Float64:
+		return func(from string, target reflect.Value, value string) error {
+			f, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return errors.Wrapf(err, "decode %s %s", from, name)
+			}
+			target.SetFloat(f)
 			return nil
 		}, nil
 	case reflect.String:

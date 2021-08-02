@@ -48,6 +48,14 @@ type canFakeType interface {
 	In(int) reflect.Type
 }
 
+func getReflectType(i interface{}) reflectType {
+	if r, ok := i.(Reflective); ok {
+		w := reflectiveWrapper{r}
+		return w
+	}
+	return reflect.TypeOf(i)
+}
+
 // getInZero is used to get the first input type for a function
 // that is in a canCall.  This depends upon knowing that canCall
 // is either a reflect.Type or a Reflective
@@ -413,7 +421,7 @@ func (w reflectiveWrapper) String() string {
 	for i := 0; i < w.NumIn(); i++ {
 		in[i] = w.In(i).String()
 	}
-	out := make([]string, 1, w.NumOut())
+	out := make([]string, w.NumOut())
 	for i := 0; i < w.NumOut(); i++ {
 		out[i] = w.Out(i).String()
 	}

@@ -156,8 +156,8 @@ func makeZero(fm *provider, vMap map[typeCode]int, upCount int, mustZero []typeC
 	}, nil
 }
 
-func terminalErrorIndex(fm *provider) (int, error) {
-	for i, t := range typesOut(reflect.TypeOf(fm.fn)) {
+func terminalErrorIndex(fn reflectType) (int, error) {
+	for i, t := range typesOut(fn) {
 		if t == terminalErrorType {
 			return i, nil
 		}
@@ -199,7 +199,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up") // return values from middleward handler
+		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up") // return values from handler
 		if err != nil {
 			return err
 		}
@@ -263,7 +263,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		errorIndex, err := terminalErrorIndex(fm)
+		errorIndex, err := terminalErrorIndex(getReflectType(fm.fn))
 		if err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		errorIndex, err := terminalErrorIndex(fm)
+		errorIndex, err := terminalErrorIndex(getReflectType(fm.fn))
 		if err != nil {
 			return err
 		}
