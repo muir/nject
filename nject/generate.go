@@ -113,7 +113,7 @@ func generateOutputMapper(fm *provider, start int, param flowType, vmap map[type
 	}, nil
 }
 
-func makeZeroer(fm *provider, vMap map[typeCode]int, mustZero []typeCode, context string) (func(v valueCollection), error) {
+func makeZero(fm *provider, vMap map[typeCode]int, mustZero []typeCode, context string) (func(v valueCollection), error) {
 	zeroMap := make(map[int]reflect.Type)
 	newMap := make(map[int]reflect.Type)
 	done := make(map[typeCode]bool)
@@ -144,18 +144,6 @@ func makeZeroer(fm *provider, vMap map[typeCode]int, mustZero []typeCode, contex
 	}, nil
 }
 
-func makeZero(fm *provider, vMap map[typeCode]int, upCount int, mustZero []typeCode) (func() valueCollection, error) {
-	zeroer, err := makeZeroer(fm, vMap, mustZero, "needed if inner() doesn't get called")
-	if err != nil {
-		return nil, err
-	}
-	return func() valueCollection {
-		zeroUpV := make(valueCollection, upCount)
-		zeroer(zeroUpV)
-		return zeroUpV
-	}, nil
-}
-
 func terminalErrorIndex(fn reflectType) (int, error) {
 	for i, t := range typesOut(fn) {
 		if t == terminalErrorType {
@@ -169,7 +157,6 @@ func generateWrappers(
 	fm *provider,
 	downVmap map[typeCode]int, // value collection map for variables passed down
 	upVmap map[typeCode]int, // value collection map for return values coming up
-	upCount int, // size of value collection to be returned (if it needs to be created)
 ) error {
 	fv := getCanCall(fm.fn)
 
@@ -183,11 +170,10 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		fm.wrapEndpoint = func(downV valueCollection) valueCollection {
-			in := inMap(downV)
-			upV := make(valueCollection, upCount)
-			upMap(upV, fv.Call(in))
-			return upV
+		fm.wrapEndpoint = func(v valueCollection) valueCollection {
+			in := inMap(v)
+			upMap(v, fv.Call(in))
+			return v
 		}
 
 	case wrapperFunc:
@@ -207,7 +193,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, upCount, fm.mustZeroIfInnerNotCalled)
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap in wrapper")
 		if err != nil {
 			return err
 		}
@@ -242,9 +228,17 @@ func generateWrappers(
 			}
 			in := inMap(downV)
 			in[0] = reflect.MakeFunc(in0Type, inner)
+			defer func() {
+				if r := recover(); r != nil {
+					upV = downV
+					zero(upV)
+					panic(r)
+				}
+			}()
 			out := fv.Call(in)
 			if callCount == 0 {
-				upV = zero()
+				upV = downV
+				zero(upV)
 			}
 			upMap(upV, out)
 			return upV
@@ -259,7 +253,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, upCount, fm.mustZeroIfInnerNotCalled)
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap in fallible")
 		if err != nil {
 			return err
 		}
@@ -272,13 +266,13 @@ func generateWrappers(
 			in := inMap(v)
 			out := fv.Call(in)
 			if out[errorIndex].Interface() != nil {
-				upV := zero()
-				upV[upVerrorIndex] = out[errorIndex].Convert(errorType)
+				zero(v)
+				v[upVerrorIndex] = out[errorIndex].Convert(errorType)
 				if debugEnabled() {
 					debugln("ABOUT TO RETURN ERROR")
-					dumpValueArray(upV, "error return", upVmap)
+					dumpValueArray(v, "error return", upVmap)
 				}
-				return true, upV
+				return true, v
 			}
 			outMap(v, append(out[:errorIndex], out[errorIndex+1:]...))
 			debugln("ABOUT TO RETURN NIL")
@@ -335,7 +329,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		zeroer, err := makeZeroer(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skippped functions")
+		zero, err := makeZero(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skippped functions")
 		if err != nil {
 			return err
 		}
@@ -357,7 +351,7 @@ func generateWrappers(
 					debugf("Zeroing for %s", fm)
 					dumpValueArray(v, "BEFORE", downVmap)
 				}
-				zeroer(v)
+				zero(v)
 				if debugEnabled() {
 					dumpValueArray(v, "AFTER", downVmap)
 					debugf("RETURNING %v", err)

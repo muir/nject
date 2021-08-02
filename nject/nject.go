@@ -53,8 +53,7 @@ type provider struct {
 	chainPosition              int
 	mustZeroIfRemainderSkipped []typeCode
 	mustZeroIfInnerNotCalled   []typeCode
-	upVmapCount                int
-	downVmapCount              int
+	vmapCount                  int
 
 	// added when generating
 	wrapWrapper          func(valueCollection, func(valueCollection) valueCollection) valueCollection // added in generate
