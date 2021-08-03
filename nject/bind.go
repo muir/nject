@@ -230,8 +230,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		case wrapperFunc:
 			inner := f
 			w := n.wrapWrapper
-			f = func(v valueCollection) valueCollection {
-				return w(v, inner)
+			f = func(v valueCollection) {
+				w(v, inner)
 			}
 		case injectorFunc, fallibleInjectorFunc:
 			j := i - 1
@@ -246,18 +246,18 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			}
 			j++
 			next := f
-			injectors := make([]func(valueCollection) (bool, valueCollection), 0, i-j+1)
+			injectors := make([]func(valueCollection) bool, 0, i-j+1)
 			for k := j; k <= i; k++ {
 				injectors = append(injectors, collections[runGroup][k].wrapFallibleInjector)
 			}
-			f = func(v valueCollection) valueCollection {
+			f = func(v valueCollection) {
 				for _, injector := range injectors {
-					errored, upV := injector(v)
+					errored := injector(v)
 					if errored {
-						return upV
+						return
 					}
 				}
-				return next(v)
+				next(v)
 			}
 			i = j
 		default:
@@ -362,8 +362,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 						dumpValueArray(values, "invoke - before input copy", downVmap)
 						outMap(values, inputs)
 						dumpValueArray(values, "invoke - after input copy", downVmap)
-						ret := f(values)
-						return inMap(ret)
+						f(values)
+						return inMap(values)
 					}))
 		}
 		debugln("SET INVOKE FUNC - DONE")

@@ -56,10 +56,10 @@ type provider struct {
 	vmapCount                  int
 
 	// added when generating
-	wrapWrapper          func(valueCollection, func(valueCollection) valueCollection) valueCollection // added in generate
-	wrapStaticInjector   func(valueCollection) error                                                  // added in generate
-	wrapFallibleInjector func(valueCollection) (bool, valueCollection)                                // added in generate
-	wrapEndpoint         func(valueCollection) valueCollection                                        // added in generate
+	wrapWrapper          func(valueCollection, func(valueCollection)) // added in generate
+	wrapStaticInjector   func(valueCollection) error                  // added in generate
+	wrapFallibleInjector func(valueCollection) bool                   // added in generate
+	wrapEndpoint         func(valueCollection)                        // added in generate
 }
 
 // copy does not copy wrappers or flows.

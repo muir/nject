@@ -170,10 +170,9 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		fm.wrapEndpoint = func(v valueCollection) valueCollection {
+		fm.wrapEndpoint = func(v valueCollection) {
 			in := inMap(v)
 			upMap(v, fv.Call(in))
-			return v
 		}
 
 	case wrapperFunc:
@@ -198,9 +197,8 @@ func generateWrappers(
 			return err
 		}
 		in0Type := getInZero(fv)
-		fm.wrapWrapper = func(downV valueCollection, next func(valueCollection) valueCollection) valueCollection {
-			var upV valueCollection
-			downVCopy := downV.Copy()
+		fm.wrapWrapper = func(v valueCollection, next func(valueCollection)) {
+			vCopy := v.Copy()
 			callCount := 0
 
 			rTypes := make([]reflect.Type, len(fm.flows[returnedParams]))
@@ -211,14 +209,15 @@ func generateWrappers(
 			// this is not built outside WrapWrapper for thread safety
 			inner := func(i []reflect.Value) []reflect.Value {
 				if callCount > 0 {
-					for i, val := range downVCopy {
-						downV[i] = val
+					// TODO: replace with copy(v, vCopy)?
+					for i, val := range vCopy {
+						v[i] = val
 					}
 				}
 				callCount++
-				outMap(downV, i)
-				upV = next(downV)
-				r := retMap(upV)
+				outMap(v, i)
+				next(v)
+				r := retMap(v)
 				for i, v := range r {
 					if rTypes[i].Kind() == reflect.Interface {
 						r[i] = v.Convert(rTypes[i])
@@ -226,22 +225,20 @@ func generateWrappers(
 				}
 				return r
 			}
-			in := inMap(downV)
+			in := inMap(v)
 			in[0] = reflect.MakeFunc(in0Type, inner)
 			defer func() {
 				if r := recover(); r != nil {
-					upV = downV
-					zero(upV)
+					zero(v)
 					panic(r)
 				}
 			}()
 			out := fv.Call(in)
 			if callCount == 0 {
-				upV = downV
-				zero(upV)
+				zero(v)
 			}
-			upMap(upV, out)
-			return upV
+			upMap(v, out)
+			return
 		}
 
 	case fallibleInjectorFunc:
@@ -262,7 +259,7 @@ func generateWrappers(
 			return err
 		}
 		upVerrorIndex := upVmap[getTypeCode(errorType)]
-		fm.wrapFallibleInjector = func(v valueCollection) (bool, valueCollection) {
+		fm.wrapFallibleInjector = func(v valueCollection) bool {
 			in := inMap(v)
 			out := fv.Call(in)
 			if out[errorIndex].Interface() != nil {
@@ -272,11 +269,11 @@ func generateWrappers(
 					debugln("ABOUT TO RETURN ERROR")
 					dumpValueArray(v, "error return", upVmap)
 				}
-				return true, v
+				return true
 			}
 			outMap(v, append(out[:errorIndex], out[errorIndex+1:]...))
 			debugln("ABOUT TO RETURN NIL")
-			return false, nil
+			return false
 		}
 
 	case injectorFunc:
@@ -288,10 +285,10 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		fm.wrapFallibleInjector = func(v valueCollection) (bool, valueCollection) {
+		fm.wrapFallibleInjector = func(v valueCollection) bool {
 			in := inMap(v)
 			outMap(v, fv.Call(in))
-			return false, nil
+			return false
 		}
 
 	case staticInjectorFunc:
