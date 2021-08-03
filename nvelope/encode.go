@@ -17,26 +17,27 @@ var InjectWriter = nject.Provide("writer", NewDeferredWriter)
 type Response interface{}
 
 // EncodeJSON is a JSON encoder manufactured by MakeEncoder with default options.
-var EncodeJSON = MakeResponseEncoder("JSON", json.Marshal)
+var EncodeJSON = MakeResponseEncoder("JSON", json.Marshal, json.Marshaler(nil))
 
 // EncodeXML is a XML encoder manufactured by MakeEncoder with default options.
-var EncodeXML = MakeResponseEncoder("XML", xml.Marshal)
+var EncodeXML = MakeResponseEncoder("XML", xml.Marshal, xml.Marshaler(nil))
 
 type encoderOptions struct {
-	errorEncoder func(BasicLogger, error) []byte
+	errorModeler func(err) interface{}
 	apiEnforcer  func(enc []byte, r *http.Request) error
 }
 
 type ResponseEncoderFuncArg func(*encoderOptions)
 
-// WithErrorEncoder specifies how to encode error responses.  The default
-// encoding is to simply send err.Error() as plain text.  Error encoding
-// is not allowed to return error itself nor is it allowed to panic.
-func WithErrorEncoder(errorEncoder func(BasicLogger, error) []byte) ResponseEncoderFuncArg {
+// WithErrorModel specifies how to encode error responses when the error
+// does not implement the Marhsaler interface of the encoder being used.
+func WithErrorModel(errorModeler func(error) interface{})
 	return func(o *encoderOptions) {
-		o.errorEncoder = errorEncoder
+		o.errorModeler = errorModeler
 	}
 }
+
+	marshal func(interface{}) ([]byte, error),
 
 // WithAPIEnforcer specifies
 // a function that can check if the encoded API response is valid
@@ -57,7 +58,6 @@ func WithAPIEnforcer(apiEnforcer func(enc []byte, r *http.Request) error) Respon
 // becomes the error.
 func MakeResponseEncoder(
 	name string,
-	marshaller func(interface{}) ([]byte, error),
 	encoderFuncArgs ...ResponseEncoderFuncArg,
 ) nject.Provider {
 	o := encoderOptions{
@@ -83,7 +83,7 @@ func MakeResponseEncoder(
 			if err != nil {
 				model = err
 			}
-			enc, err := marshaller(model)
+			enc, err := marshal(model)
 			if err != nil {
 				w.WriteHeader(500)
 				w.Write(o.errorEncoder(log, err))
