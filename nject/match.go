@@ -38,14 +38,6 @@ func (m interfaceMap) Add(t typeCode, layer int, fm *provider) {
 	}
 }
 
-func (m interfaceMap) Copy() interfaceMap {
-	copy := make(interfaceMap)
-	for tc, imd := range m {
-		copy[tc] = imd
-	}
-	return copy
-}
-
 func aGreaterBInts(a []int, b []int) bool {
 	for i := 0; i < len(a) && i < len(b); i++ {
 		if a[i] > b[i] {
