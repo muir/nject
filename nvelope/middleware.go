@@ -8,21 +8,21 @@ import (
 
 // MiddlewareBaseWriter acts as a translator.  In the Go world, there
 // are a bunch of packages that expect to use the wrapping
-// middleware pattern.  The middleware pattern is harder to
+// func(http.HandlerFunc) http.HandlerFunc pattern.  The func(http.HandlerFunc) http.HandlerFunc pattern is harder to
 // use and not as expressive as the patterns supported by
 // npoint and nvelope, but there may be code written
-// with the middleware pattern that you want to use with
+// with the func(http.HandlerFunc) http.HandlerFunc pattern that you want to use with
 // npoint and nvelope.
 //
-// MiddlewareBaseWriter converts existing middleware functions so that
+// MiddlewareBaseWriter converts existing func(http.HandlerFunc) http.HandlerFunc functions so that
 // they're compatible with nject.  Because Middleware may wrap
 // http.ResponseWriter, it should be used earlier in the injection
 // chain than InjectWriter so that InjectWriter gets the already-wrapped
 // http.ResponseWriter.
-func MiddlewareBaseWriter(m ...middleware) nject.Provider {
+func MiddlewareBaseWriter(m ...func(http.HandlerFunc) http.HandlerFunc) nject.Provider {
 	combined := combineMiddleware(m)
 
-	return nject.Required(nject.Provide("wrapped-middleware-base",
+	return nject.Required(nject.Provide("wrapped-func(http.HandlerFunc) http.HandlerFunc-base",
 		func(inner func(w http.ResponseWriter, r *http.Request), w http.ResponseWriter, r *http.Request) {
 			combined(inner)(w, r)
 		}))
@@ -30,30 +30,28 @@ func MiddlewareBaseWriter(m ...middleware) nject.Provider {
 
 // MiddlewareDeferredWriter acts as a translator.  In the Go world, there
 // are a bunch of packages that expect to use the wrapping
-// middleware pattern.  The middleware pattern is harder to
+// func(http.HandlerFunc) http.HandlerFunc pattern.  The func(http.HandlerFunc) http.HandlerFunc pattern is harder to
 // use and not as expressive as the patterns supported by
 // npoint and nvelope, but there may be code written
-// with the middleware pattern that you want to use with
+// with the func(http.HandlerFunc) http.HandlerFunc pattern that you want to use with
 // npoint and nvelope.
 //
-// MiddlewareDeferredWriter converts existing middleware functions so that
+// MiddlewareDeferredWriter converts existing func(http.HandlerFunc) http.HandlerFunc functions so that
 // they're compatible with nject.  MiddlewareDeferredWriter injects a
-// DeferredWriter into the the middleware handler chain.  If the chain
+// DeferredWriter into the the func(http.HandlerFunc) http.HandlerFunc handler chain.  If the chain
 // replaces the writer, there will be two writers in play at once and
 // results may be inconsistent.  MiddlewareDeferredWriter must be used
 // after InjectWriter.
-func MiddlewareDeferredWriter(m ...middleware) nject.Provider {
+func MiddlewareDeferredWriter(m ...func(http.HandlerFunc) http.HandlerFunc) nject.Provider {
 	combined := combineMiddleware(m)
 
-	return nject.Required(nject.Provide("wrapped-middleware-deferred",
+	return nject.Required(nject.Provide("wrapped-func(http.HandlerFunc) http.HandlerFunc-deferred",
 		func(inner func(w http.ResponseWriter, r *http.Request), w *DeferredWriter, r *http.Request) {
 			combined(inner)(http.ResponseWriter(w), r)
 		}))
 }
 
-type middleware func(http.HandlerFunc) http.HandlerFunc
-
-func combineMiddleware(m []middleware) middleware {
+func combineMiddleware(m []func(http.HandlerFunc) http.HandlerFunc) func(http.HandlerFunc) http.HandlerFunc {
 	switch len(m) {
 	case 0:
 		return func(h http.HandlerFunc) http.HandlerFunc {
