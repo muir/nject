@@ -455,22 +455,45 @@ func MustRun(name string, providers ...interface{}) {
 
 // MustBindSimple binds a collection with an invoke function that takes no
 // arguments and returns no arguments.  It panic()s if Bind() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBindSimple(c *Collection, name string) func() {
+	return c.MustBindSimple()
+}
+
+// MustBindSimple binds a collection with an invoke function that takes no
+// arguments and returns no arguments.  It panic()s if Bind() returns error.
+func (c *Collection) MustBindSimple() func() {
 	var invoke func()
-	MustBind(c, &invoke, nil)
+	c.MustBind(&invoke, nil)
 	return invoke
 }
 
 // MustBindSimpleError binds a collection with an invoke function that takes no
 // arguments and returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBindSimpleError(c *Collection, name string) func() error {
+	return c.MustBindSimpleError()
+}
+
+// MustBindSimpleError binds a collection with an invoke function that takes no
+// arguments and returns no arguments.  It panic()s if Bind() returns error.
+func (c *Collection) MustBindSimpleError() func() error {
 	var invoke func() error
-	MustBind(c, &invoke, nil)
+	c.MustBind(&invoke, nil)
 	return invoke
 }
 
 // MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBind(c *Collection, invokeFunc interface{}, initFunc interface{}) {
+	c.MustBind(invokeFunc, initFunc)
+}
+
+// MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
+func (c *Collection) MustBind(invokeFunc interface{}, initFunc interface{}) {
 	err := c.Bind(invokeFunc, initFunc)
 	if err != nil {
 		panic(DetailedError(err))
@@ -478,7 +501,14 @@ func MustBind(c *Collection, invokeFunc interface{}, initFunc interface{}) {
 }
 
 // MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustSetCallback(c *Collection, binderFunction interface{}) {
+	c.MustSetCallback(binderFunction)
+}
+
+// MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
+func (c *Collection) MustSetCallback(binderFunction interface{}) {
 	err := c.SetCallback(binderFunction)
 	if err != nil {
 		panic(DetailedError(err))

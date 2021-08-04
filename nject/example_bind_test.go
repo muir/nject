@@ -68,3 +68,65 @@ func ExampleCollection_Bind_passing_in_parameters() {
 	// 10 37
 	// 47
 }
+
+func ExampleMustBindSimple() {
+	f := nject.MustBindSimple(
+		nject.Sequence("example",
+			func() int {
+				return 7
+			},
+			func(i int) {
+				fmt.Println(i)
+			},
+		), "bind-name")
+	f()
+	f()
+	// Output: 7
+	// 7
+}
+
+func ExampleCollection_MustBindSimple() {
+	f := nject.Sequence("example",
+		func() int {
+			return 7
+		},
+		func(i int) {
+			fmt.Println(i)
+		},
+	).MustBindSimple()
+	f()
+	f()
+	// Output: 7
+	// 7
+}
+
+func ExampleMustBindSimpleError() {
+	f := nject.MustBindSimpleError(
+		nject.Sequence("example",
+			func() int {
+				return 7
+			},
+			func(i int) error {
+				fmt.Println(i)
+				return nil
+			},
+		), "bind-name")
+	fmt.Println(f())
+	// Output: 7
+	// <nil>
+}
+
+func ExampleCollection_MustBindSimpleError() {
+	f := nject.Sequence("example",
+		func() int {
+			return 7
+		},
+		func(i int) error {
+			fmt.Println(i)
+			return nil
+		},
+	).MustBindSimpleError()
+	fmt.Println(f())
+	// Output: 7
+	// <nil>
+}

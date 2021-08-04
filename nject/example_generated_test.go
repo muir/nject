@@ -68,3 +68,17 @@ func ExampleCollection_DownFlows_Collection() {
 	// Output: inputs [int int64 string]
 	// outputs [float32 float64]
 }
+
+func ExampleCollection_ForEachProvider() {
+	seq := nject.Sequence("example",
+		func() int {
+			return 10
+		},
+		func(_ int, _ string) {},
+	)
+	seq.ForEachProvider(func(p nject.Provider) {
+		fmt.Println(p.DownFlows())
+	})
+	// Output: [] [int]
+	// [int string] []
+}
