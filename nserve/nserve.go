@@ -66,7 +66,10 @@ func (app *App) do(h *Hook) error {
 	app.lock.Unlock()
 	var err error
 	runChain := func(chain nject.Provider) {
-		e := nject.Run("hook-"+h.Name, app, chain)
+		e := nject.Run("hook-"+h.Name,
+			app,
+			nject.Sequence("hook-"+h.Name+"-providers", h.Providers...),
+			chain)
 		err = ecw(err, e)
 	}
 	if h.Order == ForwardOrder {

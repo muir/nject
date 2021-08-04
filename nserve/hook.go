@@ -25,6 +25,7 @@ type Hook struct {
 	InvokeOnError []*Hook
 	ContinuePast  bool
 	ErrorCombiner func(first, second error) error
+	Providers     []interface{}
 }
 
 // Copy makes a deep copy of a hook and the new hook gets a new Id.
@@ -34,9 +35,12 @@ func (h *Hook) Copy() *Hook {
 	defer h.lock.Unlock()
 	oe := make([]*Hook, len(h.InvokeOnError))
 	copy(oe, h.InvokeOnError)
+	op := make([]interface{}, len(h.Providers))
+	copy(op, h.Providers)
 	hc := *h
 	hc.InvokeOnError = oe
 	hc.Id = hookId(atomic.AddInt32(&hookCounter, 1))
+	hc.Providers = op
 	return &hc
 }
 
