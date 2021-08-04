@@ -47,12 +47,16 @@ func HandleExampleEndpoint(req ExampleRequestBundle) (nvelope.Response, error) {
 	if req.ContentType != "application/json" {
 		return nil, errors.New("content type must be application/json")
 	}
-	if req.Parameters == 666 {
+	switch req.Parameters {
+	case 666:
 		panic("something is not right")
+	case 100:
+		return nil, nil
+	default:
+		return ExampleResponse{
+			Stuff: "something useful",
+		}, nil
 	}
-	return ExampleResponse{
-		Stuff: "something useful",
-	}, nil
 }
 
 func Service(router *mux.Router) {
@@ -62,8 +66,8 @@ func Service(router *mux.Router) {
 		nvelope.LoggerFromStd(log.Default()),
 		nvelope.InjectWriter,
 		nvelope.EncodeJSON,
-		nvelope.CatchPanic,
 		nvelope.Nil204,
+		nvelope.CatchPanic,
 		nvelope.ReadBody,
 		nvelope.DecodeJSON,
 		HandleExampleEndpoint,
@@ -89,12 +93,15 @@ func Example() {
 			fmt.Println("read error:", err)
 			return
 		}
-		fmt.Println(res.StatusCode, string(b))
+		fmt.Println(res.StatusCode, "->"+string(b))
 	}
 	doPost("/a/path/joe/37", `{"Use":"yeah","Exported":"uh hu"}`)
+	doPost("/a/path/joe/100", `{"Use":"yeah","Exported":"uh hu"}`)
 	doPost("/a/path/joe/38", `invalid json`)
 	doPost("/a/path/joe/666", `{"Use":"yeah","Exported":"uh hu"}`)
-	// Output: 200 {"stuff":"something useful"}
-	// 400 nvelope_test.ExampleRequestBundle model: Could not decode application/json into nvelope_test.PostBodyModel: invalid character 'i' looking for beginning of value
-	// 500 panic: something is not right
+
+	// Output: 200 ->{"stuff":"something useful"}
+	// 204 ->
+	// 400 ->nvelope_test.ExampleRequestBundle model: Could not decode application/json into nvelope_test.PostBodyModel: invalid character 'i' looking for beginning of value
+	// 500 ->panic: something is not right
 }

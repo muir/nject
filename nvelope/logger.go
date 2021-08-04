@@ -10,6 +10,7 @@ import (
 // but will use type assertions so that the BasicLogger
 // will remain acceptable to the APIs.
 type BasicLogger interface {
+	Debug(msg string, fields ...map[string]interface{})
 	Error(msg string, fields ...map[string]interface{})
 	Warn(msg string, fields ...map[string]interface{})
 }
@@ -48,6 +49,9 @@ func (std wrappedStdLogger) Error(msg string, fields ...map[string]interface{}) 
 func (std wrappedStdLogger) Warn(msg string, fields ...map[string]interface{}) {
 	std.Error(msg, fields...)
 }
+func (std wrappedStdLogger) Debug(msg string, fields ...map[string]interface{}) {
+	std.Error(msg, fields...)
+}
 
 // NoLogger injects a BasicLogger that discards all inputs
 func NoLogger() BasicLogger {
@@ -60,3 +64,4 @@ var _ BasicLogger = nilLogger{}
 
 func (_ nilLogger) Error(msg string, fields ...map[string]interface{}) { return }
 func (_ nilLogger) Warn(msg string, fields ...map[string]interface{})  { return }
+func (_ nilLogger) Debug(msg string, fields ...map[string]interface{}) { return }

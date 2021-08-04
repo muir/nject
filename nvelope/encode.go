@@ -218,9 +218,9 @@ func MakeResponseEncoder(
 // Nil204 is a wrapper that causes looks for return values of Response and error
 // and if both are nil, writes a 204 header and no data.  It is mean to be used
 // downstream from a response encocder.
-var Nil204 = nject.Provide("nil-204", nil204)
+var Nil204 = nject.Desired(nject.Provide("nil-204", nil204))
 
-func nil204(inner func() (Response, error), w DeferredWriter) {
+func nil204(inner func() (Response, error), w *DeferredWriter) {
 	model, err := inner()
 	if w.Done() {
 		return
