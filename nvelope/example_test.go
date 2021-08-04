@@ -62,12 +62,12 @@ func HandleExampleEndpoint(req ExampleRequestBundle) (nvelope.Response, error) {
 func Service(router *mux.Router) {
 	service := npoint.RegisterServiceWithMux("example", router)
 	service.RegisterEndpoint("/a/path/{with}/{parameters}",
-		// order matters and this is the correct order
-		nvelope.LoggerFromStd(log.Default()),
+		// order matters and this is a correct order
+		nvelope.NoLogger,
 		nvelope.InjectWriter,
 		nvelope.EncodeJSON,
-		nvelope.Nil204,
 		nvelope.CatchPanic,
+		nvelope.Nil204,
 		nvelope.ReadBody,
 		nvelope.DecodeJSON,
 		HandleExampleEndpoint,

@@ -54,13 +54,32 @@ func catchPanicInjector(inner func() error, log BasicLogger) (err error) {
 	return
 }
 
-// PanicMessage returns the interface{} that recover()
+// RecoverInterface returns the interface{} that recover()
 // originally provided.  Or it returns nil if the
-// error isn't a from a panic recovery
-func PanicMessage(err error) interface{} {
+// error isn't a from a panic recovery.  This works only
+// in conjunction with SetErrorOnPanic() and CatchPanic.
+func RecoverInterface(err error) interface{} {
+	if pe, ok := isPanicError(err); ok {
+		return pe.r
+	}
+	return nil
+}
+
+// RecoverStack returns the stack from when recover()
+// originally caught the panic.  Or it returns "" if the
+// error isn't a from a panic recovery.  This works only
+// in conjunction with SetErrorOnPanic() and CatchPanic.
+func RecoverStack(err error) string {
+	if pe, ok := isPanicError(err); ok {
+		return pe.stack
+	}
+	return ""
+}
+
+func isPanicError(err error) (panicError, bool) {
 	for {
 		if pe, ok := err.(panicError); ok {
-			return pe.r
+			return pe, true
 		}
 		if c, ok := err.(causer); ok {
 			err = c.Cause()
@@ -70,6 +89,6 @@ func PanicMessage(err error) interface{} {
 			err = u.Unwrap()
 			continue
 		}
-		return 500
+		return panicError{}, false
 	}
 }
