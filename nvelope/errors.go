@@ -17,6 +17,9 @@ type unwraper interface {
 // ReturnCode associates an HTTP return code with a error.
 // if err is nil, then nil is returned.
 func ReturnCode(err error, code int) error {
+	if err == nil {
+		return nil
+	}
 	return returnCode{
 		cause: err,
 		code:  code,
@@ -33,7 +36,7 @@ func (err returnCode) Cause() error {
 }
 
 func (err returnCode) Error() string {
-	return err.Error()
+	return err.cause.Error()
 }
 
 // NotFound annotates an error has giving 404 HTTP return code

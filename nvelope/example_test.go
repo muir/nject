@@ -47,6 +47,9 @@ func HandleExampleEndpoint(req ExampleRequestBundle) (nvelope.Response, error) {
 	if req.ContentType != "application/json" {
 		return nil, errors.New("content type must be application/json")
 	}
+	if req.Parameters == 666 {
+		panic("something is not right")
+	}
 	return ExampleResponse{
 		Stuff: "something useful",
 	}, nil
@@ -74,16 +77,24 @@ func Example() {
 	Service(r)
 	ts := httptest.NewServer(r)
 	client := ts.Client()
-	res, err := client.Post(ts.URL+"/a/path/joe/37", "application/json",
-		strings.NewReader(`{"Use":"yeah","Exported":"uh hu"}`))
-	fmt.Println("response error", err)
-	if err != nil {
-		return
+	doPost := func(url string, body string) {
+		res, err := client.Post(ts.URL+url, "application/json",
+			strings.NewReader(body))
+		if err != nil {
+			fmt.Println("response error:", err)
+			return
+		}
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			fmt.Println("read error:", err)
+			return
+		}
+		fmt.Println(res.StatusCode, string(b))
 	}
-	b, err := io.ReadAll(res.Body)
-	fmt.Println("read body error", err)
-	fmt.Println("response:", string(b))
-	// Output: response error <nil>
-	// read body error <nil>
-	// response: {"stuff":"something useful"}
+	doPost("/a/path/joe/37", `{"Use":"yeah","Exported":"uh hu"}`)
+	doPost("/a/path/joe/38", `invalid json`)
+	doPost("/a/path/joe/666", `{"Use":"yeah","Exported":"uh hu"}`)
+	// Output: 200 {"stuff":"something useful"}
+	// 400 nvelope_test.ExampleRequestBundle model: Could not decode application/json into nvelope_test.PostBodyModel: invalid character 'i' looking for beginning of value
+	// 500 panic: something is not right
 }

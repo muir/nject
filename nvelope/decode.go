@@ -3,6 +3,7 @@ package nvelope
 import (
 	"encoding"
 	"encoding/json"
+	"encoding/xml"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,16 +34,24 @@ func readBody(r *http.Request) (Body, nject.TerminalError) {
 // created with GenerateDecoder for decoding JSON requests.
 var DecodeJSON = GenerateDecoder(
 	WithDecoder("application/json", json.Unmarshal),
-	WithDefaultDecoder(json.Unmarshal),
+	WithDefaultContentType("application/json"),
+)
+
+// DecodeJSON is is a pre-defined special nject.Provider
+// created with GenerateDecoder for decoding XML requests.
+var DecodeXML = GenerateDecoder(
+	WithDecoder("application/xml", xml.Unmarshal),
+	WithDefaultContentType("application/xml"),
 )
 
 type Decoder func([]byte, interface{}) error
 
 type eigo struct {
-	tag             string
-	decoders        map[string]Decoder
-	modelValidators []func(interface{}) error
-	methodIfPresent []string
+	tag                string
+	decoders           map[string]Decoder
+	modelValidators    []func(interface{}) error
+	methodIfPresent    []string
+	defaultContentType string
 }
 
 type DecodeInputsGeneratorOpt func(*eigo)
@@ -57,11 +66,11 @@ func WithDecoder(contentType string, decoder Decoder) DecodeInputsGeneratorOpt {
 	}
 }
 
-// WithDefaultDecoder specifies which model decoder to use when
+// WithDefaultContentType specifies which model decoder to use when
 // no "Content-Type" header was sent.
-func WithDefaultDecoder(decoder Decoder) DecodeInputsGeneratorOpt {
+func WithDefaultContentType(contentType string) DecodeInputsGeneratorOpt {
 	return func(o *eigo) {
-		o.decoders[""] = decoder
+		o.defaultContentType = contentType
 	}
 }
 
@@ -176,12 +185,15 @@ func GenerateDecoder(
 						func(model reflect.Value, body []byte, r *http.Request) error {
 							f := model.FieldByIndex(field.Index)
 							ct := r.Header.Get("Content-Type")
+							if ct == "" {
+								ct = options.defaultContentType
+							}
 							exactDecoder, ok := options.decoders[ct]
 							if !ok {
 								return errors.Errorf("No body decoder for content type %s", ct)
 							}
 							err := exactDecoder(body, f.Addr().Interface())
-							return err
+							return errors.Wrapf(err, "Could not decode %s into %s", ct, field.Type)
 						})
 					return false
 				}
@@ -205,30 +217,45 @@ func GenerateDecoder(
 				case "path":
 					varsFillers = append(varsFillers, func(model reflect.Value, vars map[string]string) error {
 						f := model.FieldByIndex(field.Index)
-						return unpack("path", f, vars[name])
+						return errors.Wrapf(
+							unpack("path", f, vars[name]),
+							"path element %s into field %s",
+							name, field.Name)
 					})
 				case "header":
 					if field.Type.Kind() == reflect.Slice {
 						headerFillers = append(headerFillers, func(model reflect.Value, header http.Header) error {
 							f := model.FieldByIndex(field.Index)
-							return multiUnpack("header", f, unpack, header[name])
+							return errors.Wrapf(
+								multiUnpack("header", f, unpack, header[name]),
+								"header %s into field %s",
+								name, field.Name)
 						})
 					} else {
 						headerFillers = append(headerFillers, func(model reflect.Value, header http.Header) error {
 							f := model.FieldByIndex(field.Index)
-							return unpack("header", f, header.Get(name))
+							return errors.Wrapf(
+								unpack("header", f, header.Get(name)),
+								"header %s into field %s",
+								name, field.Name)
 						})
 					}
 				case "query":
 					if field.Type.Kind() == reflect.Slice {
 						queryFillers = append(queryFillers, func(model reflect.Value, query url.Values) error {
 							f := model.FieldByIndex(field.Index)
-							return multiUnpack("query", f, unpack, query[name])
+							return errors.Wrapf(
+								multiUnpack("query", f, unpack, query[name]),
+								"query parameter %s into field %s",
+								name, field.Name)
 						})
 					} else {
 						queryFillers = append(queryFillers, func(model reflect.Value, query url.Values) error {
 							f := model.FieldByIndex(field.Index)
-							return unpack("query", f, query.Get(name))
+							return errors.Wrapf(
+								unpack("query", f, query.Get(name)),
+								"query parameter %s into field %s",
+								name, field.Name)
 						})
 					}
 				default:
@@ -291,7 +318,7 @@ func GenerateDecoder(
 				if err == nil {
 					ev = reflect.Zero(errorType)
 				} else {
-					ev = reflect.ValueOf(err)
+					ev = reflect.ValueOf(errors.Wrapf(ReturnCode(err, 400), "%s model", returnType))
 				}
 				if returnAddress {
 					return []reflect.Value{mp, ev}
