@@ -221,7 +221,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 	// Over the course of the following loop, f will be redefined
 	// over and over so that at the end of the loop it will be a
-	// function that executes the entire RUN chain.
+	// function that executes the entire RUN chain.  We start with
+	// an f that calls the final provider and work backwards.
 	f := collections[finalGroup][0].wrapEndpoint
 	for i := len(collections[runGroup]) - 1; i >= 0; i-- {
 		n := collections[runGroup][i]
@@ -234,6 +235,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 				w(v, inner)
 			}
 		case injectorFunc, fallibleInjectorFunc:
+			// For injectors that aren't wrappers, we iterate rather than nest.
 			j := i - 1
 		Injectors:
 			for j >= 0 {

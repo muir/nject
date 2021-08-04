@@ -39,16 +39,14 @@ type ExampleRequestBundle struct {
 }
 
 type ExampleResponse struct {
-	Stuff string `json:"stuff"`
-	Here  string `json:"here"`
+	Stuff string `json:"stuff,omitempty"`
+	Here  string `json:"here,omitempty"`
 }
 
 func HandleExampleEndpoint(req ExampleRequestBundle) (nvelope.Response, error) {
-	fmt.Println("XXX handle example endpoint called")
 	if req.ContentType != "application/json" {
 		return nil, errors.New("content type must be application/json")
 	}
-	fmt.Println("XXX returning response")
 	return ExampleResponse{
 		Stuff: "something useful",
 	}, nil
@@ -61,7 +59,7 @@ func Service(router *mux.Router) {
 		nvelope.LoggerFromStd(log.Default()),
 		nvelope.InjectWriter,
 		nvelope.EncodeJSON,
-		nvelope.CatchPanics,
+		nvelope.CatchPanic,
 		nvelope.Nil204,
 		nvelope.ReadBody,
 		nvelope.DecodeJSON,
@@ -76,7 +74,7 @@ func Example() {
 	Service(r)
 	ts := httptest.NewServer(r)
 	client := ts.Client()
-	res, err := client.Post(ts.URL+"/a/path/joe/37.3", "application/json",
+	res, err := client.Post(ts.URL+"/a/path/joe/37", "application/json",
 		strings.NewReader(`{"Use":"yeah","Exported":"uh hu"}`))
 	fmt.Println("response error", err)
 	if err != nil {
@@ -88,5 +86,4 @@ func Example() {
 	// Output: response error <nil>
 	// read body error <nil>
 	// response: {"stuff":"something useful"}
-
 }

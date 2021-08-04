@@ -2,6 +2,7 @@ package nvelope
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/muir/nject/nject"
 	"github.com/pkg/errors"
@@ -14,8 +15,9 @@ type LogFlusher interface {
 }
 
 type panicError struct {
-	msg string
-	r   interface{}
+	msg   string
+	r     interface{}
+	stack string
 }
 
 func (err panicError) Error() string {
@@ -30,17 +32,21 @@ func SetErrorOnPanic(ep *error, log BasicLogger) {
 		return
 	}
 	pe := panicError{
-		msg: fmt.Sprint(r),
-		r:   r,
+		msg:   fmt.Sprint(r),
+		r:     r,
+		stack: string(debug.Stack()),
 	}
 	*ep = errors.WithStack(pe)
-	log.Error(pe.msg)
+	log.Error("panic!", map[string]interface{}{
+		"msg":   pe.msg,
+		"stack": pe.stack,
+	})
 	if flusher, ok := log.(LogFlusher); ok {
 		flusher.Flush()
 	}
 }
 
-var CatchPanics = nject.Provide("catch-panic", catchPanicInjector)
+var CatchPanic = nject.Provide("catch-panic", catchPanicInjector)
 
 func catchPanicInjector(inner func() error, log BasicLogger) (err error) {
 	defer SetErrorOnPanic(&err, log)

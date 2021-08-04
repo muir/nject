@@ -1,5 +1,9 @@
 package nvelope
 
+import (
+	"encoding"
+)
+
 type causer interface {
 	error
 	Cause() error
@@ -67,4 +71,9 @@ func GetReturnCode(err error) int {
 		}
 		return 500
 	}
+}
+
+type CanModel interface {
+	error
+	Model() encoding.TextUnmarshaler
 }

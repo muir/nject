@@ -162,11 +162,11 @@ func generateWrappers(
 
 	switch fm.class {
 	case finalFunc:
-		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in")
+		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in(final)")
 		if err != nil {
 			return err
 		}
-		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up")
+		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up(final)")
 		if err != nil {
 			return err
 		}
@@ -176,23 +176,23 @@ func generateWrappers(
 		}
 
 	case wrapperFunc:
-		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in") // parmeters to the middleware handler
+		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in(w)") // parmeters to the middleware handler
 		if err != nil {
 			return err
 		}
-		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out") // parameters to inner()
+		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out(w)") // parameters to inner()
 		if err != nil {
 			return err
 		}
-		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up") // return values from handler
+		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up(w)") // return values from handler
 		if err != nil {
 			return err
 		}
-		retMap, err := generateInputMapper(fm, 0, returnedParams, fm.upRmap, upVmap, "ret") // return values from inner()
+		retMap, err := generateInputMapper(fm, 0, returnedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap in wrapper")
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap(w)")
 		if err != nil {
 			return err
 		}
@@ -218,9 +218,9 @@ func generateWrappers(
 				outMap(v, i)
 				next(v)
 				r := retMap(v)
-				for i, v := range r {
+				for i, retV := range r {
 					if rTypes[i].Kind() == reflect.Interface {
-						r[i] = v.Convert(rTypes[i])
+						r[i] = retV.Convert(rTypes[i])
 					}
 				}
 				return r
@@ -242,15 +242,15 @@ func generateWrappers(
 		}
 
 	case fallibleInjectorFunc:
-		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in")
+		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in(fallible)")
 		if err != nil {
 			return err
 		}
-		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out")
+		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out(fallible)")
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap in fallible")
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "up(fallible)")
 		if err != nil {
 			return err
 		}

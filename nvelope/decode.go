@@ -3,7 +3,6 @@ package nvelope
 import (
 	"encoding"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -181,7 +180,8 @@ func GenerateDecoder(
 							if !ok {
 								return errors.Errorf("No body decoder for content type %s", ct)
 							}
-							return exactDecoder(body, f.Interface())
+							err := exactDecoder(body, f.Addr().Interface())
+							return err
 						})
 					return false
 				}
@@ -257,7 +257,6 @@ func GenerateDecoder(
 			outputs := []reflect.Type{returnType, terminalErrorType}
 
 			reflective := nject.MakeReflective(inputs, outputs, func(in []reflect.Value) []reflect.Value {
-				fmt.Println("XXX begin decode")
 				r := in[0].Interface().(*http.Request)
 				mp := reflect.New(nonPointer)
 				model := mp.Elem()
@@ -288,8 +287,12 @@ func GenerateDecoder(
 						setError(qf(model, vals))
 					}
 				}
-				ev := reflect.ValueOf(err)
-				fmt.Println("XXX end decode", err)
+				var ev reflect.Value
+				if err == nil {
+					ev = reflect.Zero(errorType)
+				} else {
+					ev = reflect.ValueOf(err)
+				}
 				if returnAddress {
 					return []reflect.Value{mp, ev}
 				} else {
@@ -419,7 +422,7 @@ func parseTag(s string) (string, map[string]string) {
 	}
 	kv := make(map[string]string)
 	for _, v := range a[1:] {
-		kvs := strings.SplitN(v, ",", 2)
+		kvs := strings.SplitN(v, "=", 2)
 		k := kvs[0]
 		if len(kvs) == 2 {
 			kv[k] = kvs[1]
