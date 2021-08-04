@@ -1,4 +1,4 @@
-# nject & npoint - dependency injection 
+# nject, npoint, nserve, & nvelope - dependency injection 
 
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
 [![Build Status](https://travis-ci.org/muir/nject.svg)](https://travis-ci.org/muir/nject)
@@ -12,11 +12,16 @@ Install:
 
 ---
 
-This is a pair of packages:
+This is a quartet of packages that together make up a good part of a 
+golang API server framework.
 
 nject: type safe dependency injection w/o requiring type assertions.
 
 npoint: dependency injection for http endpoint handlers
+
+nvelope: injection chains for building endpoints
+
+nserve: injection chains for for starting and stopping servers
 
 ### Basic idea
 
@@ -100,6 +105,98 @@ fails, executation of the handler chain is terminated.
 		}
 	}
 
+### nvelope example
+
+Nvelope provides pre-defined handlers for basic endpoint tasks.  When used
+in combination with npoint, all that's left is the business logic.
+
+```go
+type ExampleRequestBundle struct {
+	Request     PostBodyModel `nvelope:"model"`
+	With        string        `nvelope:"path,name=with"`
+	Parameters  int64         `nvelope:"path,name=parameters"`
+	Friends     []int         `nvelope:"query,name=friends"`
+	ContentType string        `nvelope:"header,name=Content-Type"`
+}
+
+func Service(router *mux.Router) {
+	service := npoint.RegisterServiceWithMux("example", router)
+	service.RegisterEndpoint("/some/path",
+		nvelope.LoggerFromStd(log.Default()),
+		nvelope.InjectWriter,
+		nvelope.EncodeJSON,
+		nvelope.CatchPanic,
+		nvelope.Nil204,
+		nvelope.ReadBody,
+		nvelope.DecodeJSON,
+		func (req ExampleRequestBundle) (nvelope.Response, error) {
+			....
+		},
+	).Methods("POST")
+}
+```
+
+### nserve example
+
+On thing you might want to do with nserve is to use a `Hook` to trigger
+per-library database migrations using [libschema](https://github.com/muir/libschema).
+
+First create the hook:
+
+```go
+package myhooks
+
+import "github.com/nject/nserve"
+
+var MigrateMyDB = nserve.NewHook("migrate, nserve.Ascending)
+```
+
+In each library, have a create function:
+
+```go
+package users
+
+import(
+	"github.com/muir/libschema/lspostgres"
+	"github.com/muir/nject/nserve"
+)
+
+func NewUsersStore(app *nserve.App) *Store {
+	...
+	app.On(myhooks.MigrateMyDB, func(database *libschema.Database) {
+		database.Migrations("MyLibrary",
+			lspostgres.Script("create users", `
+				CREATE TABLE users (
+					id	bigint PRIMARY KEY,
+					name	text
+				)
+			`),
+		)
+	})
+	...
+	return &Store{}
+}
+```
+
+Then as part of server startup, invoke the migration hook:
+
+```go
+package main
+
+import(
+	"github.com/muir/libschema"
+	"github.com/muir/libschema/lspostgres"
+	"github.com/muir/nject/nject"
+)
+
+func main() {
+	app, err := nserve.CreateApp("myApp", users.NewUserStore, ...)
+	schema := libschema.NewSchema(ctx, libschema.Options{})
+	sqlDB, err := sql.Open("postgres", "....")
+	database, err := lspostgres.New(logger, "main-db", schema, sqlDB)
+	myhooks.MigrateMyDB.Using(database)
+	err = app.Do(myhooks.MigrateMyDB)
+```
 
 ### Minimum Go version
 
