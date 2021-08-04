@@ -78,7 +78,7 @@ func ExampleProvide_wrapper_and_fallible_injectors() {
 			}),
 		nject.Provide("example-final-injector",
 			func(s string) string {
-				return "final:" + s
+				return "final: " + s
 			}),
 	)
 	fmt.Println(nject.Run("failure", seq))

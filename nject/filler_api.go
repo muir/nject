@@ -27,7 +27,7 @@ type postActionOption struct {
 	matchToInterface bool
 }
 
-// GeneratedFromInjectionChain is a special kind of provider that inspects the rest of the
+// generatedFromInjectionChain is a special kind of provider that inspects the rest of the
 // injection chain to replace itself with a regular provider.  The ReplaceSelf method will
 // be called only once.
 type generatedFromInjectionChain interface {
@@ -44,6 +44,12 @@ func (g gfic) ReplaceSelf(before Collection, after Collection) (selfReplacement 
 	return g.f(before, after)
 }
 
+// GenerateFromInjectionChain creates a very special provider from a function
+// that examines the injection chain and then returns a replacement provider.
+// The first parameter for the function is a Collection representing all the providers
+// that are earlier in the chain from from the new special provider; the second
+// parameter is a Collection representing all the providers that are later
+// in the chain from the new special provider.
 func GenerateFromInjectionChain(
 	f func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error),
 ) generatedFromInjectionChain {
@@ -57,6 +63,10 @@ type FillerFuncArg func(*fillerOptions)
 
 // WithTag sets the struct tag to use for per-struct-field
 // directives in MakeStructBuilder.  The default tag is "nject"
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func WithTag(tag string) FillerFuncArg {
 	return func(o *fillerOptions) {
 		o.tag = tag
@@ -71,6 +81,10 @@ func WithTag(tag string) FillerFuncArg {
 // provider (the last function, a wrapper, etc).  If there
 // is no method of that name, then MakeStructBuilder will
 // return an error.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func WithMethodCall(methodName string) FillerFuncArg {
 	// Implementation note:
 	// We'll use a Reflective to invoke the method using the
@@ -90,6 +104,10 @@ func WithMethodCall(methodName string) FillerFuncArg {
 // This function will be added to the injection chain after the
 // function that builds or fills the struct.  If there is also a
 // WithMethodCall, this function will run before that.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
 	// Implementation note:
 	// There could be more than one field using the same type so
@@ -114,6 +132,10 @@ func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFu
 //
 // If there is no match to the type of the function, then the function
 // is not invoked.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func PostActionByType(function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
 	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
@@ -124,6 +146,10 @@ func PostActionByType(function interface{}, opts ...PostActionFuncArg) FillerFun
 // PostActionByName arranges to call a function passing in the field that
 // has a matching name.  PostActionByName happens before PostActionByType
 // and after PostActionByTag calls.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func PostActionByName(name string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
 	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
@@ -134,6 +160,10 @@ func PostActionByName(name string, function interface{}, opts ...PostActionFuncA
 // FillExisting changes the behavior of MakeStructBuilder so that it
 // fills fields in a struct that it receives from upstream in the
 // provider chain rather than starting fresh with a new structure.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func FillExisting(o *fillerOptions) {
 	o.create = false
 }
@@ -157,6 +187,10 @@ func makePostActionOption(function interface{}, userOpts []PostActionFuncArg, ty
 // and PostActionByTag with respect to the field being automatically filled.
 // By default, if there is a post-action that that recevies a pointer to the
 // field, then the field will not be filled from the injection chain.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func WithFill(b bool) PostActionFuncArg {
 	return func(o *postActionOption) {
 		o.fill = b
@@ -167,6 +201,10 @@ func WithFill(b bool) PostActionFuncArg {
 // MatchToInterface requires that the post action function have exactly one
 // open interace type (interface{}) in its arguments list.  A pointer to the
 // field will be passed to the interface parameter.
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func MatchToOpenInterface(b bool) PostActionFuncArg {
 	return func(o *postActionOption) {
 		o.matchToInterface = true
@@ -175,6 +213,10 @@ func MatchToOpenInterface(b bool) PostActionFuncArg {
 
 // MustMakeStructBuilder wraps a panic around failed
 // MakeStructBuilder calls
+//
+// EXPERIMENTAL: this is currently considered experimental
+// and could be removed in a future release.  If you are using
+// this, please open a pull request to remove this comment.
 func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
 	p, err := MakeStructBuilder(model, opts...)
 	if err != nil {
