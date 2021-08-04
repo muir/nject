@@ -13,6 +13,15 @@ import (
 // Injectwriter injects a DeferredWriter
 var InjectWriter = nject.Provide("writer", NewDeferredWriter)
 
+// AutoFlush calls Flush on the deferred writer if it hasn't
+// already been done
+var AutoFlushWriter = nject.Provide("autoflush-writer", func(inner func(), w *DeferredWriter) {
+	inner()
+	if !w.Done() {
+		w.Flush()
+	}
+})
+
 // Response is an empty interface that is the expected return value
 // from endpoints.
 type Response interface{}
