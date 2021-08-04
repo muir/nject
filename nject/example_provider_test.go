@@ -89,3 +89,24 @@ func ExampleProvide_wrapper_and_fallible_injectors() {
 	// string: final: example error: <nil>
 	// <nil>
 }
+
+// This demonstrate the use of NonFinal.  NonFinal is useful when
+// manipulating lists of providers.
+func ExampleNonFinal() {
+	seq := nject.Sequence("example",
+		func() string {
+			return "some string"
+		},
+		func(i int, s string) {
+			fmt.Println("final", i, s)
+		},
+	)
+	fmt.Println(nject.Run("almost incomplete",
+		seq,
+		nject.NonFinal(func() int {
+			return 20
+		}),
+	))
+	// Output: final 20 some string
+	// <nil>
+}

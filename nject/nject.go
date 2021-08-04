@@ -63,6 +63,8 @@ type provider struct {
 }
 
 // copy does not copy wrappers or flows.
+// It only copies the base, user annotations, and characterize annotations;
+// it does not not copy include calculations, binding, or generating.
 func (fm *provider) copy() *provider {
 	if fm == nil {
 		return nil
@@ -72,23 +74,25 @@ func (fm *provider) copy() *provider {
 		index:               fm.index,
 		fn:                  fm.fn,
 		id:                  fm.id,
+		nonFinal:            fm.nonFinal,
 		cacheable:           fm.cacheable,
 		mustCache:           fm.mustCache,
 		required:            fm.required,
 		callsInner:          fm.callsInner,
 		memoize:             fm.memoize,
 		loose:               fm.loose,
-		memoized:            fm.memoized,
 		desired:             fm.desired,
-		singleton:           fm.singleton,
-		cluster:             fm.cluster,
+		notCacheable:        fm.notCacheable,
 		mustConsume:         fm.mustConsume,
 		consumptionOptional: fm.consumptionOptional,
-		notCacheable:        fm.notCacheable,
-		mapKeyCheck:         fm.mapKeyCheck,
+		singleton:           fm.singleton,
+		cluster:             fm.cluster,
+		memoized:            fm.memoized,
 		class:               fm.class,
 		group:               fm.group,
 		flows:               fm.flows,
+		isSynthetic:         fm.isSynthetic,
+		mapKeyCheck:         fm.mapKeyCheck,
 	}
 }
 
@@ -177,6 +181,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	c.reorderNonFinal()
 
 	// Handle mutations
+	var mutated bool
 	for i := 0; i < len(c.contents); i++ {
 		fm := c.contents[i]
 		g, ok := fm.fn.(generatedFromInjectionChain)
@@ -205,6 +210,9 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 			n = append(n, c.contents[i+1:]...)
 			c.contents = n
 		}
+	}
+	if mutated {
+		c.reorderNonFinal()
 	}
 
 	for ii, fm := range c.contents {
