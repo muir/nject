@@ -1,10 +1,8 @@
 # nject, npoint, nserve, & nvelope - dependency injection 
 
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
-[![Build Status](https://travis-ci.org/muir/nject.svg)](https://travis-ci.org/muir/nject)
+![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
 [![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
-[![Coverage](http://gocover.io/_badge/github.com/muir/nject/nject)](https://gocover.io/github.com/muir/nject/nject)
-[![Coverage](http://gocover.io/_badge/github.com/muir/nject/npoint)](https://gocover.io/github.com/muir/nject/npoint)
 
 Install:
 
@@ -205,8 +203,8 @@ Support for earlier versions would be easy to add if anyone cares.
 
 ### Development status
 
-This repo represents continued development of of Blue Owl's 
+This repo represents continued development of Blue Owl's 
 [nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
-has been in production use for years but has been unchanged for years.
+has been in production use for years and has been unchanged for years.
 
 This version is not yet in production use.
