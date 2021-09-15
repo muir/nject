@@ -17,7 +17,7 @@ golang API server framework.
 
 nject: type safe dependency injection w/o requiring type assertions.
 
-npoint: dependency injection for http endpoint handlers
+npoint: dependency injection wrappers for binding http endpoint handlers
 
 nvelope: injection chains for building endpoints
 
@@ -202,3 +202,11 @@ func main() {
 
 Due to the use of the "context" package, the mimimum supported Go version is 1.8.
 Support for earlier versions would be easy to add if anyone cares.
+
+### Development status
+
+This repo represents continued development of of Blue Owl's 
+[nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
+has been in production use for years but has been unchanged for years.
+
+This version is not yet in production use.
