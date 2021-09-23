@@ -11,6 +11,7 @@ type dataSourceName string
 
 // openDBErrorReturnRequired is a provider that opens a database.   Surface it seems
 // fine but it has a problem: what if nothing below it returns error?
+// nolint:deadcode
 func openDBErrorReturnRequired(inner func(*sql.DB) error, driver driverName, name dataSourceName) error {
 	db, err := sql.Open(string(driver), string(name))
 	if err != nil {

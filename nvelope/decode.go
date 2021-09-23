@@ -409,7 +409,6 @@ var httpRequestType = reflect.TypeOf(&http.Request{})
 var bodyType = reflect.TypeOf(Body{})
 var textUnmarshallerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 var terminalErrorType = reflect.TypeOf((*nject.TerminalError)(nil)).Elem()
-var emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 
 // The return value from f only matters when the type of the field is a struct.  In

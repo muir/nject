@@ -14,6 +14,7 @@ import (
 	"github.com/muir/nject/nvelope"
 )
 
+// nolint:deadcode
 func main() {
 	r := mux.NewRouter()
 	srv := &http.Server{

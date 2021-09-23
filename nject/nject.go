@@ -459,11 +459,3 @@ func (c Collection) reorderNonFinal() {
 		return
 	}
 }
-
-func providersToProviders(in []*provider) []Provider {
-	p := make([]Provider, len(in))
-	for i, fm := range in {
-		p[i] = fm
-	}
-	return p
-}
