@@ -188,7 +188,7 @@ func fillKeyFromInputs(key []interface{}, in []reflect.Value) {
 	}
 }
 
-func defineCacher(id int32, fv canCall, l int, okayCheck func([]reflect.Value) bool) cacherFunc {
+func defineCacher(_ int32, fv canCall, l int, okayCheck func([]reflect.Value) bool) cacherFunc {
 	var lock sync.Mutex
 
 	switch {

@@ -50,7 +50,6 @@ type eigo struct {
 	tag                string
 	decoders           map[string]Decoder
 	modelValidators    []func(interface{}) error
-	methodIfPresent    []string
 	defaultContentType string
 }
 
