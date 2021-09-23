@@ -217,7 +217,7 @@ linters-settings:
     # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
     # By default list of stable checks is used.
     enabled-checks:
-      - rangeExprCopy:
+      - rangeExprCopy
       - ruleguard
       - unnamedresult
       - nestingreduce
