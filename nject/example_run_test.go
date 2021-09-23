@@ -1,18 +1,20 @@
-package nject
+package nject_test
 
 import (
 	"fmt"
+
+	"github.com/muir/nject/nject"
 )
 
 // Run is the simplest way to use the nject framework.
 // Run simply executes the provider chain that it is given.
 func ExampleRun() {
-	providerChain := Sequence("example sequence",
+	providerChain := nject.Sequence("example sequence",
 		"a literal string value",
 		func(s string) int {
 			return len(s)
 		})
-	Run("example",
+	nject.Run("example",
 		providerChain,
 		func(i int, s string) {
 			fmt.Println(i, len(s))

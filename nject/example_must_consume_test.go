@@ -1,7 +1,9 @@
-package nject
+package nject_test
 
 import (
 	"database/sql"
+
+	"github.com/muir/nject/nject"
 )
 
 type driverName string
@@ -25,14 +27,15 @@ func openDBErrorReturnRequired(inner func(*sql.DB) error, driver driverName, nam
 // We use MustConsume and a private type on the open to make sure that if the open happens,
 // the close will happen too.
 type mustCloseDB bool // private type
-var openDBCollection = Sequence("open-database",
-	NotCacheable(MustConsume(func(driver driverName, name dataSourceName) (*sql.DB, mustCloseDB, TerminalError) {
-		db, err := sql.Open(string(driver), string(name))
-		if err != nil {
-			return nil, false, err
-		}
-		return db, false, nil
-	})),
+var openDBCollection = nject.Sequence("open-database",
+	nject.NotCacheable(nject.MustConsume(
+		func(driver driverName, name dataSourceName) (*sql.DB, mustCloseDB, nject.TerminalError) {
+			db, err := sql.Open(string(driver), string(name))
+			if err != nil {
+				return nil, false, err
+			}
+			return db, false, nil
+		})),
 	func(inner func(*sql.DB), db *sql.DB, _ mustCloseDB) {
 		defer db.Close()
 		inner(db)
@@ -45,7 +48,7 @@ func ExampleNotCacheable() {
 	// If someone tries to make things faster by marking everything as Cacheable,
 	// the NotCacheable in openDBCollection() will prevent an inappropriate move to the
 	// static chain of the database open.
-	_ = Cacheable(Sequence("big collection",
+	_ = nject.Cacheable(nject.Sequence("big collection",
 		// Many providers
 		driverName("postgres"),
 		dataSourceName("postgresql://username:password@host:port/databasename"),

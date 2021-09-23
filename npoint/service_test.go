@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BlueOwlOpenSource/nject/nject"
-	"github.com/BlueOwlOpenSource/nject/npoint"
 	"github.com/gorilla/mux"
+	"github.com/muir/nject/nject"
+	"github.com/muir/nject/npoint"
 	"github.com/stretchr/testify/assert"
 )
 

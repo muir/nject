@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/BlueOwlOpenSource/nject/nject"
 	"github.com/gorilla/mux"
+	"github.com/muir/nject/nject"
 )
 
 // ServiceWithMux allows a group of related endpoints to be started

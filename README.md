@@ -1,22 +1,26 @@
-# nject & npoint - dependency injection 
+# nject, npoint, nserve, & nvelope - dependency injection 
 
-[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject?status.png)](https://pkg.go.dev/github.com/BlueOwlOpenSource/nject)
-[![Build Status](https://travis-ci.org/BlueOwlOpenSource/nject.svg)](https://travis-ci.org/BlueOwlOpenSource/nject)
-[![report card](https://goreportcard.com/badge/github.com/BlueOwlOpenSource/nject)](https://goreportcard.com/report/github.com/BlueOwlOpenSource/nject)
-[![Coverage](http://gocover.io/_badge/github.com/BlueOwlOpenSource/nject/nject)](https://gocover.io/github.com/BlueOwlOpenSource/nject/nject)
-[![Coverage](http://gocover.io/_badge/github.com/BlueOwlOpenSource/nject/npoint)](https://gocover.io/github.com/BlueOwlOpenSource/nject/npoint)
+[![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
+![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject)](https://gocover.io/github.com/muir/nject)
+[![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
 
 Install:
 
-	go get github.com/BlueOwlOpenSource/nject
+	go get github.com/muir/nject
 
 ---
 
-This is a pair of packages:
+This is a quartet of packages that together make up a most of a
+golang API server framework:
 
 nject: type safe dependency injection w/o requiring type assertions.
 
-npoint: dependency injection for http endpoint handlers
+npoint: dependency injection wrappers for binding http endpoint handlers
+
+nvelope: injection chains for building endpoints
+
+nserve: injection chains for for starting and stopping servers
 
 ### Basic idea
 
@@ -100,8 +104,103 @@ fails, executation of the handler chain is terminated.
 		}
 	}
 
+### nvelope example
 
-### Minimum Go version
+Nvelope provides pre-defined handlers for basic endpoint tasks.  When used
+in combination with npoint, all that's left is the business logic.
 
-Due to the use of the "context" package, the mimimum supported Go version is 1.8.
-Support for earlier versions would be easy to add if anyone cares.
+```go
+type ExampleRequestBundle struct {
+	Request     PostBodyModel `nvelope:"model"`
+	With        string        `nvelope:"path,name=with"`
+	Parameters  int64         `nvelope:"path,name=parameters"`
+	Friends     []int         `nvelope:"query,name=friends"`
+	ContentType string        `nvelope:"header,name=Content-Type"`
+}
+
+func Service(router *mux.Router) {
+	service := npoint.RegisterServiceWithMux("example", router)
+	service.RegisterEndpoint("/some/path",
+		nvelope.LoggerFromStd(log.Default()),
+		nvelope.InjectWriter,
+		nvelope.EncodeJSON,
+		nvelope.CatchPanic,
+		nvelope.Nil204,
+		nvelope.ReadBody,
+		nvelope.DecodeJSON,
+		func (req ExampleRequestBundle) (nvelope.Response, error) {
+			....
+		},
+	).Methods("POST")
+}
+```
+
+### nserve example
+
+On thing you might want to do with nserve is to use a `Hook` to trigger
+per-library database migrations using [libschema](https://github.com/muir/libschema).
+
+First create the hook:
+
+```go
+package myhooks
+
+import "github.com/nject/nserve"
+
+var MigrateMyDB = nserve.NewHook("migrate, nserve.Ascending)
+```
+
+In each library, have a create function:
+
+```go
+package users
+
+import(
+	"github.com/muir/libschema/lspostgres"
+	"github.com/muir/nject/nserve"
+)
+
+func NewUsersStore(app *nserve.App) *Store {
+	...
+	app.On(myhooks.MigrateMyDB, func(database *libschema.Database) {
+		database.Migrations("MyLibrary",
+			lspostgres.Script("create users", `
+				CREATE TABLE users (
+					id	bigint PRIMARY KEY,
+					name	text
+				)
+			`),
+		)
+	})
+	...
+	return &Store{}
+}
+```
+
+Then as part of server startup, invoke the migration hook:
+
+```go
+package main
+
+import(
+	"github.com/muir/libschema"
+	"github.com/muir/libschema/lspostgres"
+	"github.com/muir/nject/nject"
+)
+
+func main() {
+	app, err := nserve.CreateApp("myApp", users.NewUserStore, ...)
+	schema := libschema.NewSchema(ctx, libschema.Options{})
+	sqlDB, err := sql.Open("postgres", "....")
+	database, err := lspostgres.New(logger, "main-db", schema, sqlDB)
+	myhooks.MigrateMyDB.Using(database)
+	err = app.Do(myhooks.MigrateMyDB)
+```
+
+### Development status
+
+This repo represents continued development of Blue Owl's 
+[nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
+has been in production use for years and has been unchanged for years.
+The core of nject is mostly unchanged.  Nvelope and nserve are new.
+

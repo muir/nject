@@ -111,9 +111,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	// does not call the remainder of the chain, then the values returned by the remainder
 	// of the chain must be zero'ed.
 	downVmap := make(map[typeCode]int)
-	downCount := 0
 	upVmap := make(map[typeCode]int)
-	upCount := 0
+	vCount := 0 // combined count of up and down parameters
 	for _, fm := range funcs {
 		if !fm.include {
 			continue
@@ -129,7 +128,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	for i := invokeIndex - 1; i >= 0; i-- {
 		fm := funcs[i]
 		fm.mustZeroIfRemainderSkipped = vmapMapped(downVmap)
-		addToVmap(fm, outputParams, downVmap, fm.downRmap, &downCount)
+		addToVmap(fm, outputParams, downVmap, fm.downRmap, &vCount)
 	}
 	if initF != nil {
 		for _, tc := range initF.flows[bypassParams] {
@@ -144,10 +143,9 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	// calculate for the run set
 	for i := len(funcs) - 1; i >= invokeIndex; i-- {
 		fm := funcs[i]
-		fm.downVmapCount = downCount
-		addToVmap(fm, inputParams, downVmap, fm.downRmap, &downCount)
-		fm.upVmapCount = upCount
-		addToVmap(fm, returnParams, upVmap, fm.upRmap, &upCount)
+		fm.vmapCount = vCount
+		addToVmap(fm, inputParams, downVmap, fm.downRmap, &vCount)
+		addToVmap(fm, returnParams, upVmap, fm.upRmap, &vCount)
 		fm.mustZeroIfInnerNotCalled = vmapMapped(upVmap)
 	}
 
@@ -211,7 +209,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		if !fm.include {
 			continue
 		}
-		err := generateWrappers(fm, downVmap, upVmap, upCount)
+		err := generateWrappers(fm, downVmap, upVmap)
 		if err != nil {
 			return err
 		}
@@ -223,7 +221,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 	// Over the course of the following loop, f will be redefined
 	// over and over so that at the end of the loop it will be a
-	// function that executes the entire RUN chain.
+	// function that executes the entire RUN chain.  We start with
+	// an f that calls the final provider and work backwards.
 	f := collections[finalGroup][0].wrapEndpoint
 	for i := len(collections[runGroup]) - 1; i >= 0; i-- {
 		n := collections[runGroup][i]
@@ -232,10 +231,11 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		case wrapperFunc:
 			inner := f
 			w := n.wrapWrapper
-			f = func(v valueCollection) valueCollection {
-				return w(v, inner)
+			f = func(v valueCollection) {
+				w(v, inner)
 			}
 		case injectorFunc, fallibleInjectorFunc:
+			// For injectors that aren't wrappers, we iterate rather than nest.
 			j := i - 1
 		Injectors:
 			for j >= 0 {
@@ -248,18 +248,18 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			}
 			j++
 			next := f
-			injectors := make([]func(valueCollection) (bool, valueCollection), 0, i-j+1)
+			injectors := make([]func(valueCollection) bool, 0, i-j+1)
 			for k := j; k <= i; k++ {
 				injectors = append(injectors, collections[runGroup][k].wrapFallibleInjector)
 			}
-			f = func(v valueCollection) valueCollection {
+			f = func(v valueCollection) {
 				for _, injector := range injectors {
-					errored, upV := injector(v)
+					errored := injector(v)
 					if errored {
-						return upV
+						return
 					}
 				}
-				return next(v)
+				next(v)
 			}
 			i = j
 		default:
@@ -269,7 +269,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 	// Initialize the value collection.   When invoke is called the baseValues
 	// collection will be copied.
-	baseValues := make(valueCollection, downCount)
+	baseValues := make(valueCollection, vCount)
 	for _, lit := range collections[literalGroup] {
 		i := downVmap[lit.flows[outputParams][0]]
 		if i >= 0 {
@@ -364,8 +364,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 						dumpValueArray(values, "invoke - before input copy", downVmap)
 						outMap(values, inputs)
 						dumpValueArray(values, "invoke - after input copy", downVmap)
-						ret := f(values)
-						return inMap(ret)
+						f(values)
+						return inMap(values)
 					}))
 		}
 		debugln("SET INVOKE FUNC - DONE")

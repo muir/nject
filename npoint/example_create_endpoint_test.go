@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/BlueOwlOpenSource/nject/nject"
-	"github.com/BlueOwlOpenSource/nject/npoint"
+	"github.com/muir/nject/nject"
+	"github.com/muir/nject/npoint"
 )
 
 // CreateEndpoint is the simplest way to start using the npoint framework.  It

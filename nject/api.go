@@ -5,9 +5,12 @@ package nject
 import (
 	"fmt"
 	"reflect"
+	"sync/atomic"
 )
 
-// Collection holds a sequence of providers and sub-collections
+// Collection holds a sequence of providers and sub-collections.  A Collection
+// implements the Provider interface and can be used anywhere a Provider is
+// required.
 type Collection struct {
 	name     string
 	contents []*provider
@@ -22,8 +25,8 @@ type Provider interface {
 }
 
 // Sequence creates a Collection of providers.  Each collection must
-// have a name.  The providers can be: functions, variables, or
-// *Collections, or *Providers.
+// have a name.  The providers can be: functions, variables, literal values,
+// Collections, *Collections, or Providers.
 //
 // Functions must match one of the expected patterns.
 //
@@ -44,12 +47,34 @@ func Sequence(name string, providers ...interface{}) *Collection {
 	return newCollection(name, providers...)
 }
 
-// Append appends additional providers onto an existing collection
+var clusterId int32 = 1
+
+// Cluster is a variation on Sequence() with the additional behavior
+// that all of the providers in the in the cluster will be included
+// or excluded as a group.  This doesn't apply to providers that cannot
+// be included at all.  It also downgrades providers that are in the
+// cluster that would normally be considered desired because they don't
+// return anything and aren't wrappers: they're no longer automatically
+// considered desired.
+func Cluster(name string, providers ...interface{}) *Collection {
+	c := newCollection(name, providers...)
+	id := atomic.AddInt32(&clusterId, 1)
+	for _, fm := range c.contents {
+		fm.cluster = id
+	}
+	return c
+}
+
+// Append adds additional providers onto an existing collection
 // to create a new collection.  The additional providers may be
-// value literals, functions, Providers, or *Collections.
+// value literals, functions, Providers, or *Collections.  The original
+// collection is not modified.
 func (c *Collection) Append(name string, funcs ...interface{}) *Collection {
 	nc := newCollection(name, funcs...)
-	nc.contents = append(c.contents, nc.contents...)
+	contents := make([]*provider, 0, len(c.contents)+len(nc.contents))
+	contents = append(contents, c.contents...)
+	contents = append(contents, nc.contents...)
+	nc.contents = contents
 	return nc
 }
 
@@ -66,6 +91,8 @@ func Provide(name string, fn interface{}) Provider {
 	})
 }
 
+// TODO: add ExampleMustCache
+
 // MustCache creates an Inject item and annotates it as required to be
 // in the STATIC set.  If it cannot be placed in the STATIC set
 // then any collection that includes it is invalid.
@@ -76,6 +103,8 @@ func MustCache(fn interface{}) Provider {
 	})
 }
 
+// TODO: add ExampleCacheable
+
 // Cacheable creates an inject item and annotates it as allowed to be
 // in the STATIC chain.  Without this annotation, MustCache, or
 // Memoize, a provider will be in the RUN chain.
@@ -83,6 +112,23 @@ func MustCache(fn interface{}) Provider {
 // When used on an existing Provider, it creates an annotated copy of that provider.
 func Cacheable(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
+		fm.cacheable = true
+	})
+}
+
+// Singleton marks a provider as a forced singleton.  The provider will be invoked
+// only once even if it is included in multiple different Sequences.  It will be in
+// the the STATIC chain.  There is no check that the input arguments available at the
+// time the provider would be called are consistent from one invocation to the next.
+// The provider will be called exactly once with whatever inputs are provided the
+// in the first chain that invokes the provider.
+//
+// An alternative way to get singleton behavior is with Memoize() combined with
+// MustChace().
+func Singleton(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.singleton = true
+		fm.mustCache = true
 		fm.cacheable = true
 	})
 }
@@ -103,18 +149,27 @@ func NotCacheable(fn interface{}) Provider {
 // input parameter values combination.  This cache is global among
 // all Sequences.  Memoize can only be used on functions
 // whose inputs are valid map keys (interfaces, arrays
-// (not slices), structs, pointers, and primitive types).
+// (not slices), structs, pointers, and primitive types).  It is
+// further restrict that it cannot handle private (not exported)
+// fields inside structs.
 //
-// Memoize is further restricted in that it only works in the
-// STATIC provider set.
+// Memoize only works in the STATIC provider set.
+//
+// Combine Memoize with MustCache to make sure that Memoize can actually
+// function as expected.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
+//
+// As long as consistent injection chains are used Memoize + MustCache can
+// gurantee singletons.
 func Memoize(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.memoize = true
 		fm.cacheable = true
 	})
 }
+
+// TODO: add ExampleRequired
 
 // Required creates a new provider and annotates it as
 // required: it will be included in the provider chain even
@@ -126,6 +181,8 @@ func Required(fn interface{}) Provider {
 		fm.required = true
 	})
 }
+
+// TODO: add ExampleDesired
 
 // Desired creates a new provider and annotates it as
 // desired: it will be included in the provider chain
@@ -140,6 +197,8 @@ func Desired(fn interface{}) Provider {
 		fm.desired = true
 	})
 }
+
+// TODO: add ExampleMustConsume
 
 // MustConsume creates a new provider and annotates it as
 // needing to have all of its output values consumed.  If
@@ -175,6 +234,8 @@ func MustConsume(fn interface{}) Provider {
 	})
 }
 
+// TODO: add ExampleConsumptionOptional
+
 // ConsumptionOptional creates a new provider and annotates it as
 // allowed to have some of its return values ignored.
 // Without this annotation, a wrap function will not be included
@@ -205,6 +266,8 @@ func callsInner(fn interface{}) Provider {
 	})
 }
 
+// TODO: add ExampleLoose
+
 // Loose annotates a wrap function to indicate that when trying
 // to match types against the outputs and return values from this
 // provider, an in-exact match is acceptable.  This matters when inputs and
@@ -217,6 +280,22 @@ func callsInner(fn interface{}) Provider {
 func Loose(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.loose = true
+	})
+}
+
+// TODO: add ExampleNonFinal
+
+// NonFinal annotates a provider to say that it shouldn't be considered the
+// final provider in a list of providers.  This is to make it possible to
+// insert a provider into a list of providers late in the chain without
+// actually being the final provider.  It's easy to insert a final at the
+// start of the chain -- you simply list it first.  It's easy to insert a
+// final provider.  Without NonFinal, it's hard or impossible to insert
+// a provider very late in the chain.  If NonFinal providers are invoked,
+// they will be called before the final provider.
+func NonFinal(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.nonFinal = true
 	})
 }
 
@@ -239,8 +318,12 @@ func Loose(fn interface{}) Provider {
 // function come from the values available after the static portion
 // of the provider chain runs.
 //
-// Bind pre-computes as much as possible so that the invokeFunc is
-// fast.
+// Bind pre-computes as much as possible so that the invokeFunc is fast.
+//
+// Each call to Bind() with unique providers may leak a small amount of memory,
+// creating durable type maps and closures to handle memoization and singletons.
+// Calls to the invokeFunc do not leak memory except where there are new inputs to
+// providers marked Memoize().
 func (c *Collection) Bind(invokeFunc interface{}, initFunc interface{}) error {
 	if err := c.bindFast(invokeFunc, initFunc); err != nil {
 		invokeF := newProvider(invokeFunc, -1, c.name+" invoke func")
@@ -270,14 +353,20 @@ func (c *Collection) bindFast(invokeFunc interface{}, initFunc interface{}) erro
 	return doBind(c, invokeF, initF, true)
 }
 
-// TODO: add an example
-
 // SetCallback expects to receive a function as an argument.  SetCallback() will call
 // that function.  That function in turn should take one or two functions
 // as arguments.  The first argument must be an invoke function (see Bind).
 // The second argument (if present) must be an init function.  The invoke func
 // (and the init func if present) will be created by SetCallback() and passed
 // to the function SetCallback calls.
+//
+// If there is an init function, it must be called once before the invoke function
+// is ever called.  Calling the invoke function will invoke the the sequence of
+// providers.
+//
+// Whatever arguments the invoke and init functions take will be passed into the
+// chain.  Whatever values the invoke function returns must be produced by the
+// injection chain.
 func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 	setter := reflect.ValueOf(setCallbackFunc)
 	setterType := setter.Type()
@@ -314,6 +403,14 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 	return err
 }
 
+// ForEachProvider iterates over the Providers within a Collection
+// invoking a function.
+func (c Collection) ForEachProvider(f func(Provider)) {
+	for _, fm := range c.contents {
+		f(fm)
+	}
+}
+
 // Run is different from bind: the provider chain is run, not bound
 // to functions.
 //
@@ -328,6 +425,9 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 //
 // Predefined Collection objects are considered providers along with InjectItems,
 // functions, and literal values.
+//
+// Each call to Run() with unique providers may leak a small amount of memory,
+// creating durable type maps and closures to handle memoization and singletons.
 func Run(name string, providers ...interface{}) error {
 	c := Sequence(name,
 		// include a default error responder so that the
@@ -355,22 +455,45 @@ func MustRun(name string, providers ...interface{}) {
 
 // MustBindSimple binds a collection with an invoke function that takes no
 // arguments and returns no arguments.  It panic()s if Bind() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBindSimple(c *Collection, name string) func() {
+	return c.MustBindSimple()
+}
+
+// MustBindSimple binds a collection with an invoke function that takes no
+// arguments and returns no arguments.  It panic()s if Bind() returns error.
+func (c *Collection) MustBindSimple() func() {
 	var invoke func()
-	MustBind(c, &invoke, nil)
+	c.MustBind(&invoke, nil)
 	return invoke
 }
 
 // MustBindSimpleError binds a collection with an invoke function that takes no
 // arguments and returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBindSimpleError(c *Collection, name string) func() error {
+	return c.MustBindSimpleError()
+}
+
+// MustBindSimpleError binds a collection with an invoke function that takes no
+// arguments and returns no arguments.  It panic()s if Bind() returns error.
+func (c *Collection) MustBindSimpleError() func() error {
 	var invoke func() error
-	MustBind(c, &invoke, nil)
+	c.MustBind(&invoke, nil)
 	return invoke
 }
 
 // MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustBind(c *Collection, invokeFunc interface{}, initFunc interface{}) {
+	c.MustBind(invokeFunc, initFunc)
+}
+
+// MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
+func (c *Collection) MustBind(invokeFunc interface{}, initFunc interface{}) {
 	err := c.Bind(invokeFunc, initFunc)
 	if err != nil {
 		panic(DetailedError(err))
@@ -378,7 +501,14 @@ func MustBind(c *Collection, invokeFunc interface{}, initFunc interface{}) {
 }
 
 // MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
+//
+// Deprecated: use the method on Collection instead
 func MustSetCallback(c *Collection, binderFunction interface{}) {
+	c.MustSetCallback(binderFunction)
+}
+
+// MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
+func (c *Collection) MustSetCallback(binderFunction interface{}) {
 	err := c.SetCallback(binderFunction)
 	if err != nil {
 		panic(DetailedError(err))

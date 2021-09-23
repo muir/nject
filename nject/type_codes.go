@@ -20,8 +20,7 @@ const noTypeExampleValue noType = false
 
 var noTypeCode = getTypeCode(noTypeExampleValue)
 
-// getTypeCode maps Go types to integers.  It is exported for
-// testing purposes.
+// getTypeCode maps reflect.Type to integers.
 func getTypeCode(a interface{}) typeCode {
 	if a == nil {
 		panic("nil has no type")

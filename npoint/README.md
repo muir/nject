@@ -1,10 +1,10 @@
 # npoint - dependency injection and wrapping for http handlers
 
-[![GoDoc](https://godoc.org/github.com/BlueOwlOpenSource/nject/npoint?status.png)](http://godoc.org/github.com/BlueOwlOpenSource/nject/npoint)
+[![GoDoc](https://godoc.org/github.com/muir/nject/npoint?status.png)](http://godoc.org/github.com/muir/nject/npoint)
 
 Install:
 
-	go get github.com/BlueOwlOpenSource/npoint
+	go get github.com/muir/npoint
 
 ---
 

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BlueOwlOpenSource/nject/nject"
-	"github.com/BlueOwlOpenSource/nject/npoint"
+	"github.com/muir/nject/nject"
+	"github.com/muir/nject/npoint"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 )

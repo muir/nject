@@ -1,9 +1,11 @@
-package nject
+package nject_test
 
 import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/muir/nject/nject"
 )
 
 // Example shows what gets included and what does not for several injection chains.
@@ -11,8 +13,8 @@ import (
 func Example() {
 	// This demonstrates displaying the elements of a chain using an error
 	// returned by the final element.
-	fmt.Println(Run("empty-chain",
-		Provide("Names", func(d *Debugging) error {
+	fmt.Println(nject.Run("empty-chain",
+		nject.Provide("Names", func(d *nject.Debugging) error {
 			return errors.New(strings.Join(d.NamesIncluded, ", "))
 		})))
 
@@ -20,21 +22,24 @@ func Example() {
 	// provider of a return type that is required.  Names is included in
 	// the upwards chain even though ReflectError could provide the error that
 	// Run() wants.
-	fmt.Println(Run("overwrite",
-		Required(Provide("InjectErrorDownward", func() error { return errors.New("overwrite me") })),
-		Provide("Names", func(inner func() error, d *Debugging) error {
-			inner()
-			return errors.New(strings.Join(d.NamesIncluded, ", "))
-		}),
-		Provide("ReflectError", func(err error) error { return err })))
+	fmt.Println(nject.Run("overwrite",
+		nject.Required(nject.Provide("InjectErrorDownward",
+			func() error { return errors.New("overwrite me") })),
+		nject.Provide("Names",
+			func(inner func() error, d *nject.Debugging) error {
+				inner()
+				return errors.New(strings.Join(d.NamesIncluded, ", "))
+			}),
+		nject.Provide("ReflectError",
+			func(err error) error { return err })))
 
 	// This demonstrates that the closest provider will be chosen over one farther away.
 	// Otherwise InInjector would be included instead of BoolInjector and IntReinjector.
-	fmt.Println(Run("multiple-choices",
-		Provide("IntInjector", func() int { return 1 }),
-		Provide("BoolInjector", func() bool { return true }),
-		Provide("IntReinjector", func(bool) int { return 2 }),
-		Provide("IntConsumer", func(i int, d *Debugging) error {
+	fmt.Println(nject.Run("multiple-choices",
+		nject.Provide("IntInjector", func() int { return 1 }),
+		nject.Provide("BoolInjector", func() bool { return true }),
+		nject.Provide("IntReinjector", func(bool) int { return 2 }),
+		nject.Provide("IntConsumer", func(i int, d *nject.Debugging) error {
 			return errors.New(strings.Join(d.NamesIncluded, ", "))
 		})))
 

@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/BlueOwlOpenSource/nject/npoint"
 	"github.com/gorilla/mux"
+	"github.com/muir/nject/npoint"
 	"github.com/stretchr/testify/assert"
 )
 

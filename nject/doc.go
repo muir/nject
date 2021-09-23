@@ -95,6 +95,20 @@ example, when using Bind(), if the invoke function takes an int as one of its
 inputs, then no injector that takes an int as an argument may be promoted to
 the STATIC set.
 
+Injectors in the STATIC set will be run exactly once per set of input values.
+If the inputs are consistent, then the output will be a singleton.  This is
+true across injection chains.
+
+If the following provider is used in multiple chains, as long as the same integer
+is injected, all chains will share the same pointer.
+
+```go
+Provide("square", MustCache(func(int i) *int {
+	j := i*i
+	return &j
+}))
+```
+
 Memoized injectors
 
 Injectors in the STATIC set are only run for initialization.  For some things,

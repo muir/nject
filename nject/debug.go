@@ -83,7 +83,7 @@ func dumpValueArray(va []reflect.Value, context string, vMap map[typeCode]int) {
 		return
 	}
 	if len(vMap) > 0 {
-		reverseMap := make(map[int]reflect.Type)
+		reverseMap := make(map[int]reflectType)
 		for tc, i := range vMap {
 			reverseMap[i] = tc.Type()
 		}

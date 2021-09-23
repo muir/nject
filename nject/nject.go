@@ -17,6 +17,7 @@ type provider struct {
 	id     int32
 
 	// user annotations
+	nonFinal            bool
 	cacheable           bool
 	mustCache           bool
 	required            bool
@@ -27,6 +28,8 @@ type provider struct {
 	notCacheable        bool
 	mustConsume         bool
 	consumptionOptional bool
+	singleton           bool
+	cluster             int32
 
 	// added by characterize
 	memoized    bool
@@ -34,6 +37,7 @@ type provider struct {
 	group       groupType
 	flows       flowMapType
 	isSynthetic bool
+	mapKeyCheck func([]reflect.Value) bool
 
 	// added during include calculations
 	cannotInclude error
@@ -49,16 +53,18 @@ type provider struct {
 	chainPosition              int
 	mustZeroIfRemainderSkipped []typeCode
 	mustZeroIfInnerNotCalled   []typeCode
-	upVmapCount                int
-	downVmapCount              int
+	vmapCount                  int
 
-	wrapWrapper          func(valueCollection, func(valueCollection) valueCollection) valueCollection // added in generate
-	wrapStaticInjector   func(valueCollection) error                                                  // added in generate
-	wrapFallibleInjector func(valueCollection) (bool, valueCollection)                                // added in generate
-	wrapEndpoint         func(valueCollection) valueCollection                                        // added in generate
+	// added when generating
+	wrapWrapper          func(valueCollection, func(valueCollection)) // added in generate
+	wrapStaticInjector   func(valueCollection) error                  // added in generate
+	wrapFallibleInjector func(valueCollection) bool                   // added in generate
+	wrapEndpoint         func(valueCollection)                        // added in generate
 }
 
 // copy does not copy wrappers or flows.
+// It only copies the base, user annotations, and characterize annotations;
+// it does not not copy include calculations, binding, or generating.
 func (fm *provider) copy() *provider {
 	if fm == nil {
 		return nil
@@ -68,26 +74,41 @@ func (fm *provider) copy() *provider {
 		index:               fm.index,
 		fn:                  fm.fn,
 		id:                  fm.id,
+		nonFinal:            fm.nonFinal,
 		cacheable:           fm.cacheable,
 		mustCache:           fm.mustCache,
 		required:            fm.required,
 		callsInner:          fm.callsInner,
 		memoize:             fm.memoize,
 		loose:               fm.loose,
-		memoized:            fm.memoized,
 		desired:             fm.desired,
+		notCacheable:        fm.notCacheable,
 		mustConsume:         fm.mustConsume,
 		consumptionOptional: fm.consumptionOptional,
-		notCacheable:        fm.notCacheable,
+		singleton:           fm.singleton,
+		cluster:             fm.cluster,
+		memoized:            fm.memoized,
 		class:               fm.class,
 		group:               fm.group,
 		flows:               fm.flows,
+		isSynthetic:         fm.isSynthetic,
+		mapKeyCheck:         fm.mapKeyCheck,
 	}
 }
 
 type thing interface {
 	modify(func(*provider)) thing
 	flatten() []*provider
+
+	// For single providers, DownFlows includes all inputs and
+	// all outputs.  For collections, Downflows only includes
+	// the net inputs and net outputs.
+	DownFlows() (inputs []reflect.Type, outputs []reflect.Type)
+
+	// For single providers, Upflows includes all consumes and
+	// all returns.  For collections, Upflows only includes
+	// the net consumes and returns.
+	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
 func newThing(fn interface{}) thing {
@@ -156,6 +177,43 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 
 	afterInit := make([]*provider, 0, len(c.contents))
 	afterInvoke := make([]*provider, 0, len(c.contents))
+
+	c.reorderNonFinal()
+
+	// Handle mutations
+	var mutated bool
+	for i := 0; i < len(c.contents); i++ {
+		fm := c.contents[i]
+		g, ok := fm.fn.(generatedFromInjectionChain)
+		if !ok {
+			continue
+		}
+		replacement, err := g.ReplaceSelf(
+			Collection{
+				name:     "before",
+				contents: c.contents[:i],
+			},
+			Collection{
+				name:     "after",
+				contents: c.contents[i+1:],
+			})
+		if err != nil {
+			return nil, nil, err
+		}
+		flat := replacement.flatten()
+		if len(flat) == 1 {
+			c.contents[i] = flat[0]
+		} else {
+			n := make([]*provider, 0, len(c.contents)+len(flat)-1)
+			n = append(n, c.contents[:i]...)
+			n = append(n, flat...)
+			n = append(n, c.contents[i+1:]...)
+			c.contents = n
+		}
+	}
+	if mutated {
+		c.reorderNonFinal()
+	}
 
 	for ii, fm := range c.contents {
 		cc := charContext{
@@ -264,4 +322,148 @@ func (c Collection) modify(f func(*provider)) thing {
 		name:     c.name,
 		contents: n,
 	}
+}
+
+func (p provider) DownFlows() ([]reflect.Type, []reflect.Type) {
+	if r, ok := p.fn.(Reflective); ok {
+		return effectiveOutputs(reflectiveWrapper{r})
+	}
+	if _, ok := p.fn.(generatedFromInjectionChain); ok {
+		return nil, nil
+	}
+	v := reflect.ValueOf(p.fn)
+	if !v.IsValid() {
+		return nil, nil
+	}
+	t := v.Type()
+	if t.Kind() == reflect.Func {
+		return effectiveOutputs(t)
+	}
+	return nil, []reflect.Type{t}
+}
+
+// The inputs to inner() are additional types that are provided
+// downstream.
+func effectiveOutputs(fn reflectType) ([]reflect.Type, []reflect.Type) {
+	inputs := typesIn(fn)
+	outputs := typesOut(fn)
+	if len(inputs) == 0 || inputs[0].Kind() != reflect.Func {
+		return inputs, outputs
+	}
+	i0 := inputs[0]
+	inputs = inputs[1:]
+	return inputs, typesIn(i0)
+}
+
+func (c Collection) netFlows(f func(fm *provider) ([]reflect.Type, []reflect.Type)) ([]reflect.Type, []reflect.Type) {
+	seenIn := make(map[reflect.Type]struct{})
+	uniqueIn := make([]reflect.Type, 0, len(c.contents)*4)
+	seenOut := make(map[reflect.Type]struct{})
+	uniqueOut := make([]reflect.Type, 0, len(c.contents)*4)
+	for _, fm := range c.contents {
+		inputs, outputs := f(fm)
+		inputsByType := make(map[reflect.Type]struct{})
+		for _, input := range inputs {
+			inputsByType[input] = struct{}{}
+			if _, ok := seenOut[input]; ok {
+				continue
+			}
+			if _, ok := seenIn[input]; ok {
+				continue
+			}
+			seenIn[input] = struct{}{}
+			uniqueIn = append(uniqueIn, input)
+		}
+		for _, output := range outputs {
+			if _, ok := inputsByType[output]; ok {
+				continue
+			}
+			if _, ok := seenIn[output]; ok {
+				continue
+			}
+			if _, ok := seenOut[output]; ok {
+				continue
+			}
+			seenOut[output] = struct{}{}
+			uniqueOut = append(uniqueOut, output)
+		}
+	}
+	return uniqueIn, uniqueOut
+}
+
+// DownFlows provides the net unresolved flows down the injection chain.
+// If a type is used both as input and as output for the same provider,
+// then that type counts as an input only.
+func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
+	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
+		return fm.DownFlows()
+	})
+}
+
+func (p provider) UpFlows() ([]reflect.Type, []reflect.Type) {
+	if r, ok := p.fn.(Reflective); ok {
+		return effectiveReturns(reflectiveWrapper{r})
+	}
+	if _, ok := p.fn.(generatedFromInjectionChain); ok {
+		return nil, nil
+	}
+	v := reflect.ValueOf(p.fn)
+	if !v.IsValid() {
+		return nil, nil
+	}
+	t := v.Type()
+	if t.Kind() == reflect.Func {
+		return effectiveReturns(t)
+	}
+	return nil, []reflect.Type{t}
+}
+
+// Only wrapper functions consume return values and only
+// wrapper functions provide return values
+func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
+	inputs := typesIn(fn)
+	if len(inputs) == 0 || inputs[0].Kind() != reflect.Func {
+		return nil, nil
+	}
+	i0 := inputs[0]
+	return typesOut(i0), typesOut(fn)
+}
+
+// DownFlows provides the net unresolved flows up the injection chain.
+// If a type is used both as value it consumes as a return value and also
+// as a value that it in turn returns, then the up flow for that provider will
+// be counted only by what it consumes.
+func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
+	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
+		return fm.UpFlows()
+	})
+}
+
+// Reorder collection to handle providers marked nonFinal by shifting
+// the last provider that isn't marked nonFinal to the end of the slice.
+func (c Collection) reorderNonFinal() {
+	for i := len(c.contents) - 1; i >= 0; i-- {
+		fm := c.contents[i]
+		if fm.nonFinal {
+			continue
+		}
+		if i == len(c.contents)-1 {
+			// no re-ordering required
+			return
+		}
+		final := c.contents[i]
+		for j := i; j < len(c.contents)-1; j++ {
+			c.contents[j] = c.contents[j+1]
+		}
+		c.contents[len(c.contents)-1] = final
+		return
+	}
+}
+
+func providersToProviders(in []*provider) []Provider {
+	p := make([]Provider, len(in))
+	for i, fm := range in {
+		p[i] = fm
+	}
+	return p
 }

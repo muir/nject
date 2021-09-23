@@ -113,7 +113,7 @@ func generateOutputMapper(fm *provider, start int, param flowType, vmap map[type
 	}, nil
 }
 
-func makeZeroer(fm *provider, vMap map[typeCode]int, mustZero []typeCode, context string) (func(v valueCollection), error) {
+func makeZero(fm *provider, vMap map[typeCode]int, mustZero []typeCode, context string) (func(v valueCollection), error) {
 	zeroMap := make(map[int]reflect.Type)
 	newMap := make(map[int]reflect.Type)
 	done := make(map[typeCode]bool)
@@ -144,20 +144,8 @@ func makeZeroer(fm *provider, vMap map[typeCode]int, mustZero []typeCode, contex
 	}, nil
 }
 
-func makeZero(fm *provider, vMap map[typeCode]int, upCount int, mustZero []typeCode) (func() valueCollection, error) {
-	zeroer, err := makeZeroer(fm, vMap, mustZero, "needed if inner() doesn't get called")
-	if err != nil {
-		return nil, err
-	}
-	return func() valueCollection {
-		zeroUpV := make(valueCollection, upCount)
-		zeroer(zeroUpV)
-		return zeroUpV
-	}, nil
-}
-
-func terminalErrorIndex(fm *provider) (int, error) {
-	for i, t := range typesOut(reflect.TypeOf(fm.fn)) {
+func terminalErrorIndex(fn reflectType) (int, error) {
+	for i, t := range typesOut(fn) {
 		if t == terminalErrorType {
 			return i, nil
 		}
@@ -169,51 +157,48 @@ func generateWrappers(
 	fm *provider,
 	downVmap map[typeCode]int, // value collection map for variables passed down
 	upVmap map[typeCode]int, // value collection map for return values coming up
-	upCount int, // size of value collection to be returned (if it needs to be created)
 ) error {
-	fv := reflect.ValueOf(fm.fn)
+	fv := getCanCall(fm.fn)
 
 	switch fm.class {
 	case finalFunc:
-		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in")
+		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in(final)")
 		if err != nil {
 			return err
 		}
-		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up")
+		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up(final)")
 		if err != nil {
 			return err
 		}
-		fm.wrapEndpoint = func(downV valueCollection) valueCollection {
-			in := inMap(downV)
-			upV := make(valueCollection, upCount)
-			upMap(upV, fv.Call(in))
-			return upV
+		fm.wrapEndpoint = func(v valueCollection) {
+			in := inMap(v)
+			upMap(v, fv.Call(in))
 		}
 
 	case wrapperFunc:
-		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in") // parmeters to the middleware handler
+		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in(w)") // parmeters to the middleware handler
 		if err != nil {
 			return err
 		}
-		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out") // parameters to inner()
+		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out(w)") // parameters to inner()
 		if err != nil {
 			return err
 		}
-		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up") // return values from middleward handler
+		upMap, err := generateOutputMapper(fm, 0, returnParams, upVmap, "up(w)") // return values from handler
 		if err != nil {
 			return err
 		}
-		retMap, err := generateInputMapper(fm, 0, returnedParams, fm.upRmap, upVmap, "ret") // return values from inner()
+		retMap, err := generateInputMapper(fm, 0, returnedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, upCount, fm.mustZeroIfInnerNotCalled)
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "upMap(w)")
 		if err != nil {
 			return err
 		}
-		fm.wrapWrapper = func(downV valueCollection, next func(valueCollection) valueCollection) valueCollection {
-			var upV valueCollection
-			downVCopy := downV.Copy()
+		in0Type := getInZero(fv)
+		fm.wrapWrapper = func(v valueCollection, next func(valueCollection)) {
+			vCopy := v.Copy()
 			callCount := 0
 
 			rTypes := make([]reflect.Type, len(fm.flows[returnedParams]))
@@ -224,64 +209,71 @@ func generateWrappers(
 			// this is not built outside WrapWrapper for thread safety
 			inner := func(i []reflect.Value) []reflect.Value {
 				if callCount > 0 {
-					for i, val := range downVCopy {
-						downV[i] = val
+					// TODO: replace with copy(v, vCopy)?
+					for i, val := range vCopy {
+						v[i] = val
 					}
 				}
 				callCount++
-				outMap(downV, i)
-				upV = next(downV)
-				r := retMap(upV)
-				for i, v := range r {
+				outMap(v, i)
+				next(v)
+				r := retMap(v)
+				for i, retV := range r {
 					if rTypes[i].Kind() == reflect.Interface {
-						r[i] = v.Convert(rTypes[i])
+						r[i] = retV.Convert(rTypes[i])
 					}
 				}
 				return r
 			}
-			in := inMap(downV)
-			in[0] = reflect.MakeFunc(fv.Type().In(0), inner)
+			in := inMap(v)
+			in[0] = reflect.MakeFunc(in0Type, inner)
+			defer func() {
+				if r := recover(); r != nil {
+					zero(v)
+					panic(r)
+				}
+			}()
 			out := fv.Call(in)
 			if callCount == 0 {
-				upV = zero()
+				zero(v)
 			}
-			upMap(upV, out)
-			return upV
+			upMap(v, out)
+			return
 		}
 
 	case fallibleInjectorFunc:
-		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in")
+		inMap, err := generateInputMapper(fm, 0, inputParams, fm.downRmap, downVmap, "in(fallible)")
 		if err != nil {
 			return err
 		}
-		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out")
+		outMap, err := generateOutputMapper(fm, 0, outputParams, downVmap, "out(fallible)")
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, upVmap, upCount, fm.mustZeroIfInnerNotCalled)
+		zero, err := makeZero(fm, upVmap, fm.mustZeroIfInnerNotCalled, "up(fallible)")
 		if err != nil {
 			return err
 		}
-		errorIndex, err := terminalErrorIndex(fm)
+		errorIndex, err := terminalErrorIndex(getReflectType(fm.fn))
 		if err != nil {
 			return err
 		}
 		upVerrorIndex := upVmap[getTypeCode(errorType)]
-		fm.wrapFallibleInjector = func(v valueCollection) (bool, valueCollection) {
+		fm.wrapFallibleInjector = func(v valueCollection) bool {
 			in := inMap(v)
 			out := fv.Call(in)
 			if out[errorIndex].Interface() != nil {
-				upV := zero()
-				upV[upVerrorIndex] = out[errorIndex].Convert(errorType)
+				zero(v)
+				v[upVerrorIndex] = out[errorIndex].Convert(errorType)
 				if debugEnabled() {
 					debugln("ABOUT TO RETURN ERROR")
-					dumpValueArray(upV, "error return", upVmap)
+					dumpValueArray(v, "error return", upVmap)
 				}
-				return true, upV
+				return true
 			}
 			outMap(v, append(out[:errorIndex], out[errorIndex+1:]...))
 			debugln("ABOUT TO RETURN NIL")
-			return false, nil
+			return false
 		}
 
 	case injectorFunc:
@@ -293,10 +285,10 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		fm.wrapFallibleInjector = func(v valueCollection) (bool, valueCollection) {
+		fm.wrapFallibleInjector = func(v valueCollection) bool {
 			in := inMap(v)
 			outMap(v, fv.Call(in))
-			return false, nil
+			return false
 		}
 
 	case staticInjectorFunc:
@@ -308,12 +300,12 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		cacheLookup := generateCache(fm.id, fv, len(inputParams))
+		lookup := generateLookup(fm, fv, len(inputParams))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			in := inMap(v)
 			var out []reflect.Value
-			if fm.memoized {
-				out = cacheLookup(in)
+			if lookup != nil {
+				out = lookup(in)
 			} else {
 				out = fv.Call(in)
 			}
@@ -330,21 +322,21 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		errorIndex, err := terminalErrorIndex(fm)
+		errorIndex, err := terminalErrorIndex(getReflectType(fm.fn))
 		if err != nil {
 			return err
 		}
-		zeroer, err := makeZeroer(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skippped functions")
+		zero, err := makeZero(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skippped functions")
 		if err != nil {
 			return err
 		}
-		cacheLookup := generateCache(fm.id, fv, len(inputParams))
+		lookup := generateLookup(fm, fv, len(inputParams))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			debugf("RUNNING %s", fm)
 			in := inMap(v)
 			var out []reflect.Value
-			if fm.memoized {
-				out = cacheLookup(in)
+			if lookup != nil {
+				out = lookup(in)
 			} else {
 				out = fv.Call(in)
 			}
@@ -356,7 +348,7 @@ func generateWrappers(
 					debugf("Zeroing for %s", fm)
 					dumpValueArray(v, "BEFORE", downVmap)
 				}
-				zeroer(v)
+				zero(v)
 				if debugEnabled() {
 					dumpValueArray(v, "AFTER", downVmap)
 					debugf("RETURNING %v", err)
