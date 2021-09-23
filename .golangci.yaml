@@ -80,7 +80,7 @@ output:
   sort-results: false
 
 linters:
-  disable-all: true
+  disable-all: false
   enable:
     - megacheck
     - govet
