@@ -92,8 +92,3 @@ The response will automatically be encoded.  The endpoint handler returns the
 response and and error.  If there is an error, it will trigger an appropriate
 return.  Use `nvelope.ReturnCode` to set the return code if returning an error.
 
-## Alternatives
-
-- [gin](https://github.com/gin-gonic/gin)
-- [gongular](https://github.com/mustafaakin/gongular)
-

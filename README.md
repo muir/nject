@@ -2,6 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
 ![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject)](https://gocover.io/github.com/muir/nject)
 [![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
 
 Install:
@@ -10,8 +11,8 @@ Install:
 
 ---
 
-This is a quartet of packages that together make up a good part of a 
-golang API server framework.
+This is a quartet of packages that together make up a most of a
+golang API server framework:
 
 nject: type safe dependency injection w/o requiring type assertions.
 
@@ -196,15 +197,10 @@ func main() {
 	err = app.Do(myhooks.MigrateMyDB)
 ```
 
-### Minimum Go version
-
-Due to the use of the "context" package, the mimimum supported Go version is 1.8.
-Support for earlier versions would be easy to add if anyone cares.
-
 ### Development status
 
 This repo represents continued development of Blue Owl's 
 [nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
 has been in production use for years and has been unchanged for years.
+The core of nject is mostly unchanged.  Nvelope and nserve are new.
 
-This version is not yet in production use.
