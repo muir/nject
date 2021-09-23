@@ -1,5 +1,0 @@
-name: Go Lint
-on: [ push ]
-uses: Jerome1337/golint-action@v1.0.2
-with:
-  golint-path: './src/...'
