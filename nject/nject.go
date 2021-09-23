@@ -285,30 +285,30 @@ func newCollection(name string, funcs ...interface{}) *Collection {
 	}
 }
 
-func (p provider) renameIfEmpty(i int, name string) *provider {
-	if p.origin == "" {
-		fm := p.copy()
-		fm.origin = name
-		if fm.index == -1 {
-			fm.index = i
+func (fm provider) renameIfEmpty(i int, name string) *provider {
+	if fm.origin == "" {
+		nfm := fm.copy()
+		nfm.origin = name
+		if nfm.index == -1 {
+			nfm.index = i
 		}
-		return fm
+		return nfm
 	}
-	return &p
+	return &fm
 }
 
-func (p provider) flatten() []*provider {
-	return []*provider{&p}
+func (fm provider) flatten() []*provider {
+	return []*provider{&fm}
 }
 
 func (c Collection) flatten() []*provider {
 	return c.contents
 }
 
-func (p provider) modify(f func(*provider)) thing {
-	fm := p.copy()
-	f(fm)
-	return fm
+func (fm provider) modify(f func(*provider)) thing {
+	nfm := fm.copy()
+	f(nfm)
+	return nfm
 }
 
 func (c Collection) modify(f func(*provider)) thing {
@@ -324,14 +324,14 @@ func (c Collection) modify(f func(*provider)) thing {
 	}
 }
 
-func (p provider) DownFlows() ([]reflect.Type, []reflect.Type) {
-	if r, ok := p.fn.(Reflective); ok {
+func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
+	if r, ok := fm.fn.(Reflective); ok {
 		return effectiveOutputs(reflectiveWrapper{r})
 	}
-	if _, ok := p.fn.(generatedFromInjectionChain); ok {
+	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
 		return nil, nil
 	}
-	v := reflect.ValueOf(p.fn)
+	v := reflect.ValueOf(fm.fn)
 	if !v.IsValid() {
 		return nil, nil
 	}
@@ -400,14 +400,14 @@ func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
 	})
 }
 
-func (p provider) UpFlows() ([]reflect.Type, []reflect.Type) {
-	if r, ok := p.fn.(Reflective); ok {
+func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
+	if r, ok := fm.fn.(Reflective); ok {
 		return effectiveReturns(reflectiveWrapper{r})
 	}
-	if _, ok := p.fn.(generatedFromInjectionChain); ok {
+	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
 		return nil, nil
 	}
-	v := reflect.ValueOf(p.fn)
+	v := reflect.ValueOf(fm.fn)
 	if !v.IsValid() {
 		return nil, nil
 	}
