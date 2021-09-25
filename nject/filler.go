@@ -43,6 +43,7 @@ func getCanCall(f interface{}) canCall {
 type canRealType interface {
 	Type() reflect.Type
 }
+
 type canFakeType interface {
 	In(int) reflect.Type
 }
@@ -338,15 +339,18 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 func (f *filler) In(i int) reflect.Type {
 	return f.inputs[i].typ
 }
+
 func (f *filler) NumIn() int {
 	return len(f.inputs)
 }
+
 func (f *filler) Out(i int) reflect.Type {
 	if f.pointer {
 		return reflect.PtrTo(f.typ)
 	}
 	return f.typ
 }
+
 func (f *filler) NumOut() int {
 	return 1
 }
@@ -536,7 +540,7 @@ func addFieldFiller(
 		check(reflect.PtrTo(field.Type), true)
 	}
 	if option.matchToInterface && countEmptyInterfaces != 1 {
-		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in fucntion", context)
+		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in function", context)
 	}
 	if score == bad {
 		return nil, false, fmt.Errorf("%s no match found between field type %s and function inputs",
@@ -600,7 +604,7 @@ func generatePostMethod(modelType reflect.Type, methodName string) (Provider, er
 			},
 		}), nil
 	default:
-		return nil, fmt.Errorf("internal error #36: no match betwen model %s and method input %s",
+		return nil, fmt.Errorf("internal error #36: no match between model %s and method input %s",
 			modelType, method.Type.In(0))
 	}
 }

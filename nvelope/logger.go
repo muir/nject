@@ -49,6 +49,7 @@ func (std wrappedStdLogger) Error(msg string, fields ...map[string]interface{}) 
 func (std wrappedStdLogger) Warn(msg string, fields ...map[string]interface{}) {
 	std.Error(msg, fields...)
 }
+
 func (std wrappedStdLogger) Debug(msg string, fields ...map[string]interface{}) {
 	std.Error(msg, fields...)
 }
@@ -62,6 +63,6 @@ type nilLogger struct{}
 
 var _ BasicLogger = nilLogger{}
 
-func (_ nilLogger) Error(msg string, fields ...map[string]interface{}) {}
-func (_ nilLogger) Warn(msg string, fields ...map[string]interface{})  {}
-func (_ nilLogger) Debug(msg string, fields ...map[string]interface{}) {}
+func (nilLogger) Error(msg string, fields ...map[string]interface{}) {}
+func (nilLogger) Warn(msg string, fields ...map[string]interface{})  {}
+func (nilLogger) Debug(msg string, fields ...map[string]interface{}) {}

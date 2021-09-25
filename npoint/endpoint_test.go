@@ -15,16 +15,20 @@ import (
 	"golang.org/x/net/context"
 )
 
-type intType3 int
-type intType5 int
-type intType7 int
+type (
+	intType3 int
+	intType5 int
+	intType7 int
+)
 
-type stringA string
-type stringB string
-type stringC string
-type stringD string
-type stringE string
-type stringF string
+type (
+	stringA string
+	stringB string
+	stringC string
+	stringD string
+	stringE string
+	stringF string
+)
 
 func NewBinder() *ManualBinder {
 	return &ManualBinder{
@@ -39,6 +43,7 @@ type ManualBinder struct {
 func (b *ManualBinder) Bind(path string, h http.HandlerFunc) {
 	b.Bound[path] = h
 }
+
 func (b *ManualBinder) Call(path string, method string, buf string, h http.Header) *http.Response {
 	handler, found := b.Bound[path]
 	if !found {
@@ -108,12 +113,15 @@ func TestTestFramework(t *testing.T) {
 type interfaceI interface {
 	I() int
 }
+
 type interfaceJ interface {
 	I() int
 }
+
 type interfaceK interface {
 	I() int
 }
+
 type doesI struct {
 	i int
 }
@@ -272,15 +280,19 @@ func (epp examplePaymentProvider) Stuff() int {
 	return int(epp * 2)
 }
 
-type tripsURI string
-type csettings map[string]string
-type logger interface {
-	Logf(string, ...interface{})
-}
+type (
+	tripsURI  string
+	csettings map[string]string
+	logger    interface {
+		Logf(string, ...interface{})
+	}
+)
+
 type enhancedWriter interface {
 	http.ResponseWriter
 	S(int)
 }
+
 type enhancedWriterImp struct {
 	http.ResponseWriter
 }
@@ -289,13 +301,15 @@ func (w enhancedWriterImp) S(i int) {
 	w.WriteHeader(i)
 }
 
-type dbname string
-type rbody []byte
-type jresult interface{}
+type (
+	dbname  string
+	rbody   []byte
+	jresult interface{}
+)
 
 func TestChains(t *testing.T) {
 	t.Parallel()
-	var chainTests = []struct {
+	chainTests := []struct {
 		Name   string
 		Panics bool
 		Chain  []interface{}

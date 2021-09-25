@@ -432,7 +432,7 @@ func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	return typesOut(i0), typesOut(fn)
 }
 
-// DownFlows provides the net unresolved flows up the injection chain.
+// UpFlows provides the net unresolved flows up the injection chain.
 // If a type is used both as value it consumes as a return value and also
 // as a value that it in turn returns, then the up flow for that provider will
 // be counted only by what it consumes.

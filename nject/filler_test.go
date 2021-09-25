@@ -20,10 +20,12 @@ type FillSubStruct struct {
 	S3 s3 `t1:"fill"`
 }
 
-type FillStruct2 struct{ FillStruct }
-type FillStruct3 struct{ FillStruct }
-type FillStruct4 struct{ FillStruct }
-type FillStruct5 struct{ FillStruct }
+type (
+	FillStruct2 struct{ FillStruct }
+	FillStruct3 struct{ FillStruct }
+	FillStruct4 struct{ FillStruct }
+	FillStruct5 struct{ FillStruct }
+)
 
 func TestFiller(t *testing.T) {
 	t.Parallel()

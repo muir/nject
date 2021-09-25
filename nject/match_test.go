@@ -8,15 +8,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testI int
-var di = &doesI{}
-var dj = &doesJ{}
-var interfaceIType = reflect.TypeOf((*interfaceI)(nil)).Elem()
-var interfaceJType = reflect.TypeOf((*interfaceJ)(nil)).Elem()
-var interfaceKType = reflect.TypeOf((*interfaceK)(nil)).Elem()
+var (
+	testI          int
+	di             = &doesI{}
+	dj             = &doesJ{}
+	interfaceIType = reflect.TypeOf((*interfaceI)(nil)).Elem()
+	interfaceJType = reflect.TypeOf((*interfaceJ)(nil)).Elem()
+	interfaceKType = reflect.TypeOf((*interfaceK)(nil)).Elem()
+)
 
-var requestType = reflect.TypeOf((**http.Request)(nil)).Elem()
-var responseWriterType = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
+var (
+	requestType        = reflect.TypeOf((**http.Request)(nil)).Elem()
+	responseWriterType = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
+)
 
 var provideSet1 = map[reflect.Type]int{
 	requestType:           1,

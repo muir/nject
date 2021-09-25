@@ -9,10 +9,12 @@ import (
 
 type typeCode int
 
-var typeCounter = 0
-var lock sync.Mutex
-var typeMap = make(map[reflect.Type]typeCode)
-var reverseMap = make(map[typeCode]reflect.Type)
+var (
+	typeCounter = 0
+	lock        sync.Mutex
+	typeMap     = make(map[reflect.Type]typeCode)
+	reverseMap  = make(map[typeCode]reflect.Type)
+)
 
 type noType bool
 

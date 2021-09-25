@@ -11,27 +11,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const lastT = true
-const lastF = false
-const staticT = true
-const staticF = false
-const panicT = true
-const panicF = false
+const (
+	lastT   = true
+	lastF   = false
+	staticT = true
+	staticF = false
+	panicT  = true
+	panicF  = false
+)
 
 type intType3 int
 
-var tsiwfsFunc1a = func() intType3 { return 9 }
-var tsiwfsFunc2a = func(w http.ResponseWriter, r *http.Request) {}
+var (
+	tsiwfsFunc1a = func() intType3 { return 9 }
+	tsiwfsFunc2a = func(w http.ResponseWriter, r *http.Request) {}
+)
 
 type interfaceI interface {
 	I() int
 }
+
 type interfaceJ interface {
 	I() int
 }
+
 type interfaceK interface {
 	I() int
 }
+
 type doesI struct {
 	i int
 }
@@ -47,22 +54,27 @@ func (dj *doesJ) I() int { return dj.j * 3 }
 func params() flowMapType {
 	return make(flowMapType)
 }
+
 func (flows flowMapType) returns(f ...typeCode) flowMapType {
 	flows[returnParams] = f
 	return flows
 }
+
 func (flows flowMapType) input(f ...typeCode) flowMapType {
 	flows[inputParams] = f
 	return flows
 }
+
 func (flows flowMapType) output(f ...typeCode) flowMapType {
 	flows[outputParams] = f
 	return flows
 }
+
 func (flows flowMapType) returned(f ...typeCode) flowMapType {
 	flows[returnedParams] = f
 	return flows
 }
+
 func (flows flowMapType) bypass(f ...typeCode) flowMapType {
 	flows[bypassParams] = f
 	return flows
@@ -309,16 +321,20 @@ var characterizeTests = []struct {
 	},
 }
 
-var nadaFunc func()
-var takesTwoReturnsThree func(int, string) (bool, string, error)
+var (
+	nadaFunc             func()
+	takesTwoReturnsThree func(int, string) (bool, string, error)
+)
 
-var boolTC = getTypeCode(reflect.TypeOf((*bool)(nil)).Elem())
-var intTC = getTypeCode(reflect.TypeOf((*int)(nil)).Elem())
-var intType3TC = getTypeCode(reflect.TypeOf((*intType3)(nil)).Elem())
-var stringTC = getTypeCode(reflect.TypeOf((*string)(nil)).Elem())
-var requestTC = getTypeCode(reflect.TypeOf((**http.Request)(nil)).Elem())
-var responseWriterTC = getTypeCode(reflect.TypeOf((*http.ResponseWriter)(nil)).Elem())
-var errorTC = getTypeCode(errorType)
+var (
+	boolTC           = getTypeCode(reflect.TypeOf((*bool)(nil)).Elem())
+	intTC            = getTypeCode(reflect.TypeOf((*int)(nil)).Elem())
+	intType3TC       = getTypeCode(reflect.TypeOf((*intType3)(nil)).Elem())
+	stringTC         = getTypeCode(reflect.TypeOf((*string)(nil)).Elem())
+	requestTC        = getTypeCode(reflect.TypeOf((**http.Request)(nil)).Elem())
+	responseWriterTC = getTypeCode(reflect.TypeOf((*http.ResponseWriter)(nil)).Elem())
+	errorTC          = getTypeCode(errorType)
+)
 
 func een(i []typeCode) string {
 	var s []string

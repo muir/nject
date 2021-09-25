@@ -161,7 +161,7 @@ func NotCacheable(fn interface{}) Provider {
 // When used on an existing Provider, it creates an annotated copy of that provider.
 //
 // As long as consistent injection chains are used Memoize + MustCache can
-// gurantee singletons.
+// guarantee singletons.
 func Memoize(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.memoize = true
@@ -392,7 +392,8 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 		if err == nil {
 			setter.Call([]reflect.Value{
 				reflect.ValueOf(invokePtr).Elem(),
-				reflect.ValueOf(initPtr).Elem()})
+				reflect.ValueOf(initPtr).Elem(),
+			})
 		}
 	} else {
 		err = c.Bind(invokePtr, nil)

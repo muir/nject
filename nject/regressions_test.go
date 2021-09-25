@@ -9,18 +9,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type b1 bool
-type b2 bool
-type b3 bool
-type b4 bool
-type b5 bool
-type b6 bool
-type b7 bool
-type b8 bool
-type b9 bool
-type b10 bool
-type b11 bool
-type b12 bool
+type (
+	b1  bool
+	b2  bool
+	b3  bool
+	b4  bool
+	b5  bool
+	b6  bool
+	b7  bool
+	b8  bool
+	b9  bool
+	b10 bool
+	b11 bool
+	b12 bool
+)
 
 func TestHealthRegression(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {

@@ -7,16 +7,20 @@ import (
 	"unicode/utf8"
 )
 
-type in3 [3]interface{}
-type in10 [10]interface{}
-type in30 [30]interface{}
-type in90 [90]interface{}
+type (
+	in3  [3]interface{}
+	in10 [10]interface{}
+	in30 [30]interface{}
+	in90 [90]interface{}
+)
 
 type cacherFunc func(in []reflect.Value) []reflect.Value
 
-var cachers = make(map[int32]cacherFunc)
-var singletons = make(map[int32]cacherFunc)
-var lockLock sync.RWMutex
+var (
+	cachers    = make(map[int32]cacherFunc)
+	singletons = make(map[int32]cacherFunc)
+	lockLock   sync.RWMutex
+)
 
 // canSimpleTypeBeMapKey cannot handle structs or interfaces
 func canSimpleTypeBeMapKey(t reflect.Type) bool {
@@ -105,7 +109,7 @@ func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 				}
 			}
 		case reflect.Interface:
-			// We cannot determine the map key compatability of interface types.  They
+			// We cannot determine the map key compatibility of interface types.  They
 			// may be okay, or they may not be okay.  The actual type type will have to be
 			// checked once we have a value.
 			checkers = append(checkers, func(in []reflect.Value) bool {

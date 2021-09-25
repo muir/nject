@@ -44,6 +44,6 @@ func Example() {
 		})))
 
 	// Output: Debugging, empty-chain invoke func, Run()error, Names
-	//Debugging, overwrite invoke func, Run()error, InjectErrorDownward, Names, ReflectError
-	//Debugging, multiple-choices invoke func, Run()error, BoolInjector, IntReinjector, IntConsumer
+	// Debugging, overwrite invoke func, Run()error, InjectErrorDownward, Names, ReflectError
+	// Debugging, multiple-choices invoke func, Run()error, BoolInjector, IntReinjector, IntConsumer
 }

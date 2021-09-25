@@ -6,8 +6,10 @@ import (
 	"github.com/muir/nject/nject"
 )
 
-type driverName string
-type dataSourceName string
+type (
+	driverName     string
+	dataSourceName string
+)
 
 // openDBErrorReturnRequired is a provider that opens a database.   Surface it seems
 // fine but it has a problem: what if nothing below it returns error?
