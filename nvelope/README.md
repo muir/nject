@@ -1,6 +1,7 @@
 # nvelope - http endpoint helpers in an nject world
 
 [![GoDoc](https://godoc.org/github.com/muir/nject/nserver?status.png)](http://godoc.org/github.com/muir/nject/nvelope)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/nvelope)](https://gocover.io/github.com/muir/nject/nvelope)
 
 Install:
 

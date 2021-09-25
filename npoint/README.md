@@ -1,6 +1,7 @@
 # npoint - dependency injection and wrapping for http handlers
 
 [![GoDoc](https://godoc.org/github.com/muir/nject/npoint?status.png)](http://godoc.org/github.com/muir/nject/npoint)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/npoint)](https://gocover.io/github.com/muir/nject/npoint)
 
 Install:
 

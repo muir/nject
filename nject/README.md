@@ -1,6 +1,7 @@
 # nject - dependency injection 
 
 [![GoDoc](https://godoc.org/github.com/muir/nject/nject?status.png)](http://godoc.org/github.com/muir/nject/nject)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/nject)](https://gocover.io/github.com/muir/nject/nject)
 
 Install:
 

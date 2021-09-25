@@ -1,6 +1,7 @@
 # nserve - server startup/shutdown in an nject world
 
 [![GoDoc](https://godoc.org/github.com/muir/nject/nserver?status.png)](http://godoc.org/github.com/muir/nject/nserve)
+[![Coverage](http://gocover.io/_badge/github.com/muir/nject/nserve)](https://gocover.io/github.com/muir/nject/nserve)
 
 Install:
 
