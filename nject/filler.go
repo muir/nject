@@ -536,7 +536,7 @@ func addFieldFiller(
 		check(reflect.PtrTo(field.Type), true)
 	}
 	if option.matchToInterface && countEmptyInterfaces != 1 {
-		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in fucntion", context)
+		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in function", context)
 	}
 	if score == bad {
 		return nil, false, fmt.Errorf("%s no match found between field type %s and function inputs",
@@ -600,7 +600,7 @@ func generatePostMethod(modelType reflect.Type, methodName string) (Provider, er
 			},
 		}), nil
 	default:
-		return nil, fmt.Errorf("internal error #36: no match betwen model %s and method input %s",
+		return nil, fmt.Errorf("internal error #36: no match between model %s and method input %s",
 			modelType, method.Type.In(0))
 	}
 }

@@ -19,6 +19,8 @@ type DeferredWriter struct {
 	resetHeader http.Header
 }
 
+// NewDeferredWriter returns a DeferredWriter based on a
+// base ResponseWriter
 func NewDeferredWriter(w http.ResponseWriter) *DeferredWriter {
 	return &DeferredWriter{
 		base:        w,

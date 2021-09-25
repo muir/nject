@@ -18,6 +18,8 @@ type Reflective interface {
 	Call(in []reflect.Value) []reflect.Value
 }
 
+// PostActionFuncArg are functional arguments to PostActionByTag,
+// PostActionByName, and PostActionByType.
 type PostActionFuncArg func(*postActionOption)
 
 type postActionOption struct {
@@ -198,8 +200,8 @@ func WithFill(b bool) PostActionFuncArg {
 	}
 }
 
-// MatchToInterface requires that the post action function have exactly one
-// open interace type (interface{}) in its arguments list.  A pointer to the
+// MatchToOpenInterface requires that the post action function have exactly one
+// open interface type (interface{}) in its arguments list.  A pointer to the
 // field will be passed to the interface parameter.
 //
 // EXPERIMENTAL: this is currently considered experimental

@@ -38,13 +38,15 @@ var DecodeJSON = GenerateDecoder(
 	WithDefaultContentType("application/json"),
 )
 
-// DecodeJSON is is a pre-defined special nject.Provider
+// DecodeXML is is a pre-defined special nject.Provider
 // created with GenerateDecoder for decoding XML requests.
 var DecodeXML = GenerateDecoder(
 	WithDecoder("application/xml", xml.Unmarshal),
 	WithDefaultContentType("application/xml"),
 )
 
+// Decoder is the signature for decoders: take bytes and
+// a pointer to something and deserialize it.
 type Decoder func([]byte, interface{}) error
 
 type eigo struct {
@@ -53,6 +55,8 @@ type eigo struct {
 	defaultContentType string
 }
 
+// DecodeInputsGeneratorOpt are functional arguments for
+// GenerateDecoder
 type DecodeInputsGeneratorOpt func(*eigo)
 
 // WithDecoder maps conent types (eg "application/json") to
@@ -323,9 +327,8 @@ func GenerateDecoder(
 				}
 				if returnAddress {
 					return []reflect.Value{mp, ev}
-				} else {
-					return []reflect.Value{model, ev}
 				}
+				return []reflect.Value{model, ev}
 			})
 			providers = append(providers, nject.Provide("create "+nonPointer.String(), reflective))
 		}

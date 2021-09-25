@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Injectwriter injects a DeferredWriter
+// InjectWriter injects a DeferredWriter
 var InjectWriter = nject.Provide("writer", NewDeferredWriter)
 
-// AutoFlush calls Flush on the deferred writer if it hasn't
+// AutoFlushWriter calls Flush on the deferred writer if it hasn't
 // already been done
 var AutoFlushWriter = nject.Provide("autoflush-writer", func(inner func(), w *DeferredWriter) {
 	inner()
@@ -63,8 +63,13 @@ type specificEncoder struct {
 	encode           func(interface{}) ([]byte, error)
 }
 
+// ResponseEncoderFuncArg is a function argument for MakeResponseEncoder
 type ResponseEncoderFuncArg func(*encoderOptions)
+
+// EncoderSpecificFuncArg is a functional arguemnt for WithEncoder
 type EncoderSpecificFuncArg func(*specificEncoder)
+
+// ErrorTranformer transforms an error into a model that can be logged.
 type ErrorTranformer func(error) (replacementModel interface{}, useReplacement bool)
 
 // WithEncoder adds an model encoder to what MakeResponseEncoder will support.
@@ -90,7 +95,7 @@ func WithEncoder(contentType string, encode func(interface{}) ([]byte, error), e
 	}
 }
 
-// WithErrorTransformation provides a function to transform errors before
+// WithErrorModel provides a function to transform errors before
 // encoding them using the normal encoder.  The return values are the model
 // to use instead of the error and a boolean to indicate that the replacement
 // should be used.  If the boolean is false, then a plain text error
@@ -164,7 +169,7 @@ func MakeResponseEncoder(
 			var code int
 			var enc []byte
 
-			// handleError will alwyas set enc
+			// handleError will always set enc
 			var handleError func(recurseOkay bool)
 			handleError = func(recurseOkay bool) {
 				code = GetReturnCode(err)

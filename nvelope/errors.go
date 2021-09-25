@@ -50,6 +50,7 @@ func Forbidden(err error) error {
 	return ReturnCode(err, 403)
 }
 
+// GetReturnCode turns an error into an HTTP response code.
 func GetReturnCode(err error) int {
 	var rc returnCode
 	if errors.As(err, &rc) {
@@ -58,6 +59,8 @@ func GetReturnCode(err error) int {
 	return 500
 }
 
+// CanModel represents errors that can transform themselves into a model
+// for logging.
 type CanModel interface {
 	error
 	Model() encoding.TextUnmarshaler

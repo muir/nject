@@ -105,7 +105,7 @@ func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 				}
 			}
 		case reflect.Interface:
-			// We cannot determine the map key compatability of interface types.  They
+			// We cannot determine the map key compatibility of interface types.  They
 			// may be okay, or they may not be okay.  The actual type type will have to be
 			// checked once we have a value.
 			checkers = append(checkers, func(in []reflect.Value) bool {

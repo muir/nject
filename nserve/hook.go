@@ -10,6 +10,10 @@ var hookCounter int32
 type hookOrder string
 
 const (
+	// ForwardOrder and ReverseOrder define the two
+	// directions for hook invocation.  Given a list of
+	// actions, ForwardOrder runs the list from start
+	// to finish and ReverseOrder does the opposite.
 	// nolint:staticcheck
 	ForwardOrder hookOrder = "forward"
 	ReverseOrder           = "forward"
@@ -96,6 +100,14 @@ func (h *Hook) String() string {
 	return "hook " + h.Name
 }
 
+// Shutdown is a reverse-order hook meant to be used for forced shutdowns.
+// If Stop encounters an error, then Shutdown will also be called.
 var Shutdown = NewHook("shutdown", ReverseOrder)
+
+// Stop is a reverse-order hook meant to be used when stopping. If an error
+// is encountered, Shutdown will also be used.
 var Stop = NewHook("stop", ReverseOrder).OnError(Shutdown).ContinuePastError(true)
+
+// Start is a forward-order hook for starting services. If it encounters
+// an error, it will invoke Stop on whatever was started.
 var Start = NewHook("start", ForwardOrder).OnError(Stop)

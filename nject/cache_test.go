@@ -88,7 +88,7 @@ func TestCanBeMapKey(t *testing.T) {
 			mappable: true,
 		},
 		{
-			name: "mutliples-yes",
+			name: "multiples-yes",
 			values: []interface{}{
 				outer{
 					Inner: smt{
@@ -103,7 +103,7 @@ func TestCanBeMapKey(t *testing.T) {
 			mappable: true,
 		},
 		{
-			name: "mutliples-no",
+			name: "multiples-no",
 			values: []interface{}{
 				outer{
 					Inner: smt{
