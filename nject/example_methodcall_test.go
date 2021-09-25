@@ -18,7 +18,7 @@ func (s S) Print() {
 	fmt.Println(s.I)
 }
 
-func ExampleMethodCall() {
+func ExampleWithMethodCall() {
 	nject.Run("example",
 		func() int {
 			return 4

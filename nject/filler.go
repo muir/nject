@@ -14,7 +14,6 @@ const debugFiller = false
 // of Reflective
 type filler struct {
 	pointer bool
-	create  bool
 	copy    bool
 	typ     reflect.Type
 	inputs  []inputDisposition
@@ -498,6 +497,7 @@ func addFieldFiller(
 	var needConvert bool
 	var countEmptyInterfaces int
 	for i, in := range inputs {
+		i, in := i, in
 		check := func(t reflect.Type, aOf bool) {
 			var s int
 			var c bool

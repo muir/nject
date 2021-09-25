@@ -24,6 +24,7 @@ func (w *testResponseWriter) Header() http.Header  { return w.header }
 func (w *testResponseWriter) WriteHeader(code int) { w.code = code }
 func (w *testResponseWriter) Write(b []byte) (int, error) {
 	if w.simulateWriteError != nil {
+		// nolint:errorlint
 		if w.simulateWriteError == io.ErrShortWrite {
 			if len(b) == 0 {
 				return 0, nil

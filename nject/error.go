@@ -1,5 +1,9 @@
 package nject
 
+import (
+	"errors"
+)
+
 type njectError struct {
 	err     error
 	details string
@@ -14,8 +18,9 @@ func (ne *njectError) Error() string {
 // or something that called Bind() then it will return
 // a much more detailed error than just calling err.Error()
 func DetailedError(err error) string {
-	if njerr, ok := err.(*njectError); ok {
-		return njerr.err.Error() + "\n\n" + njerr.details
+	var njectError *njectError
+	if errors.As(err, &njectError) {
+		return err.Error() + "\n\n" + njectError.details
 	}
 	return err.Error()
 }

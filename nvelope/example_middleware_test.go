@@ -74,7 +74,7 @@ func ServiceWithMiddleware(router *mux.Router) {
 
 // Example shows an injection chain handling a single endpoint using nject,
 // npoint, and nvelope.
-func Example_MiddlewareDeferredWriter() {
+func ExampleServiceWithMiddleware() {
 	r := mux.NewRouter()
 	ServiceWithMiddleware(r)
 	ts := httptest.NewServer(r)
@@ -96,6 +96,7 @@ func Example_MiddlewareDeferredWriter() {
 			fmt.Println("read error:", err)
 			return
 		}
+		res.Body.Close()
 		fmt.Println(res.StatusCode, "->"+string(b))
 	}
 	doGet("/a/path/john/37", "good")

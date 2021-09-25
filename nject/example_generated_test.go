@@ -48,7 +48,7 @@ func ExampleGenerateFromInjectionChain() {
 	// <nil>
 }
 
-func ExampleCollection_DownFlows_Provider() {
+func ExampleCollection_DownFlows_provider() {
 	sequence := nject.Sequence("one provider", func(_ int, _ string) float64 { return 0 })
 	inputs, outputs := sequence.DownFlows()
 	fmt.Println("inputs", inputs)
@@ -57,7 +57,7 @@ func ExampleCollection_DownFlows_Provider() {
 	// outputs [float64]
 }
 
-func ExampleCollection_DownFlows_Collection() {
+func ExampleCollection_DownFlows_collection() {
 	sequence := nject.Sequence("two providers",
 		func(_ int, _ int64) float32 { return 0 },
 		func(_ int, _ string) float64 { return 0 },

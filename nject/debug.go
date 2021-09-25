@@ -144,17 +144,17 @@ func dumpF(context string, fm *provider) {
 		}
 	}
 	if fm.include {
-		out += fmt.Sprintf("\n\tincluded")
+		out += "\n\tincluded"
 	}
 	if fm.required {
-		out += fmt.Sprintf("\n\trequired")
+		out += "\n\trequired"
 	} else if fm.wanted {
-		out += fmt.Sprintf("\n\twanted")
+		out += "\n\twanted"
 	} else if fm.desired {
-		out += fmt.Sprintf("\n\tdesired")
+		out += "\n\tdesired"
 	}
 	if fm.mustConsume {
-		out += fmt.Sprintf("\n\tmust consume")
+		out += "\n\tmust consume"
 	}
 	if fm.memoized || fm.memoize {
 		out += fmt.Sprintf("\n\tmemoize %v memoized %v", fm.memoize, fm.memoized)

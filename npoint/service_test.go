@@ -252,8 +252,10 @@ func multiStartups(
 		b := NewBinder()
 		s.Start(b.Bind)
 		afterStart(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall1(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall2(n)
 	}
@@ -267,8 +269,10 @@ func multiStartups(
 		s.RegisterEndpoint(ept, hc)
 		// afterRegister(n)
 		afterStart(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall1(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall2(n)
 	}
@@ -282,8 +286,10 @@ func multiStartups(
 		sr.RegisterEndpoint(ept, hc)
 		// afterRegister(n)
 		afterStart(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall1(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall2(n)
 	}
@@ -300,12 +306,20 @@ func multiStartups(
 		defer localServer.Close()
 		afterStart(n)
 		t.Logf("GET %s%s\n", localServer.URL, ept)
-		_, err := client.Get(localServer.URL + ept)
-		assert.NoError(t, err)
-		afterCall1(n)
+		// nolint:noctx
 		resp, err := client.Get(localServer.URL + ept)
+		assert.NoError(t, err)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		afterCall1(n)
+		// nolint:noctx
+		resp, err = client.Get(localServer.URL + ept)
 		assert.NoError(t, err, name)
-		assert.Equal(t, 204, resp.StatusCode, name)
+		if resp != nil {
+			assert.Equal(t, 204, resp.StatusCode, name)
+			resp.Body.Close()
+		}
 		afterCall2(n)
 	}
 	{
@@ -321,12 +335,20 @@ func multiStartups(
 		// afterRegister(n)
 		afterStart(n)
 		t.Logf("GET %s%s\n", localServer.URL, ept)
-		_, err := client.Get(localServer.URL + ept)
-		assert.NoError(t, err)
-		afterCall1(n)
+		// nolint:noctx
 		resp, err := client.Get(localServer.URL + ept)
+		assert.NoError(t, err)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		afterCall1(n)
+		// nolint:noctx
+		resp, err = client.Get(localServer.URL + ept)
 		assert.NoError(t, err, name)
-		assert.Equal(t, 204, resp.StatusCode, name)
+		if resp != nil {
+			assert.Equal(t, 204, resp.StatusCode, name)
+			resp.Body.Close()
+		}
 		afterCall2(n)
 	}
 	{
@@ -342,12 +364,20 @@ func multiStartups(
 		// afterRegister(n)
 		afterStart(n)
 		t.Logf("GET %s%s\n", localServer.URL, ept)
-		_, err := client.Get(localServer.URL + ept)
-		assert.NoError(t, err)
-		afterCall1(n)
+		// nolint:noctx
 		resp, err := client.Get(localServer.URL + ept)
+		assert.NoError(t, err)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		afterCall1(n)
+		// nolint:noctx
+		resp, err = client.Get(localServer.URL + ept)
 		assert.NoError(t, err, name)
-		assert.Equal(t, 204, resp.StatusCode, name)
+		if resp != nil {
+			assert.Equal(t, 204, resp.StatusCode, name)
+			resp.Body.Close()
+		}
 		afterCall2(n)
 	}
 	{
@@ -359,8 +389,10 @@ func multiStartups(
 		b.Bind(ept, e)
 		// afterRegister(n)
 		afterStart(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall1(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall2(n)
 	}
@@ -373,8 +405,10 @@ func multiStartups(
 		s.RegisterEndpoint(ept, hc)
 		// afterRegister(n)
 		afterStart(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall1(n)
+		// nolint:bodyclose
 		b.Call(ept, "GET", "", nil)
 		afterCall2(n)
 	}
@@ -390,12 +424,20 @@ func multiStartups(
 		defer localServer.Close()
 		afterStart(n)
 		t.Logf("GET %s%s\n", localServer.URL, ept)
-		_, err := client.Get(localServer.URL + ept)
-		assert.NoError(t, err)
-		afterCall1(n)
+		// nolint:noctx
 		resp, err := client.Get(localServer.URL + ept)
+		assert.NoError(t, err)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		afterCall1(n)
+		// nolint:noctx
+		resp, err = client.Get(localServer.URL + ept)
 		assert.NoError(t, err, name)
-		assert.Equal(t, 204, resp.StatusCode, name)
+		if resp != nil {
+			assert.Equal(t, 204, resp.StatusCode, name)
+			resp.Body.Close()
+		}
 		afterCall2(n)
 	}
 }
@@ -418,11 +460,19 @@ func TestMuxModifiers(t *testing.T) {
 	localServer := httptest.NewServer(muxRouter)
 	defer localServer.Close()
 
+	// nolint:noctx
 	resp, err := client.Get(localServer.URL + "/x")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
+	resp.Body.Close()
 	assert.Equal(t, 204, resp.StatusCode)
 
+	// nolint:noctx
 	resp, err = client.Post(localServer.URL+"/x", "application/json", nil)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
+	resp.Body.Close()
 	assert.Equal(t, 205, resp.StatusCode)
 }

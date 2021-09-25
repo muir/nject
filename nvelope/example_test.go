@@ -14,7 +14,7 @@ import (
 	"github.com/muir/nject/nvelope"
 )
 
-// nolint:deadcode
+// nolint:deadcode,unused
 func main() {
 	r := mux.NewRouter()
 	srv := &http.Server{
@@ -33,7 +33,7 @@ type PostBodyModel struct {
 
 type ExampleRequestBundle struct {
 	Request     PostBodyModel `nvelope:"model"`
-	With        string        `nvelope:"path,name=with"`
+	With        *string       `nvelope:"path,name=with"`
 	Parameters  int64         `nvelope:"path,name=parameters"`
 	Friends     []int         `nvelope:"query,name=friends"`
 	ContentType string        `nvelope:"header,name=Content-Type"`
@@ -55,7 +55,7 @@ func HandleExampleEndpoint(req ExampleRequestBundle) (nvelope.Response, error) {
 		return nil, nil
 	default:
 		return ExampleResponse{
-			Stuff: "something useful",
+			Stuff: *req.With,
 		}, nil
 	}
 }
@@ -83,6 +83,7 @@ func Example() {
 	ts := httptest.NewServer(r)
 	client := ts.Client()
 	doPost := func(url string, body string) {
+		// nolint:noctx
 		res, err := client.Post(ts.URL+url, "application/json",
 			strings.NewReader(body))
 		if err != nil {
@@ -94,6 +95,7 @@ func Example() {
 			fmt.Println("read error:", err)
 			return
 		}
+		res.Body.Close()
 		fmt.Println(res.StatusCode, "->"+string(b))
 	}
 	doPost("/a/path/joe/37", `{"Use":"yeah","Exported":"uh hu"}`)
@@ -101,7 +103,7 @@ func Example() {
 	doPost("/a/path/joe/38", `invalid json`)
 	doPost("/a/path/joe/666", `{"Use":"yeah","Exported":"uh hu"}`)
 
-	// Output: 200 ->{"stuff":"something useful"}
+	// Output: 200 ->{"stuff":"joe"}
 	// 204 ->
 	// 400 ->nvelope_test.ExampleRequestBundle model: Could not decode application/json into nvelope_test.PostBodyModel: invalid character 'i' looking for beginning of value
 	// 500 ->panic: something is not right

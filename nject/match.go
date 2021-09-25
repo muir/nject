@@ -47,10 +47,7 @@ func aGreaterBInts(a []int, b []int) bool {
 			return false
 		}
 	}
-	if len(a) < len(b) {
-		return false
-	}
-	return true
+	return len(a) >= len(b)
 }
 
 func (m interfaceMap) bestMatch(match typeCode, purpose string) (typeCode, []*provider, error) {

@@ -10,6 +10,7 @@ var hookCounter int32
 type hookOrder string
 
 const (
+	// nolint:staticcheck
 	ForwardOrder hookOrder = "forward"
 	ReverseOrder           = "forward"
 )
@@ -19,7 +20,7 @@ type hookId int32
 // Hook is the handle/name for a list of callbacks to invoke.
 type Hook struct {
 	Id            hookId
-	lock          sync.Mutex
+	lock          *sync.Mutex
 	Name          string
 	Order         hookOrder
 	InvokeOnError []*Hook
@@ -41,6 +42,7 @@ func (h *Hook) Copy() *Hook {
 	hc.InvokeOnError = oe
 	hc.Id = hookId(atomic.AddInt32(&hookCounter, 1))
 	hc.Providers = op
+	hc.lock = new(sync.Mutex)
 	return &hc
 }
 
@@ -50,6 +52,7 @@ func NewHook(name string, order hookOrder) *Hook {
 		Id:    hookId(atomic.AddInt32(&hookCounter, 1)),
 		Name:  name,
 		Order: order,
+		lock:  new(sync.Mutex),
 	}
 }
 

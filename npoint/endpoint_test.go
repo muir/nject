@@ -45,6 +45,7 @@ func (b *ManualBinder) Call(path string, method string, buf string, h http.Heade
 		panic(fmt.Sprintf("no handler for %s", path))
 	}
 	url := "http://localhost" + path
+	// nolint:noctx
 	req, err := http.NewRequest(method, url, bytes.NewReader([]byte(buf)))
 	if err != nil {
 		panic(err)
@@ -93,6 +94,7 @@ func TestTestFramework(t *testing.T) {
 	})
 	h := make(http.Header)
 	h.Set("X-Test-Request", "H2")
+	// nolint:bodyclose
 	resp := b.Call("/y", "POST", "some data sent", h)
 	buf, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
@@ -201,6 +203,7 @@ func TestVariablePassing(t *testing.T) {
 		})
 	b := NewBinder()
 	s.Start(b.Bind)
+	// nolint:bodyclose
 	_ = b.Call("/x", "GET", "", make(http.Header))
 }
 
@@ -242,6 +245,7 @@ func TestInclusion(t *testing.T) {
 			tc.endpoint)
 		b := NewBinder()
 		s.Start(b.Bind)
+		// nolint:bodyclose
 		_ = b.Call("/x", "GET", "", make(http.Header))
 		expected := make(map[string]bool)
 		for _, c := range strings.Split(tc.called, " ") {
@@ -504,11 +508,13 @@ func TestChains(t *testing.T) {
 	}
 
 	for _, test := range chainTests {
+		test := test
 		t.Log("TEST:", test.Name)
 		f := func() {
 			e := npoint.CreateEndpoint(test.Chain...)
 			b := NewBinder()
 			b.Bind("/foo", e)
+			// nolint:bodyclose
 			b.Call("/foo", "GET", "", nil)
 		}
 		if test.Panics {

@@ -137,10 +137,10 @@ func (r *EndpointRegistrationWithMux) URL(pairs ...string) (*url.URL, error) {
 
 // URLHost calls the mux.Route method of the same name on the route created for this endpoint.
 func (r *EndpointRegistrationWithMux) URLHost(pairs ...string) (*url.URL, error) {
-	return r.URLHost(pairs...)
+	return r.route.URLHost(pairs...)
 }
 
 // URLPath calls the mux.Route method of the same name on the route created for this endpoint.
 func (r *EndpointRegistrationWithMux) URLPath(pairs ...string) (*url.URL, error) {
-	return r.URLPath(pairs...)
+	return r.route.URLPath(pairs...)
 }

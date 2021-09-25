@@ -533,18 +533,16 @@ func TestRegressionPrior(t *testing.T) {
 				Cacheable(Provide("QuoteChecker", func() s055 { called["QuoteChecker"]++; return 0 })), // included
 				Cacheable(Provide("QuoteUpdater", func() s056 { called["QuoteUpdater"]++; return 0 })), // included
 				Cacheable(Provide("ServiceLog", func() i018 { called["ServiceLog"]++; return nil })),   // included
-				Provide("CORS", func(_ i016, _ s017) { called["CORS"]++; return }),                     // included
+				Provide("CORS", func(_ i016, _ s017) { called["CORS"]++ }),                             // included
 				Provide("LogBegin", func(inner func(i019), _ s017, _ i018) {
 					called["LogBegin"]++
 					inner(nil)
-					return
 				}), // included
-				Desired(Provide("InjectorChainDebugging", func(_ i019, _ *Debugging) { called["InjectorChainDebugging"]++; return })), // included
-				Provide("base-collection-2", func(_ i016, _ i019) i020 { called["base-collection-2"]++; return nil }),                 // included
+				Desired(Provide("InjectorChainDebugging", func(_ i019, _ *Debugging) { called["InjectorChainDebugging"]++ })), // included
+				Provide("base-collection-2", func(_ i016, _ i019) i020 { called["base-collection-2"]++; return nil }),         // included
 				Provide("WriteJSON", func(inner func() i021, _ i020, _ i019) {
 					called["WriteJSON"]++
 					inner()
-					return
 				}), // included
 				Desired(Provide("IfError", func(inner func() (i021, s022), _ i019, _ i020) i021 {
 					called["IfError"]++
@@ -562,7 +560,6 @@ func TestRegressionPrior(t *testing.T) {
 				MustConsume(Provide("DBClose", func(inner func(i029), _ i029) {
 					called["DBClose"]++
 					inner(nil)
-					return
 				})), // included
 				Provide("TimeTravelHeader", func() s041 { called["TimeTravelHeader"]++; return 0 }),
 				Provide("ParseClientQuote", func(_ i019, _ s023) (TerminalError, s057) { called["ParseClientQuote"]++; return nil, 0 }),                        // included
@@ -572,7 +569,7 @@ func TestRegressionPrior(t *testing.T) {
 					inner(nil, nil)
 					return nil
 				})),
-				Provide("ConsumeTxDone", func(_ i031) { called["ConsumeTxDone"]++; return }),
+				Provide("ConsumeTxDone", func(_ i031) { called["ConsumeTxDone"]++ }),
 				MustConsume(Provide("ParentTx", func(_ i030) i032 { called["ParentTx"]++; return nil })),
 				Provide("GetSessionID", func(_ i019, _ s017) (TerminalError, s043) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s044) error, _ i019, _ i029, _ s043) error {
@@ -690,18 +687,16 @@ func TestRegression7642(t *testing.T) {
 				Cacheable(Provide("QuoteChecker", func() s064 { called["QuoteChecker"]++; return 0 })), // included
 				Cacheable(Provide("QuoteUpdater", func() s065 { called["QuoteUpdater"]++; return 0 })), // included
 				Cacheable(Provide("ServiceLog", func() i033 { called["ServiceLog"]++; return nil })),   // included
-				Provide("CORS", func(_ i031, _ s032) { called["CORS"]++; return }),                     // included
+				Provide("CORS", func(_ i031, _ s032) { called["CORS"]++ }),                             // included
 				Provide("LogBegin", func(inner func(i034), _ s032, _ i033) {
 					called["LogBegin"]++
 					inner(nil)
-					return
 				}), // included
-				Desired(Provide("InjectorChainDebugging", func(_ i034, _ *Debugging) { called["InjectorChainDebugging"]++; return })), // included
-				Provide("base-collection-2", func(_ i031, _ i034) i035 { called["base-collection-2"]++; return nil }),                 // included
+				Desired(Provide("InjectorChainDebugging", func(_ i034, _ *Debugging) { called["InjectorChainDebugging"]++ })), // included
+				Provide("base-collection-2", func(_ i031, _ i034) i035 { called["base-collection-2"]++; return nil }),         // included
 				Provide("WriteJSON", func(inner func() i036, _ i035, _ i034) {
 					called["WriteJSON"]++
 					inner()
-					return
 				}), // included
 				Desired(Provide("IfError", func(inner func() (i036, s037), _ i034, _ i035) i036 {
 					called["IfError"]++
@@ -718,7 +713,6 @@ func TestRegression7642(t *testing.T) {
 				MustConsume(Provide("DBClose", func(inner func(i044), _ i044) {
 					called["DBClose"]++
 					inner(nil)
-					return
 				})), // included
 				Provide("TimeTravelHeader", func() s051 { called["TimeTravelHeader"]++; return 0 }),
 				MustConsume(Provide("ParseClientQuote", func(_ i034, _ s038) (TerminalError, s066) { called["ParseClientQuote"]++; return nil, 0 })), // included
@@ -728,7 +722,7 @@ func TestRegression7642(t *testing.T) {
 					inner(nil, nil)
 					return nil
 				})),
-				Provide("ConsumeTxDone", func(_ i046) { called["ConsumeTxDone"]++; return }),
+				Provide("ConsumeTxDone", func(_ i046) { called["ConsumeTxDone"]++ }),
 				MustConsume(Provide("ParentTx", func(_ i045) i047 { called["ParentTx"]++; return nil })),
 				Provide("GetSessionID", func(_ i034, _ s032) (TerminalError, s053) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s054) error, _ i034, _ i044, _ s053) error {
@@ -740,7 +734,6 @@ func TestRegression7642(t *testing.T) {
 				Desired(MustConsume(Provide("PurchaseFailureAlerter", func(inner func(s068) error, _ i034, _ s067, _ s053) {
 					called["PurchaseFailureAlerter"]++
 					inner(0)
-					return
 				}))),
 				Provide("VariationsRuleChecker", func(_ i034, _ s062, _ s053, _ s054) s069 { called["VariationsRuleChecker"]++; return 0 }), // included
 				Provide("ReassembleQuote", func(_ i034, _ s066, _ s067, _ s061) (TerminalError, s070, s071) {
