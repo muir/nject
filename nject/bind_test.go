@@ -14,59 +14,73 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type s0 string
-type s1 string
-type s2 string
-type s3 string
-type s4 string
-type s5 string
-type s6 string
-type s7 string
-type s8 string
-type s9 string
+type (
+	s0 string
+	s1 string
+	s2 string
+	s3 string
+	s4 string
+	s5 string
+	s6 string
+	s7 string
+	s8 string
+	s9 string
+)
 
 type s2bypass string
 
-type s1prime string
-type s2prime string
-type s3prime string
-type s4prime string
-type s5prime string
-type s6prime string
-type s7prime string
-type s8prime string
+type (
+	s1prime string
+	s2prime string
+	s3prime string
+	s4prime string
+	s5prime string
+	s6prime string
+	s7prime string
+	s8prime string
+)
 
 type a1 []*s1
 
 type i1 interface {
 	s1() s1
 }
+
 type i2 interface {
 	s2() s2
 }
+
 type i3 interface {
 	s3() s3
 }
+
 type i4 interface {
 	s4() s4
 }
-type ie interface{}
-type i4prime interface {
-	s4() s4
-	s4prime() s4prime
-}
+type (
+	ie      interface{}
+	i4prime interface {
+		s4() s4
+		s4prime() s4prime
+	}
+)
+
 type i5 interface {
 	s5() s5
 }
+
 type i6 interface {
 	s6() s6
 }
+
 type i7 interface {
 	s7() s7
 }
+
 type i8 interface {
 	s8() s8
 }
+
 type i9 interface {
 	s9() s9
 }

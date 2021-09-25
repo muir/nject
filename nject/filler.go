@@ -43,6 +43,7 @@ func getCanCall(f interface{}) canCall {
 type canRealType interface {
 	Type() reflect.Type
 }
+
 type canFakeType interface {
 	In(int) reflect.Type
 }
@@ -338,15 +339,18 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 func (f *filler) In(i int) reflect.Type {
 	return f.inputs[i].typ
 }
+
 func (f *filler) NumIn() int {
 	return len(f.inputs)
 }
+
 func (f *filler) Out(i int) reflect.Type {
 	if f.pointer {
 		return reflect.PtrTo(f.typ)
 	}
 	return f.typ
 }
+
 func (f *filler) NumOut() int {
 	return 1
 }

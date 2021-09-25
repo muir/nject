@@ -7,9 +7,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-type L1 struct{}
-type L2 struct{}
-type L3 struct{}
+type (
+	L1 struct{}
+	L2 struct{}
+	L3 struct{}
+)
 
 func NewL1(app *nserve.App) *L1 {
 	fmt.Println("L1 created")

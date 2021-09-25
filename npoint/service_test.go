@@ -30,26 +30,26 @@ func TestStaticInitializerWaitsForStart(t *testing.T) {
 	var debugOutput string
 	var svcInitCount int
 	var svcInvokeCount int
-	var serviceSequenceInitFunc = func(db *nject.Debugging) string {
+	serviceSequenceInitFunc := func(db *nject.Debugging) string {
 		t.Logf("service init chain")
 		debugOutput = strings.Join(db.Included, "\n")
 		svcInitCount++
 		return "foo"
 	}
-	var serviceSequenceNonCacheable = func(s string, r *http.Request, db *nject.Debugging) {
+	serviceSequenceNonCacheable := func(s string, r *http.Request, db *nject.Debugging) {
 		t.Logf("service invoke chain")
 		debugOutput = strings.Join(db.Included, "\n")
 		svcInvokeCount++
 	}
 	var initCount int
 	var invokeCount int
-	var endpointSequenceInitFunc = func(db *nject.Debugging) int {
+	endpointSequenceInitFunc := func(db *nject.Debugging) int {
 		t.Logf("endpoint init chain")
 		initCount++
 		debugOutput = strings.Join(db.Included, "\n")
 		return initCount
 	}
-	var endpointSequenceFinalFunc = func(w http.ResponseWriter, i int, db *nject.Debugging) {
+	endpointSequenceFinalFunc := func(w http.ResponseWriter, i int, db *nject.Debugging) {
 		t.Logf("endpoint invoke chain")
 		w.WriteHeader(204)
 		debugOutput = strings.Join(db.Included, "\n")

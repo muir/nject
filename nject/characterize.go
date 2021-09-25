@@ -129,42 +129,48 @@ func predicate(message string, test func(a testArgs) bool) predicateType {
 	}
 }
 
-var notNil = predicate("is nil", func(a testArgs) bool { return !a.isNil })
-var notFunc = predicate("is a function", func(a testArgs) bool { return a.t.Kind() != reflect.Func })
-var isFunc = predicate("is not a function", func(a testArgs) bool { return a.t.Kind() == reflect.Func })
-var isLast = predicate("is not the final item in the provider chain", func(a testArgs) bool { return a.cc.isLast })
-var notLast = predicate("must not be last", func(a testArgs) bool { return !a.cc.isLast })
-var unstaticOkay = predicate("is marked MustCache", func(a testArgs) bool { return !a.fm.mustCache })
-var inStatic = predicate("is after invoke", func(a testArgs) bool { return a.cc.inputsAreStatic })
-var hasOutputs = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
-var mustNotMemoize = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
-var markedMemoized = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
-var markedCacheable = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
-var markedSingleton = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
-var notMarkedSingleton = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
-var notMarkedNoCache = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
-var mappableInputs = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
-var possibleMapKey = predicate("type is not cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
-var returnsTerminalError = predicate("does not return TerminalError", func(a testArgs) bool {
-	for _, out := range typesOut(a.t) {
-		if out == terminalErrorType {
-			return true
+var (
+	notNil               = predicate("is nil", func(a testArgs) bool { return !a.isNil })
+	notFunc              = predicate("is a function", func(a testArgs) bool { return a.t.Kind() != reflect.Func })
+	isFunc               = predicate("is not a function", func(a testArgs) bool { return a.t.Kind() == reflect.Func })
+	isLast               = predicate("is not the final item in the provider chain", func(a testArgs) bool { return a.cc.isLast })
+	notLast              = predicate("must not be last", func(a testArgs) bool { return !a.cc.isLast })
+	unstaticOkay         = predicate("is marked MustCache", func(a testArgs) bool { return !a.fm.mustCache })
+	inStatic             = predicate("is after invoke", func(a testArgs) bool { return a.cc.inputsAreStatic })
+	hasOutputs           = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
+	mustNotMemoize       = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
+	markedMemoized       = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
+	markedCacheable      = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
+	markedSingleton      = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
+	notMarkedSingleton   = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
+	notMarkedNoCache     = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
+	mappableInputs       = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
+	possibleMapKey       = predicate("type is not cacheable", func(a testArgs) bool { p, _ := canBeMapKey(typesIn(a.t)); return p })
+	returnsTerminalError = predicate("does not return TerminalError", func(a testArgs) bool {
+		for _, out := range typesOut(a.t) {
+			if out == terminalErrorType {
+				return true
+			}
 		}
-	}
-	return false
-})
+		return false
+	})
+)
+
 var noAnonymousFuncs = predicate("has an untyped functional argument", func(a testArgs) bool {
 	return !hasAnonymousFuncs(typesIn(a.t), false) &&
 		!hasAnonymousFuncs(typesOut(a.t), false)
 })
+
 var noAnonymousExceptFirstInput = predicate("has extra untyped functional arguments", func(a testArgs) bool {
 	return !hasAnonymousFuncs(typesIn(a.t), true) &&
 		!hasAnonymousFuncs(typesOut(a.t), false)
 })
+
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
 	t := a.t
 	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
 })
+
 var isFuncPointer = predicate("is not a pointer to a function", func(a testArgs) bool {
 	t := a.t
 	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func

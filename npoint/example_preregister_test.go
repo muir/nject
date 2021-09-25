@@ -14,9 +14,11 @@ import (
 // The npoint framework distinguishes parameters based on their types.
 // All parameters of type "string" look the same, but a type that is
 // defined as another type (like exampleType) is a different type.
-type exampleType string
-type fooParam string
-type fromMiddleware string
+type (
+	exampleType    string
+	fooParam       string
+	fromMiddleware string
+)
 
 // exampleStaticInjector will not be called until the service.Start()
 // call in Example_PreregisterServiceWithMux.  It will be called only

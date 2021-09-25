@@ -8,13 +8,17 @@ import (
 	"sync/atomic"
 )
 
-var debugLock sync.RWMutex
-var debug uint32
-var debugOutput string
-var debugOutputMu sync.Mutex
+var (
+	debugLock     sync.RWMutex
+	debug         uint32
+	debugOutput   string
+	debugOutputMu sync.Mutex
+)
 
-var debuglnHook func(...interface{})
-var debugfHook func(string, ...interface{})
+var (
+	debuglnHook func(...interface{})
+	debugfHook  func(string, ...interface{})
+)
 
 func debugEnabled() bool {
 	return atomic.LoadUint32(&debug) == 1

@@ -244,7 +244,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 				switch collections[runGroup][j].class {
 				default:
 					break Injectors
-				case injectorFunc, fallibleInjectorFunc: //okay
+				case injectorFunc, fallibleInjectorFunc: // okay
 				}
 				j--
 			}

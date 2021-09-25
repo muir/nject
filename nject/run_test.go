@@ -67,6 +67,7 @@ func TestRunMissingValue(t *testing.T) {
 func TestRunReturnsErrorNoError(t *testing.T) {
 	testRunReturnsError(t, nil)
 }
+
 func TestRunReturnsErrorError(t *testing.T) {
 	testRunReturnsError(t, fmt.Errorf("an error"))
 }

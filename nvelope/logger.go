@@ -49,6 +49,7 @@ func (std wrappedStdLogger) Error(msg string, fields ...map[string]interface{}) 
 func (std wrappedStdLogger) Warn(msg string, fields ...map[string]interface{}) {
 	std.Error(msg, fields...)
 }
+
 func (std wrappedStdLogger) Debug(msg string, fields ...map[string]interface{}) {
 	std.Error(msg, fields...)
 }

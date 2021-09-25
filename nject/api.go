@@ -392,7 +392,8 @@ func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
 		if err == nil {
 			setter.Call([]reflect.Value{
 				reflect.ValueOf(invokePtr).Elem(),
-				reflect.ValueOf(initPtr).Elem()})
+				reflect.ValueOf(initPtr).Elem(),
+			})
 		}
 	} else {
 		err = c.Bind(invokePtr, nil)
