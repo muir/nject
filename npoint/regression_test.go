@@ -57,12 +57,20 @@ func TestSaveRequest(t *testing.T) {
 	localServer := httptest.NewServer(muxRouter)
 	defer localServer.Close()
 
-	_, err := http.Post(localServer.URL+"/ept", "text/plain", ioutil.NopCloser(bytes.NewBuffer([]byte("some stuff"))))
+	// nolint:noctx
+	resp, err := http.Post(localServer.URL+"/ept", "text/plain", ioutil.NopCloser(bytes.NewBuffer([]byte("some stuff"))))
 	assert.NoError(t, err)
 	assert.True(t, calledPost)
 	assert.False(t, calledGet)
+	if resp != nil {
+		resp.Body.Close()
+	}
 
-	_, err = http.Get(localServer.URL + "/ept")
+	// nolint:noctx
+	resp, err = http.Get(localServer.URL + "/ept")
 	assert.NoError(t, err)
 	assert.True(t, calledGet)
+	if resp != nil {
+		resp.Body.Close()
+	}
 }

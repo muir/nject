@@ -139,6 +139,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 			}
 		}
 		debugf("lenth of without before: %d", len(without))
+		// nolint:govet
 		err := validateChainMarkIncludeExclude(funcs, false)
 		debugf("lenth of without after: %d", len(without))
 		for _, fm := range without {

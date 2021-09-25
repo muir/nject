@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/muir/nject/nserve"
+	"github.com/pkg/errors"
 )
 
 type L1 struct{}
@@ -45,7 +46,7 @@ func NewL3(_ *L2, app *nserve.App) *L3 {
 }
 
 func ErrorCombiner(e1, e2 error) error {
-	return fmt.Errorf("%s; %s", e1.Error(), e2.Error())
+	return errors.New(e1.Error() + "; " + e2.Error())
 }
 
 // Example shows the injection, startup, and shutdown of an app with two libraries

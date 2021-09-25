@@ -109,6 +109,7 @@ func Example() {
 	service.Start(muxRouter)
 	localServer := httptest.NewServer(muxRouter)
 	defer localServer.Close()
+	// nolint:noctx
 	r, err := http.Get(localServer.URL + "/example?foo=bar")
 	if err != nil {
 		fmt.Println("get error", err)
@@ -119,6 +120,7 @@ func Example() {
 		fmt.Println("read error", err)
 		return
 	}
+	r.Body.Close()
 	var res map[string]string
 	err = json.Unmarshal(buf, &res)
 	if err != nil {

@@ -18,7 +18,7 @@ var InjectWriter = nject.Provide("writer", NewDeferredWriter)
 var AutoFlushWriter = nject.Provide("autoflush-writer", func(inner func(), w *DeferredWriter) {
 	inner()
 	if !w.Done() {
-		w.Flush()
+		_ = w.Flush()
 	}
 })
 
@@ -30,8 +30,9 @@ type Response interface{}
 var EncodeJSON = MakeResponseEncoder("JSON",
 	WithEncoder("application/json", json.Marshal,
 		WithEncoderErrorTransform(func(err error) (interface{}, bool) {
-			if m, ok := err.(json.Marshaler); ok {
-				return m, true
+			var jm json.Marshaler
+			if errors.As(err, &jm) {
+				return jm, true
 			}
 			return nil, false
 		}),
@@ -41,8 +42,9 @@ var EncodeJSON = MakeResponseEncoder("JSON",
 var EncodeXML = MakeResponseEncoder("XML",
 	WithEncoder("application/xml", xml.Marshal,
 		WithEncoderErrorTransform(func(err error) (interface{}, bool) {
-			if m, ok := err.(xml.Marshaler); ok {
-				return m, true
+			var me xml.Marshaler
+			if errors.As(err, &me) {
+				return me, true
 			}
 			return nil, false
 		}),
@@ -211,8 +213,11 @@ func MakeResponseEncoder(
 				handleError(true)
 			}
 			w.WriteHeader(code)
-			w.Write(enc)
-			err = w.Flush()
+			_, err = w.Write(enc)
+			e2 := w.Flush()
+			if err == nil {
+				err = e2
+			}
 			if err != nil {
 				log.Warn("Cannot write response",
 					map[string]interface{}{
@@ -236,6 +241,6 @@ func nil204(inner func() (Response, error), w *DeferredWriter) {
 	}
 	if err == nil && model == nil {
 		w.WriteHeader(204)
-		w.Flush()
+		_ = w.Flush()
 	}
 }

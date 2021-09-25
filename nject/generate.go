@@ -96,6 +96,7 @@ func generateInputMapper(fm *provider, start int, param flowType, rmap map[typeC
 }
 
 // generateOutputMapper returns a function that copies values from an array of reflect.Value to a valueCollection
+// nolint:unparam
 func generateOutputMapper(fm *provider, start int, param flowType, vmap map[typeCode]int, purpose string) (func(valueCollection, []reflect.Value), error) {
 	pMap, err := generateParameterMap(fm, param, start, nil, vmap, purpose+" []->valueCollection")
 	if err != nil {
@@ -209,10 +210,7 @@ func generateWrappers(
 			// this is not built outside WrapWrapper for thread safety
 			inner := func(i []reflect.Value) []reflect.Value {
 				if callCount > 0 {
-					// TODO: replace with copy(v, vCopy)?
-					for i, val := range vCopy {
-						v[i] = val
-					}
+					copy(v, vCopy)
 				}
 				callCount++
 				outMap(v, i)
@@ -238,7 +236,6 @@ func generateWrappers(
 				zero(v)
 			}
 			upMap(v, out)
-			return
 		}
 
 	case fallibleInjectorFunc:

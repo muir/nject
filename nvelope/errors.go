@@ -2,17 +2,8 @@ package nvelope
 
 import (
 	"encoding"
+	"errors"
 )
-
-type causer interface {
-	error
-	Cause() error
-}
-
-type unwraper interface {
-	error
-	Unwrap() error
-}
 
 // ReturnCode associates an HTTP return code with a error.
 // if err is nil, then nil is returned.
@@ -60,20 +51,11 @@ func Forbidden(err error) error {
 }
 
 func GetReturnCode(err error) int {
-	for {
-		if rc, ok := err.(returnCode); ok {
-			return rc.code
-		}
-		if c, ok := err.(causer); ok {
-			err = c.Cause()
-			continue
-		}
-		if u, ok := err.(unwraper); ok {
-			err = u.Unwrap()
-			continue
-		}
-		return 500
+	var rc returnCode
+	if errors.As(err, &rc) {
+		return rc.code
 	}
+	return 500
 }
 
 type CanModel interface {

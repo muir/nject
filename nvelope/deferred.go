@@ -118,7 +118,7 @@ func (w *DeferredWriter) Flush() error {
 			// Is this handling of short writes necessary?  Perhaps
 			// so since a follow-up write will probably give a
 			// more accurate error.
-			if err == io.ErrShortWrite {
+			if errors.Is(err, io.ErrShortWrite) {
 				i += amt
 				continue
 			}
@@ -129,10 +129,9 @@ func (w *DeferredWriter) Flush() error {
 	return nil
 }
 
-// TODO: make this public or remove it
-// flushIfNotFlushed calls Flush if the DeferredWriter is not in
+// FlushIfNotFlushed calls Flush if the DeferredWriter is not in
 // passthrough mode.
-func (w *DeferredWriter) flushIfNotFlushed() error {
+func (w *DeferredWriter) FlushIfNotFlushed() error {
 	if !w.passthrough {
 		return w.Flush()
 	}

@@ -29,6 +29,8 @@ func canSimpleTypeBeMapKey(t reflect.Type) bool {
 	case reflect.Chan, reflect.Func, reflect.Map,
 		reflect.Slice, reflect.UnsafePointer:
 		return false
+	case reflect.Interface, reflect.Struct, reflect.Invalid:
+		fallthrough
 	default:
 		// we shouldn't be here
 		return false
@@ -41,6 +43,7 @@ func canValueBeMapKey(v reflect.Value, recurseOkay bool) bool {
 		// typed nils is too hard
 		return false
 	}
+	// nolint:exhaustive
 	switch v.Type().Kind() {
 	case reflect.Interface:
 		if v.IsNil() {
@@ -77,6 +80,7 @@ func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 	var checkers []func([]reflect.Value) bool
 	for i, t := range in {
 		i := i
+		// nolint:exhaustive
 		switch t.Kind() {
 		case reflect.Struct:
 			for j := 0; j < t.NumField(); j++ {
@@ -188,7 +192,7 @@ func fillKeyFromInputs(key []interface{}, in []reflect.Value) {
 	}
 }
 
-func defineCacher(id int32, fv canCall, l int, okayCheck func([]reflect.Value) bool) cacherFunc {
+func defineCacher(_ int32, fv canCall, l int, okayCheck func([]reflect.Value) bool) cacherFunc {
 	var lock sync.Mutex
 
 	switch {

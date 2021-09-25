@@ -41,7 +41,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			d.mustCache = true
 			d, err = characterizeFunc(d, charContext{inputsAreStatic: true})
 			if err != nil {
-				return fmt.Errorf("internal error #29: problem with debugging injectors: %s", err)
+				return fmt.Errorf("internal error #29: problem with debugging injectors: %w", err)
 			}
 			d.isSynthetic = true
 			debuggingProvider = &d
@@ -227,6 +227,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	for i := len(collections[runGroup]) - 1; i >= 0; i-- {
 		n := collections[runGroup][i]
 
+		// nolint:exhaustive
 		switch n.class {
 		case wrapperFunc:
 			inner := f
@@ -239,6 +240,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			j := i - 1
 		Injectors:
 			for j >= 0 {
+				// nolint:exhaustive
 				switch collections[runGroup][j].class {
 				default:
 					break Injectors

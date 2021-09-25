@@ -220,7 +220,8 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 			isLast:          ii == len(c.contents)-1,
 			inputsAreStatic: true,
 		}
-		fm, err := characterizeFunc(fm, cc)
+		var err error
+		fm, err = characterizeFunc(fm, cc)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -237,6 +238,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 				}
 			}
 		}
+		// nolint:exhaustive
 		switch fm.group {
 		case runGroup, invokeGroup:
 			for _, out := range fm.flows[outputParams] {
@@ -244,6 +246,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 			}
 		}
 
+		// nolint:exhaustive
 		switch fm.group {
 		case staticGroup, literalGroup:
 			afterInit = append(afterInit, fm)
@@ -458,12 +461,4 @@ func (c Collection) reorderNonFinal() {
 		c.contents[len(c.contents)-1] = final
 		return
 	}
-}
-
-func providersToProviders(in []*provider) []Provider {
-	p := make([]Provider, len(in))
-	for i, fm := range in {
-		p[i] = fm
-	}
-	return p
 }

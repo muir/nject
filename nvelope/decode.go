@@ -25,6 +25,7 @@ type Body []byte
 var ReadBody = nject.Provide("read-body", readBody)
 
 func readBody(r *http.Request) (Body, nject.TerminalError) {
+	// nolint:errcheck
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	return Body(body), err
@@ -49,8 +50,6 @@ type Decoder func([]byte, interface{}) error
 type eigo struct {
 	tag                string
 	decoders           map[string]Decoder
-	modelValidators    []func(interface{}) error
-	methodIfPresent    []string
 	defaultContentType string
 }
 
@@ -156,6 +155,7 @@ func GenerateDecoder(
 			returnType := missingType
 			var nonPointer reflect.Type
 			var returnAddress bool
+			// nolint:exhaustive
 			switch missingType.Kind() {
 			case reflect.Struct:
 				nonPointer = returnType
@@ -284,6 +284,7 @@ func GenerateDecoder(
 			outputs := []reflect.Type{returnType, terminalErrorType}
 
 			reflective := nject.MakeReflective(inputs, outputs, func(in []reflect.Value) []reflect.Value {
+				// nolint:errcheck
 				r := in[0].Interface().(*http.Request)
 				mp := reflect.New(nonPointer)
 				model := mp.Elem()
@@ -347,6 +348,7 @@ func multiUnpack(
 	return nil
 }
 
+// getUnpacker is used for unpacking headers, query parameters, and path elements
 func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 ) (func(from string, target reflect.Value, value string) error, error) {
 	if fieldType.AssignableTo(textUnmarshallerType) {
@@ -364,6 +366,16 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 		}, nil
 	}
 	switch fieldType.Kind() {
+	case reflect.Ptr:
+		vu, err := getUnpacker(fieldType.Elem(), fieldName, name)
+		if err != nil {
+			return nil, err
+		}
+		return func(from string, target reflect.Value, value string) error {
+			p := reflect.New(fieldType.Elem())
+			target.Set(p)
+			return vu(from, target.Elem(), value)
+		}, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(from string, target reflect.Value, value string) error {
 			i, err := strconv.ParseInt(value, 10, 64)
@@ -396,8 +408,29 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			target.SetString(value)
 			return nil
 		}, nil
+	case reflect.Complex64, reflect.Complex128:
+		return func(from string, target reflect.Value, value string) error {
+			c, err := strconv.ParseComplex(value, 128)
+			if err != nil {
+				return errors.Wrapf(err, "decode %s %s", from, name)
+			}
+			target.SetComplex(c)
+			return nil
+		}, nil
+	case reflect.Bool:
+		return func(from string, target reflect.Value, value string) error {
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return errors.Wrapf(err, "decode %s %s", from, name)
+			}
+			target.SetBool(b)
+			return nil
+		}, nil
 	// TODO: case reflect.Slice:
 	// TODO: case reflect.Array:
+	case reflect.Chan, reflect.Interface, reflect.UnsafePointer, reflect.Func, reflect.Invalid,
+		reflect.Struct, reflect.Map, reflect.Array, reflect.Slice:
+		fallthrough
 	default:
 		return nil, errors.Errorf(
 			"Cannot decode into %s, %s does not implement UnmarshalText",
@@ -409,7 +442,6 @@ var httpRequestType = reflect.TypeOf(&http.Request{})
 var bodyType = reflect.TypeOf(Body{})
 var textUnmarshallerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 var terminalErrorType = reflect.TypeOf((*nject.TerminalError)(nil)).Elem()
-var emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 
 // The return value from f only matters when the type of the field is a struct.  In
@@ -421,7 +453,6 @@ func walkStructElements(t reflect.Type, f func(reflect.StructField) bool) {
 	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
 		doWalkStructElements(t.Elem(), []int{}, f)
 	}
-	return
 }
 
 func doWalkStructElements(t reflect.Type, path []int, f func(reflect.StructField) bool) {

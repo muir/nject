@@ -77,18 +77,9 @@ func RecoverStack(err error) string {
 }
 
 func isPanicError(err error) (panicError, bool) {
-	for {
-		if pe, ok := err.(panicError); ok {
-			return pe, true
-		}
-		if c, ok := err.(causer); ok {
-			err = c.Cause()
-			continue
-		}
-		if u, ok := err.(unwraper); ok {
-			err = u.Unwrap()
-			continue
-		}
-		return panicError{}, false
+	var pe panicError
+	if errors.As(err, &pe) {
+		return pe, true
 	}
+	return panicError{}, false
 }

@@ -99,6 +99,7 @@ func toTypeCodes(in []reflect.Type) []typeCode {
 func mappable(inputs ...reflect.Type) bool {
 	ok := true
 	for _, in := range inputs {
+		// nolint:exhaustive
 		switch in.Kind() {
 		case reflect.Map, reflect.Slice, reflect.Func:
 			ok = false
@@ -452,6 +453,7 @@ func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*
 	} else {
 		v := reflect.ValueOf(fm.fn)
 		var isNil bool
+		// nolint:exhaustive
 		switch v.Type().Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			isNil = v.IsNil()
