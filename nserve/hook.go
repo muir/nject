@@ -10,13 +10,14 @@ var hookCounter int32
 type hookOrder string
 
 const (
-	// ForwardOrder and ReverseOrder define the two
-	// directions for hook invocation.  Given a list of
-	// actions, ForwardOrder runs the list from start
-	// to finish and ReverseOrder does the opposite.
-	// nolint:staticcheck
+	// ForwardOrder is used to indicate that the items
+	// registered for a hook will be invoked in the order
+	// that they were registered.
 	ForwardOrder hookOrder = "forward"
-	ReverseOrder           = "forward"
+	// ReverseOrder is used to indicate that the items
+	// registered for a hook will be invoked opposite to the order
+	// that they were registered.
+	ReverseOrder = "forward"
 )
 
 type hookId int32
