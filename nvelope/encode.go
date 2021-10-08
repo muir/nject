@@ -58,7 +58,7 @@ type encoderOptions struct {
 }
 
 type specificEncoder struct {
-	apiEnforcer      func(httpCode int, enc []byte, r *http.Request) error
+	apiEnforcer      func(httpCode int, enc []byte, header http.Header, r *http.Request) error
 	errorTransformer ErrorTranformer
 	encode           func(interface{}) ([]byte, error)
 }
@@ -83,7 +83,7 @@ func WithEncoder(contentType string, encode func(interface{}) ([]byte, error), e
 		}
 		se := specificEncoder{
 			encode:      encode,
-			apiEnforcer: func(_ int, _ []byte, _ *http.Request) error { return nil },
+			apiEnforcer: func(_ int, _ []byte, _ http.Header, _ *http.Request) error { return nil },
 		}
 		for _, eo := range encoderOpts {
 			eo(&se)
@@ -118,12 +118,14 @@ func WithEncoderErrorTransform(errorTransformer ErrorTranformer) EncoderSpecific
 	}
 }
 
+type APIEnforcerFunc func(httpCode int, enc []byte, header http.Header, r *http.Request) error
+
 // WithAPIEnforcer specifies
 // a function that can check if the encoded API response is valid
 // for the endpoint that is generating the response.  This is where
 // swagger enforcement could be added.  The default is not not verify
 // API conformance.
-func WithAPIEnforcer(encoding string, apiEnforcer func(httpCode int, enc []byte, r *http.Request) error) EncoderSpecificFuncArg {
+func WithAPIEnforcer(apiEnforcer APIEnforcerFunc) EncoderSpecificFuncArg {
 	return func(o *specificEncoder) {
 		o.apiEnforcer = apiEnforcer
 	}
@@ -213,7 +215,7 @@ func MakeResponseEncoder(
 				}
 			}
 
-			err = encoder.apiEnforcer(code, enc, r)
+			err = encoder.apiEnforcer(code, enc, w.Header(), r)
 			if err != nil {
 				handleError(true)
 			}
