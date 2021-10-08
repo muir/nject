@@ -15,7 +15,7 @@ import (
 )
 
 // nolint:deadcode,unused
-func main() {
+func Main() {
 	r := mux.NewRouter()
 	srv := &http.Server{
 		Addr:    "0.0.0.0:8080",
