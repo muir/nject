@@ -125,6 +125,9 @@ type APIEnforcerFunc func(httpCode int, enc []byte, header http.Header, r *http.
 // for the endpoint that is generating the response.  This is where
 // swagger enforcement could be added.  The default is not not verify
 // API conformance.
+//
+// https://github.com/muir/nvalid provides a function to generate an
+// APIEnforcerFunc from swagger.
 func WithAPIEnforcer(apiEnforcer APIEnforcerFunc) EncoderSpecificFuncArg {
 	return func(o *specificEncoder) {
 		o.apiEnforcer = apiEnforcer
@@ -168,6 +171,7 @@ func MakeResponseEncoder(
 			}
 			contentType := httputil.NegotiateContentType(r, o.contentOffers, o.defaultEncoder)
 			encoder := o.encoders[contentType]
+			w.Header().Set("Content-Type", contentType)
 			var code int
 			var enc []byte
 

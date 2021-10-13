@@ -91,15 +91,18 @@ WriteErrorResponse invokes the remainder of the handler chain by calling inner()
 	}
 
 InjectDB returns a handler function that opens a database connection.   If the open
-fails, executation of the handler chain is terminated.
+fails, executation of the handler chain is terminated.  InjectDB returns an injector
+so that it can be called with arguments -- injectors are functions, not invocations
+and so we need to return a function.  InjectDB also closes the database connection.
 
-	func InjectDB(driver, uri string) func() (nject.TerminalError, *sql.DB) {
-		return func() (nject.TerminalError, *sql.DB) {
+	func InjectDB(driver, uri string) func(*sql.DB) nject.TerminalError {
+		return func(inner func(*sql.DB)) nject.TerminalError {
 			db, err := sql.Open(driver, uri)
 			if err != nil {
-				return err, nil
+				return err
 			}
-			return nil, db
+			inner(db)
+			return nil
 		}
 	}
 

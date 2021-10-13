@@ -82,6 +82,8 @@ convience.
 This is an optional step, provided by the user of `nvelope`, that 
 should return `nject.TerminalError` if the request is not valid.  Other
 validation can happen later, but this is good place to enforce API compliance.
+The [nvalid](https://github.com/muir/nvalid) package provides a function
+to generate an input validator from Swagger.
 
 ### Actually handle the request
 
