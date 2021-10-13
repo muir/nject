@@ -101,6 +101,9 @@ and so we need to return a function.  InjectDB also closes the database connecti
 			if err != nil {
 				return err
 			}
+			defer func() {
+				_ = db.Close()
+			}()
 			inner(db)
 			return nil
 		}
