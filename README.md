@@ -95,15 +95,19 @@ fails, executation of the handler chain is terminated.  InjectDB returns an inje
 so that it can be called with arguments -- injectors are functions, not invocations
 and so we need to return a function.  InjectDB also closes the database connection.
 
-	func InjectDB(driver, uri string) func(*sql.DB) nject.TerminalError {
-		return func(inner func(*sql.DB)) nject.TerminalError {
+	func InjectDB(driver, uri string) func(func(*sql.DB) error) error {
+		return func(inner func(*sql.DB) error) (finalError error) {
 			db, err := sql.Open(driver, uri)
 			if err != nil {
 				return err
 			}
-			defer db.Close()
-			inner(db)
-			return nil
+			defer func() {
+				err := db.Close()
+				if err != nil && finalError == nil {
+					finalError = err
+				}
+			}()
+			return inner(db)
 		}
 	}
 
