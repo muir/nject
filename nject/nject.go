@@ -25,6 +25,7 @@ type provider struct {
 	memoize             bool
 	loose               bool
 	desired             bool
+	shun                bool
 	notCacheable        bool
 	mustConsume         bool
 	consumptionOptional bool
@@ -82,6 +83,7 @@ func (fm *provider) copy() *provider {
 		memoize:             fm.memoize,
 		loose:               fm.loose,
 		desired:             fm.desired,
+		shun:                fm.shun,
 		notCacheable:        fm.notCacheable,
 		mustConsume:         fm.mustConsume,
 		consumptionOptional: fm.consumptionOptional,

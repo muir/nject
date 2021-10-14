@@ -208,6 +208,9 @@ Wrap functions can call inner() zero or more times.
 The values returned by wrap functions must be consumed by another
 upstream wrap function or by the init function (if using Bind()).
 
+Wrap functions have a small amount of runtime overhead compared to
+other kinds of functions: one call to reflect.MakeFunc().
+
 Final functions
 
 Final functions are simply the last provider in the chain.
