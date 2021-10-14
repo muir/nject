@@ -1,3 +1,5 @@
+// Package nserve helps with server startup and shutdown by by allowing libraries
+// too register themselves with hooks that run at startup and shutdown.
 package nserve
 
 import (
