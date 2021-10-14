@@ -3,6 +3,7 @@ package nject_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/muir/nject/nject"
@@ -37,8 +38,10 @@ func InjectDB(driver, uri string, txOptions *sql.TxOptions) *nject.Collection {
 	)
 }
 
-type driverType string
-type uriType string
+type (
+	driverType string
+	uriType    string
+)
 
 func injectDB(inner func(*sql.DB) error, driver driverType, uri uriType) (finalError error) {
 	db, err := sql.Open(string(driver), string(uri))
@@ -62,7 +65,7 @@ func injectTx(inner func(*sql.Tx) error, ctx context.Context, db *sql.DB, opts *
 	defer func() {
 		if finalError == nil {
 			finalError = tx.Commit()
-			if finalError == sql.ErrTxDone {
+			if errors.Is(finalError, sql.ErrTxDone) {
 				finalError = nil
 			}
 		} else {
@@ -99,6 +102,7 @@ func Example_transaction() {
 	fmt.Println("\nDatabase used...")
 	nject.MustRun("B", upstream, InjectDB("dummy", "ignored", nil),
 		func(db *sql.DB) error {
+			// nolint:sqlclosecheck
 			_, _ = db.Prepare("ignored") // database opens are lazy so this triggers the logging
 			fmt.Println("final-func")
 			return nil
