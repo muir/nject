@@ -512,7 +512,7 @@ func proposeEliminations(funcs []*provider) []*provider {
 	}
 	proposal := make([]*provider, 0, len(funcs))
 	for i, fm := range funcs {
-		if !kept[i] {
+		if !kept[i] || fm.shun {
 			proposal = append(proposal, fm)
 		}
 	}

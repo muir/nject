@@ -17,6 +17,9 @@ import (
 // TerminalError return value gets converted to a regular error value
 // and (like other return values) it must be consumed by an upstream handler
 // or the invoke function.
+//
+// Note: wrapper functions should not return TerminalError because such
+// a return value would not be automatically converted into a regular error.
 type TerminalError interface {
 	error
 }
