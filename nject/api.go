@@ -198,6 +198,18 @@ func Desired(fn interface{}) Provider {
 	})
 }
 
+// TODO: add ExampleShun
+
+// Shun creates a new provider and annotates it as not
+// desired: even if it appears to be needed because another
+// provider uses its output, the chain will be built without
+// it if possible.
+func Shun(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.shun = true
+	})
+}
+
 // TODO: add ExampleMustConsume
 
 // MustConsume creates a new provider and annotates it as
