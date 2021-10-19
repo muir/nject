@@ -9,11 +9,14 @@ import (
 	"github.com/muir/nject/nject"
 )
 
-// InjectDB injects both a *sql.DB and *sql.Tx if they're needed.
+// InjectDB injects both an *sql.DB and an *sql.Tx if they're needed.
 // Errors from opening and closing the database can be returned
 // so a consumer of downstream errors is necessary.
 // A context.Context is used in the creation of the transaction
-// inject that earlier in the chain.  txOptions can be nil.
+// inject that earlier in the chain.  txOptions can be nil.  If a
+// transaction is injected, it will be automatically committed if the
+// returned error from downstream is nil.  It will be rolled back if
+// the returned error is not nil.
 func InjectDB(driver, uri string, txOptions *sql.TxOptions) *nject.Collection {
 	return nject.Sequence("database-sequence",
 		driverType(driver),
@@ -21,19 +24,19 @@ func InjectDB(driver, uri string, txOptions *sql.TxOptions) *nject.Collection {
 		txOptions,
 
 		// We tag the db injector as MustConsume so that we don't inject
-		// the database unless the is a consumer for it.  When a wrapper
+		// the database unless there is a consumer for it.  When a wrapper
 		// returns error, it should usually consume error too and pass
 		// that error along, otherwise it can mask a downstream error.
 		nject.MustConsume(nject.Provide("db", injectDB)),
 
 		// We tag the tx injector as MustConsume so that we don't inject
-		// the transaction unless the is a consumer for it.  When a wrapper
+		// the transaction unless there is a consumer for it.  When a wrapper
 		// returns error, it should usually consume error too and pass
 		// that error along, otherwise it can mask a downstream error.
 		nject.MustConsume(nject.Provide("tx", injectTx)),
 
 		// Since injectTx or injectDB consumes an error, this provider
-		// will supply that error if there is no other downstream supplier
+		// will supply that error if there is no other downstream supplier.
 		nject.Shun(nject.Provide("fallback error", fallbackErrorSource)),
 	)
 }

@@ -61,6 +61,9 @@ one place where API enforcement can be done.  The type `nvelope.Body` is provide
 This is a user-provided optional step that can be used to double-check
 that what is being sent matches the API defintion.
 
+The [nvalid](https://github.com/muir/nvalid) package provides a function
+to generate a response validator from Swagger.
+
 ### Decode the request body
 
 The request body needs to be unpacked with an unmarshaller of some kind.

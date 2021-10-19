@@ -219,6 +219,9 @@ func MakeResponseEncoder(
 				}
 			}
 
+			if code == 0 {
+				code = 200
+			}
 			err = encoder.apiEnforcer(code, enc, w.Header(), r)
 			if err != nil {
 				handleError(true)
