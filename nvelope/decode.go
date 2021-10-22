@@ -1,6 +1,7 @@
 package nvelope
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/json"
 	"encoding/xml"
@@ -28,6 +29,7 @@ func readBody(r *http.Request) (Body, nject.TerminalError) {
 	// nolint:errcheck
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(bytes.NewReader(body))
 	return Body(body), err
 }
 
