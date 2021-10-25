@@ -14,7 +14,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/muir/nject/nject"
+	"github.com/muir/reflectutils"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 // Body is a type provideded by ReadBody: it is a []byte
@@ -142,6 +144,32 @@ func WithTag(tag string) DecodeInputsGeneratorOpt {
 // `nvelope:"header,name=xxx"` causes the named HTTP header
 // to be extracted and written to the tagged field.
 //
+// `nvelope:"cookie,name=xxx"` cause the named HTTP cookie to be
+// extracted and writted to the tagged field.
+//
+// Path, query, header, and cookie support options described
+// in https://swagger.io/docs/specification/serialization/ for
+// controlling how to serialize.  The following are supported
+// as appropriate.
+//
+//	explode=true			# default for query
+//	explode=false			# default for path, header
+//	delimiter=comma			# default
+//	delimiter=space			# query parameters only
+//	delimiter=pipe			# query parameters only
+//	allowReserved=false		# default
+//	allowReserved=true		# query parameters only
+//	form=false			# default
+//	form=true			# cookies only
+//	content=application/json	# specifies that the value should be decoded with JSON
+//	content=application/xml		# specifies that the value should be decoded with XML
+//
+// "style=label" and "style=matrix" are NOT yet supported for path parameters.
+// "explode=false" is not supported for query parameters mapping to structs.
+// "deepObject=true" is not supported
+//
+// Generally setting "content" to something should be paired with "explode=false"
+//
 // GenerateDecoder depends upon and uses Gorilla mux.
 func GenerateDecoder(
 	genOpts ...DecodeInputsGeneratorOpt,
@@ -178,14 +206,19 @@ func GenerateDecoder(
 			var varsFillers []func(model reflect.Value, vars map[string]string) error
 			var headerFillers []func(model reflect.Value, header http.Header) error
 			var queryFillers []func(model reflect.Value, query url.Values) error
+			var cookieFillers []func(model reflect.Value, r *http.Request) error
 			var bodyFillers []func(model reflect.Value, body []byte, r *http.Request) error
 			var returnError error
-			walkStructElements(nonPointer, func(field reflect.StructField) bool {
+			reflectutils.WalkStructElements(nonPointer, func(field reflect.StructField) bool {
 				tag, ok := field.Tag.Lookup(options.tag)
 				if !ok {
 					return true
 				}
-				base, kv := parseTag(tag)
+				base, tags, err := parseTag(tag)
+				if err != nil {
+					returnError = err
+					return false
+				}
 				if base == "model" {
 					bodyFillers = append(bodyFillers,
 						func(model reflect.Value, body []byte, r *http.Request) error {
@@ -205,16 +238,11 @@ func GenerateDecoder(
 				}
 
 				name := field.Name // not used by model, but used by the rest
-				if n, ok := kv["name"]; ok {
-					name = n
+				if tags.name != "" {
+					name = tags.name
 				}
-				var unpack func(from string, target reflect.Value, value string) error
-				var err error
-				if field.Type.Kind() == reflect.Slice && (base == "header" || base == "query") {
-					unpack, err = getUnpacker(field.Type.Elem(), field.Name, name)
-				} else {
-					unpack, err = getUnpacker(field.Type, field.Name, name)
-				}
+				unpackerType := field.Type
+				unpack, multiUnpack, err := getUnpacker(unpackerType, field.Name, name, base, tags, options.decoders)
 				if err != nil {
 					returnError = err
 					return false
@@ -229,11 +257,11 @@ func GenerateDecoder(
 							name, field.Name)
 					})
 				case "header":
-					if field.Type.Kind() == reflect.Slice {
+					if multiUnpack != nil {
 						headerFillers = append(headerFillers, func(model reflect.Value, header http.Header) error {
 							f := model.FieldByIndex(field.Index)
 							return errors.Wrapf(
-								multiUnpack("header", f, unpack, header[name]),
+								multiUnpack("header", f, header[name]),
 								"header %s into field %s",
 								name, field.Name)
 						})
@@ -247,11 +275,11 @@ func GenerateDecoder(
 						})
 					}
 				case "query":
-					if field.Type.Kind() == reflect.Slice {
+					if multiUnpack != nil {
 						queryFillers = append(queryFillers, func(model reflect.Value, query url.Values) error {
 							f := model.FieldByIndex(field.Index)
 							return errors.Wrapf(
-								multiUnpack("query", f, unpack, query[name]),
+								multiUnpack("query", f, query[name]),
 								"query parameter %s into field %s",
 								name, field.Name)
 						})
@@ -264,11 +292,21 @@ func GenerateDecoder(
 								name, field.Name)
 						})
 					}
-				default:
-					returnError = errors.Errorf(
-						"unknown tag %s value in %s struct: %s",
-						options.tag, nonPointer, base)
-					return false
+				case "cookie":
+					cookieFillers = append(cookieFillers, func(model reflect.Value, r *http.Request) error {
+						f := model.FieldByIndex(field.Index)
+						cookie, err := r.Cookie(name)
+						if err != nil {
+							if err == http.ErrNoCookie {
+								return nil
+							}
+							return errors.Wrapf(err, "cookie parameter %s into field %s", name, field.Name)
+						}
+						return errors.Wrapf(
+							unpack("cookie", f, cookie.Value),
+							"cookie parameter %s into field %s",
+							name, field.Name)
+					})
 				}
 				return true
 			})
@@ -321,6 +359,9 @@ func GenerateDecoder(
 						setError(qf(model, vals))
 					}
 				}
+				for _, cf := range cookieFillers {
+					setError(cf(model, r))
+				}
 				var ev reflect.Value
 				if err == nil {
 					ev = reflect.Zero(errorType)
@@ -338,7 +379,102 @@ func GenerateDecoder(
 	})
 }
 
-func multiUnpack(
+// generateStructUnpacker generates a function to deal with filling a struct from
+// an array of key, value pairs.
+func generateStructUnpacker(
+	fieldType reflect.Type,
+	tagName string,
+) (
+	func(from string, f reflect.Value, values []string) error,
+	error,
+) {
+	type fillTarget struct {
+		field  reflect.StructField
+		filler func(from string, target reflect.Value, value string) error
+	}
+	targets := make(map[string]fillTarget)
+	var anyErr error
+	reflectutils.WalkStructElements(fieldType, func(field reflect.StructField) bool {
+		tag, ok := field.Tag.Lookup(tagName)
+		if !ok {
+			return true
+		}
+		name, tags, err := parseTag(tag)
+		if err != nil {
+			anyErr = errors.Wrap(err, field.Name)
+			return false
+		}
+		if _, ok := targets[name]; ok {
+			anyErr = errors.Errorf("Only one field can be filled with the same name.  '%s' is duplicated.  One example is %s",
+				name, field.Name)
+			return false
+		}
+		tags.explode = false
+		unpacker, _, err := getUnpacker(field.Type, field.Name, name, "XXX", tags, nil)
+		if err != nil {
+			anyErr = errors.Wrap(err, field.Name)
+			return false
+		}
+		targets[name] = fillTarget{
+			field:  field,
+			filler: unpacker,
+		}
+		return true
+	})
+	if anyErr != nil {
+		return nil, anyErr
+	}
+	return func(from string, model reflect.Value, values []string) error {
+		for i := 0; i < len(values); i += 2 {
+			keyString := values[i]
+			var valueString string
+			if i+1 < len(values) {
+				valueString = values[i+1]
+			}
+			target, ok := targets[keyString]
+			if !ok {
+				return errors.Errorf("No struct member to receive key '%s'", keyString)
+			}
+			f := model.FieldByIndex(target.field.Index)
+			err := target.filler(from, f, valueString)
+			if err != nil {
+				return errors.Wrap(err, target.field.Name)
+			}
+		}
+		return nil
+	}, nil
+}
+
+func mapUnpack(
+	from string, f reflect.Value,
+	keyUnpack func(from string, target reflect.Value, value string) error,
+	valueUnpack func(from string, target reflect.Value, value string) error,
+	values []string,
+) error {
+	m := reflect.MakeMap(f.Type())
+	for i := 0; i < len(values); i += 2 {
+		keyString := values[i]
+		var valueString string
+		if i+1 < len(values) {
+			valueString = values[i+1]
+		}
+		keyPointer := reflect.New(f.Type().Key())
+		err := keyUnpack(from, keyPointer, keyString)
+		if err != nil {
+			return err
+		}
+		valuePointer := reflect.New(f.Type().Elem())
+		err = valueUnpack(from, valuePointer, valueString)
+		if err != nil {
+			return err
+		}
+		m.SetMapIndex(reflect.Indirect(keyPointer), reflect.Indirect(valuePointer))
+	}
+	f.Set(m)
+	return nil
+}
+
+func arrayUnpack(
 	from string, f reflect.Value,
 	singleUnpack func(from string, target reflect.Value, value string) error,
 	values []string,
@@ -350,37 +486,67 @@ func multiUnpack(
 			return err
 		}
 	}
+	f.Set(a)
 	return nil
 }
 
+type parameterContext int
+
+const (
+	pathParemeter parameterContext = iota
+	queryParameter
+	headerParameter
+	cookieParameter
+)
+
 // getUnpacker is used for unpacking headers, query parameters, and path elements
-func getUnpacker(fieldType reflect.Type, fieldName string, name string,
-) (func(from string, target reflect.Value, value string) error, error) {
+func getUnpacker(
+	fieldType reflect.Type,
+	fieldName string,
+	name string,
+	base string, // "path", "query", etc.
+	tags tags,
+	decoders map[string]Decoder,
+) (
+	func(from string, target reflect.Value, value string) error,
+	func(from string, target reflect.Value, values []string) error,
+	error) {
 	if fieldType.AssignableTo(textUnmarshallerType) {
 		return func(from string, target reflect.Value, value string) error {
 			return errors.Wrapf(
 				target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
 				"decode %s %s", from, name)
-		}, nil
+		}, nil, nil // XXX?
 	}
 	if reflect.PtrTo(fieldType).AssignableTo(textUnmarshallerType) {
 		return func(from string, target reflect.Value, value string) error {
 			return errors.Wrapf(
 				target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
 				"decode %s %s", from, name)
-		}, nil
+		}, nil, nil // XXX?
 	}
+	if tags.content != "" {
+		return contentUnpacker(fieldType, fieldName, name, base, tags, decoders)
+	}
+
 	switch fieldType.Kind() {
 	case reflect.Ptr:
-		vu, err := getUnpacker(fieldType.Elem(), fieldName, name)
+		vu, mu, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags, decoders)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		if mu != nil {
+			return nil, func(from string, target reflect.Value, values []string) error {
+				p := reflect.New(fieldType.Elem())
+				target.Set(p)
+				return mu(from, target.Elem(), values)
+			}, nil
 		}
 		return func(from string, target reflect.Value, value string) error {
 			p := reflect.New(fieldType.Elem())
 			target.Set(p)
 			return vu(from, target.Elem(), value)
-		}, nil
+		}, nil, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(from string, target reflect.Value, value string) error {
 			i, err := strconv.ParseInt(value, 10, 64)
@@ -389,7 +555,7 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			}
 			target.SetInt(i)
 			return nil
-		}, nil
+		}, nil, nil
 	case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return func(from string, target reflect.Value, value string) error {
 			i, err := strconv.ParseUint(value, 10, 64)
@@ -398,7 +564,7 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			}
 			target.SetUint(i)
 			return nil
-		}, nil
+		}, nil, nil
 	case reflect.Float32, reflect.Float64:
 		return func(from string, target reflect.Value, value string) error {
 			f, err := strconv.ParseFloat(value, 64)
@@ -407,12 +573,12 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			}
 			target.SetFloat(f)
 			return nil
-		}, nil
+		}, nil, nil
 	case reflect.String:
 		return func(_ string, target reflect.Value, value string) error {
 			target.SetString(value)
 			return nil
-		}, nil
+		}, nil, nil
 	case reflect.Complex64, reflect.Complex128:
 		return func(from string, target reflect.Value, value string) error {
 			c, err := strconv.ParseComplex(value, 128)
@@ -421,7 +587,7 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			}
 			target.SetComplex(c)
 			return nil
-		}, nil
+		}, nil, nil
 	case reflect.Bool:
 		return func(from string, target reflect.Value, value string) error {
 			b, err := strconv.ParseBool(value)
@@ -430,17 +596,175 @@ func getUnpacker(fieldType reflect.Type, fieldName string, name string,
 			}
 			target.SetBool(b)
 			return nil
-		}, nil
-	// TODO: case reflect.Slice:
-	// TODO: case reflect.Array:
-	case reflect.Chan, reflect.Interface, reflect.UnsafePointer, reflect.Func, reflect.Invalid,
-		reflect.Struct, reflect.Map, reflect.Array, reflect.Slice:
+		}, nil, nil
+
+	case reflect.Slice:
+		switch base {
+		case "cookie", "path":
+			if tags.delimiter != "," {
+				return nil, nil, errors.New("delimiter setting is only allowed for 'query' parameters")
+			}
+		}
+		singleUnpack, _, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		if err != nil {
+			return nil, nil, err
+		}
+		switch base {
+		case "query", "header":
+			if tags.explode {
+				return nil, func(from string, target reflect.Value, values []string) error {
+					return arrayUnpack(from, target, singleUnpack, values)
+				}, nil
+			}
+		}
+		return func(from string, target reflect.Value, value string) error {
+			values := strings.Split(value, tags.delimiter)
+			return arrayUnpack(from, target, singleUnpack, values)
+		}, nil, nil
+
+	case reflect.Struct:
+		structUnpacker, err := generateStructUnpacker(fieldType, fieldName)
+		if err != nil {
+			return nil, nil, err
+		}
+		switch base {
+		case "query", "header":
+			if tags.explode {
+				return nil, func(from string, target reflect.Value, values []string) error {
+					return structUnpacker(from, target, resplitOnEquals(values))
+				}, nil
+			}
+		}
+		return func(from string, target reflect.Value, value string) error {
+			values := strings.Split(value, tags.delimiter)
+			return structUnpacker(from, target, values)
+		}, nil, nil
+
+	case reflect.Map:
+		switch base {
+		case "cookie", "path":
+			if tags.delimiter != "," {
+				return nil, nil, errors.New("delimiter setting is only allowed for 'query' parameters")
+			}
+		}
+		keyUnpack, _, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		if err != nil {
+			return nil, nil, err
+		}
+		elementUnpack, _, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		if err != nil {
+			return nil, nil, err
+		}
+		switch base {
+		case "query", "header":
+			if tags.explode {
+				return nil, func(from string, target reflect.Value, values []string) error {
+					return mapUnpack(from, target, keyUnpack, elementUnpack, resplitOnEquals(values))
+				}, nil
+			}
+		}
+		return func(from string, target reflect.Value, value string) error {
+			values := strings.Split(value, tags.delimiter)
+			return arrayUnpack(from, target, elementUnpack, resplitOnEquals(values))
+		}, nil, nil
+
+	case reflect.Array:
+		// TODO: handle arrays
+		fallthrough
+	case reflect.Chan, reflect.Interface, reflect.UnsafePointer, reflect.Func, reflect.Invalid:
 		fallthrough
 	default:
-		return nil, errors.Errorf(
+		return nil, nil, errors.Errorf(
 			"Cannot decode into %s, %s does not implement UnmarshalText",
 			fieldName, fieldType)
 	}
+}
+
+// contentUnpacker generates an unpacker to use when something has
+// been tagged "content=application/json" or such.  We bypass our
+// regular unpackers and instead use a regular decoder.  The interesting
+// case is where this is combined with "explode=true" because then
+// we have to decode many times
+func contentUnpacker(
+	fieldType reflect.Type,
+	fieldName string,
+	name string,
+	base string, // "path", "query", etc.
+	tags tags,
+	decoders map[string]Decoder,
+) (
+	func(from string, target reflect.Value, value string) error,
+	func(from string, target reflect.Value, values []string) error,
+	error) {
+
+	decoder, ok := decoders[tags.content]
+	if !ok {
+		// tags.content can provide access to decoders beyond what
+		// is specified for GenerateDecoder
+		switch tags.content {
+		case "application/json":
+			decoder = json.Unmarshal
+		case "application/xml":
+			decoder = xml.Unmarshal
+		case "application/yaml":
+			decoder = yaml.Unmarshal
+		default:
+			errors.Errorf("No decoder provided for content type '%s'", tags.content)
+		}
+	}
+	kind := fieldType.Kind()
+	if tags.explode &&
+		(base == "query" || base == "header") &&
+		(kind == reflect.Map || kind == reflect.Slice) {
+		valueUnpack, _, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		if err != nil {
+			return nil, nil, err
+		}
+		if kind == reflect.Slice {
+			return nil, func(from string, target reflect.Value, values []string) error {
+				a := reflect.MakeSlice(target.Type(), len(values), len(values))
+				for i, valueString := range values {
+					err := valueUnpack(from, a.Index(i), valueString)
+					if err != nil {
+						return err
+					}
+				}
+				target.Set(a)
+				return nil
+			}, nil
+		}
+		keyUnpack, _, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutContent(), decoders)
+		return nil, func(from string, target reflect.Value, values []string) error {
+			m := reflect.MakeMap(target.Type())
+			for _, pair := range values {
+				kv := strings.SplitN(pair, "=", 2)
+				keyString := kv[0]
+				var valueString string
+				if len(kv) == 2 {
+					valueString = kv[1]
+				}
+				keyPointer := reflect.New(fieldType.Key())
+				err := keyUnpack(from, keyPointer, keyString)
+				if err != nil {
+					return err
+				}
+				valuePointer := reflect.New(fieldType.Elem())
+				err = valueUnpack(from, valuePointer, valueString)
+				if err != nil {
+					return err
+				}
+				m.SetMapIndex(reflect.Indirect(keyPointer), reflect.Indirect(valuePointer))
+			}
+			target.Set(m)
+			return nil
+		}, nil
+	}
+
+	return func(from string, target reflect.Value, value string) error {
+		i := target.Addr().Interface()
+		err := decoder([]byte(value), i)
+		return errors.Wrap(err, fieldName)
+	}, nil, nil
 }
 
 var (
@@ -451,49 +775,86 @@ var (
 	errorType            = reflect.TypeOf((*error)(nil)).Elem()
 )
 
-// The return value from f only matters when the type of the field is a struct.  In
-// that case, a false value prevents recursion.
-func walkStructElements(t reflect.Type, f func(reflect.StructField) bool) {
-	if t.Kind() == reflect.Struct {
-		doWalkStructElements(t, []int{}, f)
-	}
-	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
-		doWalkStructElements(t.Elem(), []int{}, f)
-	}
+var delimiters = map[string]string{
+	"comma": ",",
+	"pipe":  "|",
+	"space": " ",
 }
 
-func doWalkStructElements(t reflect.Type, path []int, f func(reflect.StructField) bool) {
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		np := copyIntSlice(path)
-		np = append(np, field.Index...)
-		field.Index = np
-		if f(field) && field.Type.Kind() == reflect.Struct {
-			doWalkStructElements(field.Type, np, f)
-		}
-	}
+type tags struct {
+	name          string
+	explode       bool
+	delimiter     string
+	allowReserved bool
+	content       string
 }
 
-func copyIntSlice(in []int) []int {
-	c := make([]int, len(in), len(in)+1)
-	copy(c, in)
-	return c
+func (tags tags) WithoutExplode() tags {
+	tags.explode = false
+	return tags
 }
 
-func parseTag(s string) (string, map[string]string) {
+func (tags tags) WithoutContent() tags {
+	tags.content = ""
+	return tags
+}
+
+func parseTag(s string) (string, tags, error) {
 	a := strings.Split(s, ",")
-	if len(a) == 1 {
-		return s, nil
+	var tags tags
+	if len(a) == 0 {
+		return "", tags, errors.New("must specify the source of the data ('path', 'query', etc)")
 	}
-	kv := make(map[string]string)
+	tags.delimiter = ","
+	switch a[0] {
+	case "path":
+	case "query":
+		tags.explode = true
+	case "header":
+	case "cookie":
+	case "model":
+	default:
+		return "", tags, errors.Errorf("'%s' is not a valid source of the data use ('model', 'path', 'query', etc)", a[0])
+	}
 	for _, v := range a[1:] {
 		kvs := strings.SplitN(v, "=", 2)
 		k := kvs[0]
+		var val string
 		if len(kvs) == 2 {
-			kv[k] = kvs[1]
-		} else {
-			kv[k] = ""
+			val = kvs[1]
+		}
+		var err error
+		switch k {
+		case "name":
+			tags.name = val
+		case "explode":
+			tags.explode, err = strconv.ParseBool(val)
+		case "delimiter":
+			var ok bool
+			tags.delimiter, ok = delimiters[val]
+			if !ok {
+				err = errors.Errorf("Invalid delimiter value (must be 'comma', 'space', or 'pipe')")
+			}
+		case "allowReserved":
+			tags.allowReserved, err = strconv.ParseBool(val)
+		case "content":
+			tags.content = val
+		}
+		if err != nil {
+			return "", tags, errors.Wrap(err, k)
 		}
 	}
-	return a[0], kv
+	return a[0], tags, nil
+}
+
+func resplitOnEquals(values []string) []string {
+	nv := make([]string, len(values)*2)
+	for i, v := range values {
+		a := strings.SplitN(v, "=", 2)
+		nv[i*2] = a[0]
+		if len(a) == 2 {
+			nv[i*2+1] = a[1]
+		}
+	}
+	return nv
 }
