@@ -260,16 +260,24 @@ func GenerateDecoder(
 					if multiUnpack != nil {
 						headerFillers = append(headerFillers, func(model reflect.Value, header http.Header) error {
 							f := model.FieldByIndex(field.Index)
+							values, ok := header[name]
+							if !ok {
+								return nil
+							}
 							return errors.Wrapf(
-								multiUnpack("header", f, header[name]),
+								multiUnpack("header", f, values),
 								"header %s into field %s",
 								name, field.Name)
 						})
 					} else {
 						headerFillers = append(headerFillers, func(model reflect.Value, header http.Header) error {
 							f := model.FieldByIndex(field.Index)
+							values, ok := header[name]
+							if !ok || len(values) == 0 {
+								return nil
+							}
 							return errors.Wrapf(
-								unpack("header", f, header.Get(name)),
+								unpack("header", f, values[0]),
 								"header %s into field %s",
 								name, field.Name)
 						})
@@ -278,16 +286,24 @@ func GenerateDecoder(
 					if multiUnpack != nil {
 						queryFillers = append(queryFillers, func(model reflect.Value, query url.Values) error {
 							f := model.FieldByIndex(field.Index)
+							values, ok := query[name]
+							if !ok {
+								return nil
+							}
 							return errors.Wrapf(
-								multiUnpack("query", f, query[name]),
+								multiUnpack("query", f, values),
 								"query parameter %s into field %s",
 								name, field.Name)
 						})
 					} else {
 						queryFillers = append(queryFillers, func(model reflect.Value, query url.Values) error {
 							f := model.FieldByIndex(field.Index)
+							values, ok := query[name]
+							if !ok || len(values) == 0 {
+								return nil
+							}
 							return errors.Wrapf(
-								unpack("query", f, query.Get(name)),
+								unpack("query", f, values[0]),
 								"query parameter %s into field %s",
 								name, field.Name)
 						})
@@ -459,12 +475,12 @@ func mapUnpack(
 			valueString = values[i+1]
 		}
 		keyPointer := reflect.New(f.Type().Key())
-		err := keyUnpack(from, keyPointer, keyString)
+		err := keyUnpack(from, keyPointer.Elem(), keyString)
 		if err != nil {
 			return err
 		}
 		valuePointer := reflect.New(f.Type().Elem())
-		err = valueUnpack(from, valuePointer, valueString)
+		err = valueUnpack(from, valuePointer.Elem(), valueString)
 		if err != nil {
 			return err
 		}
@@ -665,7 +681,7 @@ func getUnpacker(
 		}
 		return func(from string, target reflect.Value, value string) error {
 			values := strings.Split(value, tags.delimiter)
-			return arrayUnpack(from, target, elementUnpack, resplitOnEquals(values))
+			return mapUnpack(from, target, keyUnpack, elementUnpack, values)
 		}, nil, nil
 
 	case reflect.Array:
