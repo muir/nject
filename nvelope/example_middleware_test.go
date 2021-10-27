@@ -3,7 +3,7 @@ package nvelope_test
 import (
 	"context"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -91,7 +91,7 @@ func ExampleServiceWithMiddleware() {
 			fmt.Println("response error:", err)
 			return
 		}
-		b, err := io.ReadAll(res.Body)
+		b, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			fmt.Println("read error:", err)
 			return

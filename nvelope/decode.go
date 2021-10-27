@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -28,7 +29,7 @@ var ReadBody = nject.Provide("read-body", readBody)
 func readBody(r *http.Request) (Body, nject.TerminalError) {
 	// nolint:errcheck
 	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+	body, err := ioutil.ReadAll(r.Body)
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	return Body(body), err
 }
