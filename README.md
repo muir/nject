@@ -211,3 +211,7 @@ This repo represents continued development of Blue Owl's
 has been in production use for years and has been unchanged for years.
 The core of nject is mostly unchanged.  Nvelope and nserve are new.
 
+### Go version
+
+Due to the use of strconv.ParseComplex in nvelope, the minimum supported
+version of Go is 1.15
