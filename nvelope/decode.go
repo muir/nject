@@ -5,7 +5,6 @@ import (
 	"encoding"
 	"encoding/json"
 	"encoding/xml"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -30,7 +29,7 @@ func readBody(r *http.Request) (Body, nject.TerminalError) {
 	// nolint:errcheck
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(body))
+	r.Body = ioutil.NopCloser(bytes.NewReader(body))
 	return Body(body), err
 }
 
