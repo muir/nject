@@ -84,8 +84,13 @@ func WithDefaultContentType(contentType string) DecodeInputsGeneratorOpt {
 
 // RejectUnknownQueryParameters true indicates that if there are any
 // query parameters supplied that were not expected, the request should
-// be rejected with a 400 response code.
-// XXX
+// be rejected with a 400 response code.  This parameter also controls
+// what happens if there an embedded object is filled and there is no
+// object key corresponding to the request parameter.
+//
+// This does not apply to query parameters with content=application/json
+// decodings.  If you want to disallow unknown tags for content= decodings,
+// define a custom decoder.
 func RejectUnknownQueryParameters(b bool) DecodeInputsGeneratorOpt {
 	return func(o *eigo) {
 		o.rejectUnknownQueryParameters = b
@@ -187,7 +192,20 @@ var deepObjectRE = regexp.MustCompile(`^([^\[]+)\[([^\]]+)\]$`) // id[name]
 //	deepObject=true
 //	deepObject=false,explode=false
 //
-// "deepObject=true" is not supported for slices.
+// When filling embedded structs from query, or header, parameters,
+// using explode=false or deepObject=true, tagging struct members is
+// optional.  Tag them with their name or with "-" if you do not want
+// them filled.
+//
+// 	type Fillme struct {
+//		Embedded struct {
+//			IntValue    int                     // will get filled by key "IntValue"
+//			FloatValue  float64 `nvelope:"-"`   // will not get filled
+//			StringValue string  `nvelope:"bob"` // will get filled by key "bob"
+//		} `nvelope:"query,name=embedded,explode=false"`
+//	}
+//
+// "deepObject=true" is only supported for maps and structs and only for query parameters.
 //
 // Generally setting "content" to something should be paired with "explode=false"
 //
@@ -236,7 +254,7 @@ func GenerateDecoder(
 				if !ok {
 					return true
 				}
-				base, tags, err := parseTag(tag)
+				base, tags, err := parseTag(tag, true)
 				if err != nil {
 					returnError = err
 					return false
@@ -263,7 +281,7 @@ func GenerateDecoder(
 				if tags.name != "" {
 					name = tags.name
 				}
-				unpacker, err := getUnpacker(field.Type, field.Name, name, base, tags, options.decoders)
+				unpacker, err := getUnpacker(field.Type, field.Name, name, base, tags, options)
 				if err != nil {
 					returnError = err
 					return false
@@ -306,7 +324,10 @@ func GenerateDecoder(
 				case "query":
 					switch {
 					case unpacker.deepObject != nil:
-						deepObjectFillers[name] = unpacker.deepObject
+						deepObjectFillers[name] = func(model reflect.Value, mapValues map[string][]string) error {
+							f := model.FieldByIndex(field.Index)
+							return unpacker.deepObject(f, mapValues)
+						}
 					case unpacker.multi != nil:
 						queryFillers[name] = func(model reflect.Value, values []string) error {
 							f := model.FieldByIndex(field.Index)
@@ -442,6 +463,7 @@ func generateStructUnpacker(
 	fieldType reflect.Type,
 	tagName string,
 	outerTags tags,
+	options eigo,
 ) (unpack, error) {
 	type fillTarget struct {
 		field reflect.StructField
@@ -450,14 +472,17 @@ func generateStructUnpacker(
 	targets := make(map[string]fillTarget)
 	var anyErr error
 	reflectutils.WalkStructElements(fieldType, func(field reflect.StructField) bool {
-		tag, ok := field.Tag.Lookup(tagName)
-		if !ok {
-			return true
-		}
-		name, tags, err := parseTag(tag)
+		tag, _ := field.Tag.Lookup(tagName)
+		name, tags, err := parseTag(tag, false)
 		if err != nil {
 			anyErr = errors.Wrap(err, field.Name)
 			return false
+		}
+		switch name {
+		case "-":
+			return true
+		case "":
+			name = field.Name
 		}
 		if _, ok := targets[name]; ok {
 			anyErr = errors.Errorf("Only one field can be filled with the same name.  '%s' is duplicated.  One example is %s",
@@ -471,7 +496,7 @@ func generateStructUnpacker(
 			anyErr = errors.Errorf("deepObject=true is not allowed on fields inside a struct.  Used on %s", name)
 			return false
 		}
-		unpacker, err := getUnpacker(field.Type, field.Name, name, base, tags, nil)
+		unpacker, err := getUnpacker(field.Type, field.Name, name, base, tags, options)
 		if err != nil {
 			anyErr = errors.Wrap(err, field.Name)
 			return false
@@ -495,7 +520,10 @@ func generateStructUnpacker(
 				}
 				target, ok := targets[keyString]
 				if !ok {
-					return errors.Errorf("No struct member to receive key '%s'", keyString)
+					if options.rejectUnknownQueryParameters {
+						return errors.Errorf("No struct member to receive key '%s'", keyString)
+					}
+					continue
 				}
 				f := model.FieldByIndex(target.field.Index)
 				err := target.single(from, f, valueString)
@@ -509,7 +537,10 @@ func generateStructUnpacker(
 			for keyString, values := range mapValues {
 				target, ok := targets[keyString]
 				if !ok {
-					return errors.Errorf("No struct member to receive key '%s'", keyString)
+					if options.rejectUnknownQueryParameters {
+						return errors.Errorf("No struct member to receive key '%s'", keyString)
+					}
+					continue
 				}
 				f := model.FieldByIndex(target.field.Index)
 				var err error
@@ -584,6 +615,7 @@ const (
 )
 
 type unpack struct {
+	createMe   bool
 	single     func(from string, target reflect.Value, value string) error
 	multi      func(from string, target reflect.Value, values []string) error
 	deepObject func(target reflect.Value, mapValues map[string][]string) error
@@ -596,44 +628,60 @@ func getUnpacker(
 	name string,
 	base string, // "path", "query", etc.
 	tags tags,
-	decoders map[string]Decoder,
+	options eigo,
 ) (unpack, error) {
+	if tags.content != "" {
+		return contentUnpacker(fieldType, fieldName, name, base, tags, options)
+	}
 	if fieldType.AssignableTo(textUnmarshallerType) {
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			return errors.Wrapf(
-				target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
-				"decode %s %s", from, name)
-		}}, nil // XXX?
+		return unpack{
+			createMe: true,
+			single: func(from string, target reflect.Value, value string) error {
+				p := reflect.New(fieldType.Elem())
+				target.Set(p)
+				return errors.Wrapf(
+					target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
+					"decode %s %s", from, name)
+			},
+		}, nil
 	}
 	if reflect.PtrTo(fieldType).AssignableTo(textUnmarshallerType) {
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			return errors.Wrapf(
-				target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
-				"decode %s %s", from, name)
-		}}, nil // XXX?
-	}
-	if tags.content != "" {
-		return contentUnpacker(fieldType, fieldName, name, base, tags, decoders)
+		return unpack{
+			createMe: true,
+			single: func(from string, target reflect.Value, value string) error {
+				return errors.Wrapf(
+					target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)),
+					"decode %s %s", from, name)
+			},
+		}, nil
 	}
 
 	switch fieldType.Kind() {
 	case reflect.Ptr:
-		unpacker, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags, decoders)
+		unpacker, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags, options)
 		if err != nil {
 			return unpack{}, err
 		}
-		if unpacker.multi != nil {
+		switch {
+		case unpacker.deepObject != nil:
+			return unpack{deepObject: func(target reflect.Value, mapValues map[string][]string) error {
+				p := reflect.New(fieldType.Elem())
+				target.Set(p)
+				return unpacker.deepObject(target.Elem(), mapValues)
+			}}, nil
+		case unpacker.multi != nil:
 			return unpack{multi: func(from string, target reflect.Value, values []string) error {
 				p := reflect.New(fieldType.Elem())
 				target.Set(p)
 				return unpacker.multi(from, target.Elem(), values)
 			}}, nil
+		default:
+			return unpack{single: func(from string, target reflect.Value, value string) error {
+				p := reflect.New(fieldType.Elem())
+				target.Set(p)
+				return unpacker.single(from, target.Elem(), value)
+			}}, nil
 		}
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			p := reflect.New(fieldType.Elem())
-			target.Set(p)
-			return unpacker.single(from, target.Elem(), value)
-		}}, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return unpack{single: func(from string, target reflect.Value, value string) error {
 			i, err := strconv.ParseInt(value, 10, 64)
@@ -696,7 +744,7 @@ func getUnpacker(
 			return unpack{}, errors.New("deepObject=true not supported for slices")
 		}
 
-		singleUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		singleUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), options)
 		if err != nil {
 			return unpack{}, err
 		}
@@ -716,7 +764,7 @@ func getUnpacker(
 		}}, nil
 
 	case reflect.Struct:
-		structUnpacker, err := generateStructUnpacker(base, fieldType, fieldName, tags)
+		structUnpacker, err := generateStructUnpacker(base, fieldType, options.tag, tags, options)
 		if err != nil {
 			return unpack{}, err
 		}
@@ -748,7 +796,7 @@ func getUnpacker(
 				return unpack{}, errors.New("delimiter setting is only allowed for 'query' parameters")
 			}
 		}
-		keyUnpack, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutDeepObject(), decoders)
+		keyUnpack, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutDeepObject(), options)
 		if err != nil {
 			return unpack{}, err
 		}
@@ -758,7 +806,7 @@ func getUnpacker(
 		} else {
 			etags = etags.WithoutExplode()
 		}
-		elementUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, etags, decoders)
+		elementUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, etags, options)
 		if err != nil {
 			return unpack{}, err
 		}
@@ -767,14 +815,14 @@ func getUnpacker(
 				return unpack{}, errors.Errorf("deepObject=true not supported for %s", base)
 			}
 			return unpack{deepObject: func(target reflect.Value, mapValues map[string][]string) error {
-				m := reflect.MakeMap(target.Type())
+				m := reflect.MakeMap(fieldType)
 				for keyString, values := range mapValues {
-					keyPointer := reflect.New(target.Type().Key())
+					keyPointer := reflect.New(fieldType.Key())
 					err := keyUnpack.single("query", keyPointer.Elem(), keyString)
 					if err != nil {
 						return err
 					}
-					valuePointer := reflect.New(target.Type().Elem())
+					valuePointer := reflect.New(fieldType.Elem())
 					if elementUnpack.multi != nil {
 						err = elementUnpack.multi("query", valuePointer.Elem(), values)
 					} else {
@@ -831,9 +879,9 @@ func contentUnpacker(
 	name string,
 	base string, // "path", "query", etc.
 	tags tags,
-	decoders map[string]Decoder,
+	options eigo,
 ) (unpack, error) {
-	decoder, ok := decoders[tags.content]
+	decoder, ok := options.decoders[tags.content]
 	if !ok {
 		// tags.content can provide access to decoders beyond what
 		// is specified for GenerateDecoder
@@ -852,7 +900,7 @@ func contentUnpacker(
 	if tags.explode &&
 		(base == "query" || base == "header") &&
 		(kind == reflect.Map || kind == reflect.Slice) {
-		valueUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), decoders)
+		valueUnpack, err := getUnpacker(fieldType.Elem(), fieldName, name, base, tags.WithoutExplode(), options)
 		if err != nil {
 			return unpack{}, err
 		}
@@ -869,7 +917,7 @@ func contentUnpacker(
 				return nil
 			}}, nil
 		}
-		keyUnpack, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutContent().WithoutDeepObject(), decoders)
+		keyUnpack, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutContent().WithoutDeepObject(), options)
 		return unpack{multi: func(from string, target reflect.Value, values []string) error {
 			m := reflect.MakeMap(target.Type())
 			for _, pair := range values {
@@ -930,22 +978,24 @@ func (tags tags) WithoutExplode() tags    { tags.explode = false; return tags }
 func (tags tags) WithoutContent() tags    { tags.content = ""; return tags }
 func (tags tags) WithoutDeepObject() tags { tags.deepObject = false; return tags }
 
-func parseTag(s string) (string, tags, error) {
+func parseTag(s string, validate bool) (string, tags, error) {
 	a := strings.Split(s, ",")
 	var tags tags
 	if len(a) == 0 {
 		return "", tags, errors.New("must specify the source of the data ('path', 'query', etc)")
 	}
 	tags.delimiter = ","
-	switch a[0] {
-	case "path":
-	case "query":
-		tags.explode = true
-	case "header":
-	case "cookie":
-	case "model":
-	default:
-		return "", tags, errors.Errorf("'%s' is not a valid source of the data use ('model', 'path', 'query', etc)", a[0])
+	if validate {
+		switch a[0] {
+		case "path":
+		case "query":
+			tags.explode = true
+		case "header":
+		case "cookie":
+		case "model":
+		default:
+			return "", tags, errors.Errorf("'%s' is not a valid source of the data use ('model', 'path', 'query', etc)", a[0])
+		}
 	}
 	for _, v := range a[1:] {
 		kvs := strings.SplitN(v, "=", 2)
