@@ -8,9 +8,10 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/muir/nject/npoint"
 	"github.com/muir/nject/nvelope"
+
+	"github.com/gorilla/mux"
 )
 
 func RequestTimingMiddlewareHandler(next http.Handler) http.Handler {

@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 
 	"github.com/muir/nject/nject"
+
 	"github.com/pkg/errors"
 )
 
