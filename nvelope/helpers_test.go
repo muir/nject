@@ -3,33 +3,61 @@ package nvelope_test
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/muir/nject/npoint"
 	"github.com/muir/nject/nvelope"
+
+	"github.com/gorilla/mux"
 )
 
-func setupTestService(path string, f interface{}) func(url, body string) {
+// nolint:deadcode,unused
+func setupTestService(path string, f interface{}) func(string, ...mod) {
 	return captureOutputFunc(func(i ...interface{}) {
 		fmt.Println(i...)
 	}, path, f)
 }
 
-func captureOutput(path string, f interface{}) func(url, body string) string {
+func captureOutput(path string, f interface{}) func(string, ...mod) string {
 	var o string
 	do := captureOutputFunc(func(i ...interface{}) {
 		o += fmt.Sprint(i...)
 	}, path, f)
-	return func(url, body string) string {
+	return func(url string, mods ...mod) string {
 		o = ""
-		do(url, body)
+		do(url, mods...)
 		return o
 	}
 }
 
-func captureOutputFunc(out func(...interface{}), path string, f interface{}) func(url, body string) {
+type mod func(*http.Request, *http.Client, *httptest.Server)
+
+// nolint:unused,deadcode
+func body(s string) mod {
+	return func(r *http.Request, cl *http.Client, ts *httptest.Server) {
+		r.Body = ioutil.NopCloser(strings.NewReader(s))
+	}
+}
+
+func cookie(k, v string) mod {
+	return func(r *http.Request, cl *http.Client, ts *httptest.Server) {
+		cl.Jar.SetCookies(r.URL, []*http.Cookie{
+			{Name: k, Value: v},
+		})
+	}
+}
+
+func header(k, v string) mod {
+	return func(r *http.Request, cl *http.Client, ts *httptest.Server) {
+		r.Header[k] = append(r.Header[k], v)
+	}
+}
+
+func captureOutputFunc(out func(...interface{}), path string, f interface{}) func(string, ...mod) {
 	router := mux.NewRouter()
 	service := npoint.RegisterServiceWithMux("example", router)
 	service.RegisterEndpoint(path,
@@ -44,12 +72,25 @@ func captureOutputFunc(out func(...interface{}), path string, f interface{}) fun
 		f,
 	).Methods("POST")
 	ts := httptest.NewServer(router)
-	client := ts.Client()
 
-	return func(url string, body string) {
+	return func(url string, mods ...mod) {
+		client := ts.Client()
+		var err error
+		client.Jar, err = cookiejar.New(&cookiejar.Options{})
+		if err != nil {
+			panic("jar")
+		}
 		// nolint:noctx
-		res, err := client.Post(ts.URL+url, "application/json",
-			strings.NewReader(body))
+		req, err := http.NewRequest("POST", ts.URL+url, ioutil.NopCloser(strings.NewReader("")))
+		if err != nil {
+			panic("request")
+		}
+		for _, m := range mods {
+			m(req, client, ts)
+		}
+
+		// nolint:noctx
+		res, err := client.Do(req)
 		if err != nil {
 			out("response error:", err)
 			return

@@ -9,9 +9,10 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/muir/nject/npoint"
 	"github.com/muir/nject/nvelope"
+
+	"github.com/gorilla/mux"
 )
 
 // nolint:deadcode,unused

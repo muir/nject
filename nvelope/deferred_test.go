@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/muir/nject/nvelope"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

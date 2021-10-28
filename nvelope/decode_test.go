@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/muir/nject/nvelope"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,35 +56,35 @@ func TestDecodeQuerySimpleParameters(t *testing.T) {
 	}) (nvelope.Response, error) {
 		return s, nil
 	})
-	assert.Equal(t, `200->{"Int":135}`, do("/x?int=135", ""))
-	assert.Equal(t, `200->{"Int8":-5}`, do("/x?int8=-5", ""))
-	assert.Equal(t, `200->{"Int16":127}`, do("/x?int16=127", ""))
-	assert.Equal(t, `200->{"Int32":11}`, do("/x?int32=11", ""))
-	assert.Equal(t, `200->{"Int64":-38}`, do("/x?int64=-38", ""))
-	assert.Equal(t, `200->{"Uint":135}`, do("/x?uint=135", ""))
-	assert.Equal(t, `200->{"Uint8":5}`, do("/x?uint8=5", ""))
-	assert.Equal(t, `200->{"Uint16":127}`, do("/x?uint16=127", ""))
-	assert.Equal(t, `200->{"Uint32":11}`, do("/x?uint32=11", ""))
-	assert.Equal(t, `200->{"Uint64":38}`, do("/x?uint64=38", ""))
-	assert.Equal(t, `200->{"Float64":38.7}`, do("/x?float64=38.7", ""))
-	assert.Equal(t, `200->{"Float32":11.1}`, do("/x?float32=11.1", ""))
-	assert.Equal(t, `200->{"String":"fred"}`, do("/x?string=fred", ""))
-	assert.Equal(t, `200->{"IntP":135}`, do("/x?intp=135", ""))
-	assert.Equal(t, `200->{"Int8P":-5}`, do("/x?int8p=-5", ""))
-	assert.Equal(t, `200->{"Int16P":127}`, do("/x?int16p=127", ""))
-	assert.Equal(t, `200->{"Int32P":11}`, do("/x?int32p=11", ""))
-	assert.Equal(t, `200->{"Int64P":-38}`, do("/x?int64p=-38", ""))
-	assert.Equal(t, `200->{"UintP":135}`, do("/x?uintp=135", ""))
-	assert.Equal(t, `200->{"Uint8P":5}`, do("/x?uint8p=5", ""))
-	assert.Equal(t, `200->{"Uint16P":127}`, do("/x?uint16p=127", ""))
-	assert.Equal(t, `200->{"Uint32P":11}`, do("/x?uint32p=11", ""))
-	assert.Equal(t, `200->{"Uint64P":38}`, do("/x?uint64p=38", ""))
-	assert.Equal(t, `200->{"Float64P":38.7}`, do("/x?float64p=38.7", ""))
-	assert.Equal(t, `200->{"Float32P":11.1}`, do("/x?float32p=11.1", ""))
-	assert.Equal(t, `200->{"StringP":"fred"}`, do("/x?stringp=fred", ""))
-	assert.Equal(t, `200->{"Complex64":"(38.7-9.3i)"}`, do("/x?complex64="+url.QueryEscape("38.7-9.3i"), ""))
-	assert.Equal(t, `200->{"Complex128":"(11.1+22.1i)"}`, do("/x?complex128="+url.QueryEscape("11.1+22.1i"), ""))
-	assert.Equal(t, `200->{"BoolP":false}`, do("/x?boolp=false", ""))
+	assert.Equal(t, `200->{"Int":135}`, do("/x?int=135"))
+	assert.Equal(t, `200->{"Int8":-5}`, do("/x?int8=-5"))
+	assert.Equal(t, `200->{"Int16":127}`, do("/x?int16=127"))
+	assert.Equal(t, `200->{"Int32":11}`, do("/x?int32=11"))
+	assert.Equal(t, `200->{"Int64":-38}`, do("/x?int64=-38"))
+	assert.Equal(t, `200->{"Uint":135}`, do("/x?uint=135"))
+	assert.Equal(t, `200->{"Uint8":5}`, do("/x?uint8=5"))
+	assert.Equal(t, `200->{"Uint16":127}`, do("/x?uint16=127"))
+	assert.Equal(t, `200->{"Uint32":11}`, do("/x?uint32=11"))
+	assert.Equal(t, `200->{"Uint64":38}`, do("/x?uint64=38"))
+	assert.Equal(t, `200->{"Float64":38.7}`, do("/x?float64=38.7"))
+	assert.Equal(t, `200->{"Float32":11.1}`, do("/x?float32=11.1"))
+	assert.Equal(t, `200->{"String":"fred"}`, do("/x?string=fred"))
+	assert.Equal(t, `200->{"IntP":135}`, do("/x?intp=135"))
+	assert.Equal(t, `200->{"Int8P":-5}`, do("/x?int8p=-5"))
+	assert.Equal(t, `200->{"Int16P":127}`, do("/x?int16p=127"))
+	assert.Equal(t, `200->{"Int32P":11}`, do("/x?int32p=11"))
+	assert.Equal(t, `200->{"Int64P":-38}`, do("/x?int64p=-38"))
+	assert.Equal(t, `200->{"UintP":135}`, do("/x?uintp=135"))
+	assert.Equal(t, `200->{"Uint8P":5}`, do("/x?uint8p=5"))
+	assert.Equal(t, `200->{"Uint16P":127}`, do("/x?uint16p=127"))
+	assert.Equal(t, `200->{"Uint32P":11}`, do("/x?uint32p=11"))
+	assert.Equal(t, `200->{"Uint64P":38}`, do("/x?uint64p=38"))
+	assert.Equal(t, `200->{"Float64P":38.7}`, do("/x?float64p=38.7"))
+	assert.Equal(t, `200->{"Float32P":11.1}`, do("/x?float32p=11.1"))
+	assert.Equal(t, `200->{"StringP":"fred"}`, do("/x?stringp=fred"))
+	assert.Equal(t, `200->{"Complex64":"(38.7-9.3i)"}`, do("/x?complex64="+url.QueryEscape("38.7-9.3i")))
+	assert.Equal(t, `200->{"Complex128":"(11.1+22.1i)"}`, do("/x?complex128="+url.QueryEscape("11.1+22.1i")))
+	assert.Equal(t, `200->{"BoolP":false}`, do("/x?boolp=false"))
 }
 
 func TestDecodeQueryComplexParameters(t *testing.T) {
@@ -109,14 +110,14 @@ func TestDecodeQueryComplexParameters(t *testing.T) {
 	}) (nvelope.Response, error) {
 		return s, nil
 	})
-	assert.Equal(t, `200->{"IntSlice":[1,7]}`, do("/x?intslice=1,7", ""))
-	assert.Equal(t, `200->{"Int8Slice":[10,11,12]}`, do("/x?int8slice=10&int8slice=11&int8slice=12", ""))
-	assert.Equal(t, `200->{"Int16Slice":[8,22,-3]}`, do("/x?int16slice=8%2022%20-3", ""))
-	assert.Equal(t, `200->{"Int32Slice":[7,11,13]}`, do("/x?int32slice=7|11|13", ""))
-	assert.Equal(t, `200->{"MapIntBool":{"-9":false,"7":true}}`, do("/x?mapintbool=7,true,-9,false", ""))
-	assert.Equal(t, `200->{"MapIntString":{"-9":"hi","7":"bye"}}`, do("/x?mapintstring[7]=bye&mapintstring[-9]=hi", ""))
-	assert.Equal(t, `200->{"Emb1":{"Int":192,"Int8":-3,"String":"foo"}}`, do("/x?emb1=eint,192,eint8,-3,String,foo", ""))
-	assert.Equal(t, `200->{"Emb2":{"Int":193,"Int8":-4,"String":"bar"}}`, do("/x?emb2[eint]=193&emb2[eint8]=-4&emb2[String]=bar", ""))
+	assert.Equal(t, `200->{"IntSlice":[1,7]}`, do("/x?intslice=1,7"))
+	assert.Equal(t, `200->{"Int8Slice":[10,11,12]}`, do("/x?int8slice=10&int8slice=11&int8slice=12"))
+	assert.Equal(t, `200->{"Int16Slice":[8,22,-3]}`, do("/x?int16slice=8%2022%20-3"))
+	assert.Equal(t, `200->{"Int32Slice":[7,11,13]}`, do("/x?int32slice=7|11|13"))
+	assert.Equal(t, `200->{"MapIntBool":{"-9":false,"7":true}}`, do("/x?mapintbool=7,true,-9,false"))
+	assert.Equal(t, `200->{"MapIntString":{"-9":"hi","7":"bye"}}`, do("/x?mapintstring[7]=bye&mapintstring[-9]=hi"))
+	assert.Equal(t, `200->{"Emb1":{"Int":192,"Int8":-3,"String":"foo"}}`, do("/x?emb1=eint,192,eint8,-3,String,foo"))
+	assert.Equal(t, `200->{"Emb2":{"Int":193,"Int8":-4,"String":"bar"}}`, do("/x?emb2[eint]=193&emb2[eint8]=-4&emb2[String]=bar"))
 }
 
 type Foo string
@@ -138,11 +139,50 @@ func TestDecodeQueryJSONParameters(t *testing.T) {
 	}) (nvelope.Response, error) {
 		return s, nil
 	})
-	assert.Equal(t, `200->{"Foo":"~bar~"}`, do("/x?foo=bar", ""))
-	assert.Equal(t, `200->{"FooP":"~baz~"}`, do("/x?foop=baz", ""))
-	assert.Equal(t, `200->{"FooA":["~bar~","~baz~"]}`, do("/x?fooa=bar&fooa=baz", ""))
-	assert.Equal(t, `200->{"FooB":["~bing~","~baz~"]}`, do("/x?foob=bing,baz", ""))
-	assert.Equal(t, `200->{"S1":"doof"}`, do(`/x?s1="doof"`, ""))
-	assert.Equal(t, `200->{"S2":"boor"}`, do(`/x?s2="boor"`, ""))
-	assert.Equal(t, `200->{"S3":"ppp"}`, do(`/x?s3="ppp"`, ""))
+	assert.Equal(t, `200->{"Foo":"~bar~"}`, do("/x?foo=bar"))
+	assert.Equal(t, `200->{"FooP":"~baz~"}`, do("/x?foop=baz"))
+	assert.Equal(t, `200->{"FooA":["~bar~","~baz~"]}`, do("/x?fooa=bar&fooa=baz"))
+	assert.Equal(t, `200->{"FooB":["~bing~","~baz~"]}`, do("/x?foob=bing,baz"))
+	assert.Equal(t, `200->{"S1":"doof"}`, do(`/x?s1="doof"`))
+	assert.Equal(t, `200->{"S2":"boor"}`, do(`/x?s2="boor"`))
+	assert.Equal(t, `200->{"S3":"ppp"}`, do(`/x?s3="ppp"`))
+}
+
+func TestDecodeQueryHeaderParameters(t *testing.T) {
+	do := captureOutput("/x", func(s struct {
+		S  string   `json:",omitempty" nvelope:"header,name=S"`
+		A1 []string `json:",omitempty" nvelope:"header,name=A1"`
+		A2 []string `json:",omitempty" nvelope:"header,name=A2"`
+		A3 []string `json:",omitempty" nvelope:"header,explode=false,name=A3"`
+	}) (nvelope.Response, error) {
+		return s, nil
+	})
+	assert.Equal(t, `200->{"S":"yip"}`, do("/x", header("S", "yip")))
+	assert.Equal(t, `200->{"A1":["eee"]}`, do("/x", header("A1", "eee")))
+	assert.Equal(t, `200->{"A2":["yia","yo"]}`, do("/x", header("A2", "yia"), header("A2", "yo")))
+	assert.Equal(t, `200->{"A3":["cow","boy"]}`, do("/x", header("A3", "cow,boy")))
+}
+
+func TestDecodeQueryCookieParameters(t *testing.T) {
+	do := captureOutput("/x", func(s struct {
+		S  string   `json:",omitempty" nvelope:"cookie,name=S"`
+		A1 []string `json:",omitempty" nvelope:"cookie,name=A1"`
+		A3 []string `json:",omitempty" nvelope:"cookie,explode=false,name=A3"`
+	}) (nvelope.Response, error) {
+		return s, nil
+	})
+	assert.Equal(t, `200->{"S":"yip"}`, do("/x", cookie("S", "yip")))
+	assert.Equal(t, `200->{"A1":["eee"]}`, do("/x", cookie("A1", "eee")))
+	assert.Equal(t, `200->{"A3":["cow","boy"]}`, do("/x", cookie("A3", "cow,boy")))
+}
+
+func TestDecodeQueryPathParameters(t *testing.T) {
+	do := captureOutput("/x/{a}/{b}/{c}", func(s struct {
+		A string `json:",omitempty" nvelope:"path,name=a"`
+		B *int   `json:",omitempty" nvelope:"path,name=b"`
+		C Foo    `json:",omitempty" nvelope:"path,name=c"`
+	}) (nvelope.Response, error) {
+		return s, nil
+	})
+	assert.Equal(t, `200->{"A":"foobar","B":38,"C":"~john~"}`, do("/x/foobar/38/john"))
 }

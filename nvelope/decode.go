@@ -12,9 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/muir/nject/nject"
 	"github.com/muir/reflectutils"
+
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -170,8 +171,8 @@ var deepObjectRE = regexp.MustCompile(`^([^\[]+)\[([^\]]+)\]$`) // id[name]
 // controlling how to serialize.  The following are supported
 // as appropriate.
 //
-//	explode=true			# default for query array
-//	explode=false			# default for path, header
+//	explode=true			# default for query, header
+//	explode=false			# default for path
 //	delimiter=comma			# default
 //	delimiter=space			# query parameters only
 //	delimiter=pipe			# query parameters only
@@ -271,6 +272,7 @@ func GenerateDecoder(
 							if !ok {
 								return errors.Errorf("No body decoder for content type %s", ct)
 							}
+							// nolint:govet
 							err := exactDecoder(body, f.Addr().Interface())
 							return errors.Wrapf(err, "Could not decode %s into %s", ct, field.Type)
 						})
@@ -353,7 +355,7 @@ func GenerateDecoder(
 						f := model.FieldByIndex(field.Index)
 						cookie, err := r.Cookie(name)
 						if err != nil {
-							if err == http.ErrNoCookie {
+							if errors.Is(err, http.ErrNoCookie) {
 								return nil
 							}
 							return errors.Wrapf(err, "cookie parameter %s into field %s", name, field.Name)
@@ -372,8 +374,10 @@ func GenerateDecoder(
 
 			if len(varsFillers) == 0 &&
 				len(headerFillers) == 0 &&
+				len(cookieFillers) == 0 &&
 				len(queryFillers) == 0 &&
-				len(bodyFillers) == 0 {
+				len(bodyFillers) == 0 &&
+				len(deepObjectFillers) == 0 {
 				continue
 			}
 
@@ -473,6 +477,7 @@ func generateStructUnpacker(
 	var anyErr error
 	reflectutils.WalkStructElements(fieldType, func(field reflect.StructField) bool {
 		tag, _ := field.Tag.Lookup(tagName)
+		// nolint:govet
 		name, tags, err := parseTag(tag, false)
 		if err != nil {
 			anyErr = errors.Wrap(err, field.Name)
@@ -605,15 +610,6 @@ func arrayUnpack(
 	return nil
 }
 
-type parameterContext int
-
-const (
-	pathParemeter parameterContext = iota
-	queryParameter
-	headerParameter
-	cookieParameter
-)
-
 type unpack struct {
 	createMe   bool
 	single     func(from string, target reflect.Value, value string) error
@@ -738,6 +734,9 @@ func getUnpacker(
 		case "cookie", "path":
 			if tags.delimiter != "," {
 				return unpack{}, errors.New("delimiter setting is only allowed for 'query' parameters")
+			}
+			if tags.explode {
+				return unpack{}, errors.New("explode=true not supported for cookies & path parameters")
 			}
 		}
 		if tags.deepObject {
@@ -893,7 +892,7 @@ func contentUnpacker(
 		case "application/yaml":
 			decoder = yaml.Unmarshal
 		default:
-			errors.Errorf("No decoder provided for content type '%s'", tags.content)
+			return unpack{}, errors.Errorf("No decoder provided for content type '%s'", tags.content)
 		}
 	}
 	kind := fieldType.Kind()
@@ -908,6 +907,7 @@ func contentUnpacker(
 			return unpack{multi: func(from string, target reflect.Value, values []string) error {
 				a := reflect.MakeSlice(target.Type(), len(values), len(values))
 				for i, valueString := range values {
+					// nolint:govet
 					err := valueUnpack.single(from, a.Index(i), valueString)
 					if err != nil {
 						return err
@@ -918,6 +918,9 @@ func contentUnpacker(
 			}}, nil
 		}
 		keyUnpack, err := getUnpacker(fieldType.Key(), fieldName, name, base, tags.WithoutExplode().WithoutContent().WithoutDeepObject(), options)
+		if err != nil {
+			return unpack{}, err
+		}
 		return unpack{multi: func(from string, target reflect.Value, values []string) error {
 			m := reflect.MakeMap(target.Type())
 			for _, pair := range values {
@@ -980,6 +983,7 @@ func (tags tags) WithoutDeepObject() tags { tags.deepObject = false; return tags
 
 func parseTag(s string, validate bool) (string, tags, error) {
 	a := strings.Split(s, ",")
+	// nolint:govet
 	var tags tags
 	if len(a) == 0 {
 		return "", tags, errors.New("must specify the source of the data ('path', 'query', etc)")
@@ -991,6 +995,7 @@ func parseTag(s string, validate bool) (string, tags, error) {
 		case "query":
 			tags.explode = true
 		case "header":
+			tags.explode = true
 		case "cookie":
 		case "model":
 		default:
