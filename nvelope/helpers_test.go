@@ -2,7 +2,6 @@ package nvelope_test
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -95,7 +94,7 @@ func captureOutputFunc(out func(...interface{}), path string, f interface{}) fun
 			out("response error:", err)
 			return
 		}
-		b, err := io.ReadAll(res.Body)
+		b, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			out("read error:", err)
 			return
