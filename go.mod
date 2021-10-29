@@ -1,6 +1,6 @@
 module github.com/muir/nject
 
-go 1.16
+go 1.15
 
 require (
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
