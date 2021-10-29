@@ -141,7 +141,7 @@ var deepObjectRE = regexp.MustCompile(`^([^\[]+)\[([^\]]+)\]$`) // id[name]
 // chain to see if there are any models that are used but
 // never provided.  If so, it looks at the struct tags in
 // the models to see if they are tagged for filling with
-// the decoder.  If so, the provider is created that injects
+// the decoder.  If so, a provider is created that injects
 // the missing model into the dependency chain.  The intended
 // use for this is to have an endpoint handler receive the
 // deocded request body.

@@ -3,6 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
 ![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
 [![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
+[![Coverage Status](https://coveralls.io/repos/github/muir/nject/badge.svg?branch=main)](https://coveralls.io/github/muir/nject?branch=main)
 
 Install:
 
