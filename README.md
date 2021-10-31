@@ -4,6 +4,7 @@
 ![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
 [![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
 [![codecov](https://codecov.io/gh/muir/nject/branch/main/graph/badge.svg)](https://codecov.io/gh/muir/nject)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmuir%2Fnject.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmuir%2Fnject?ref=badge_shield)
 
 
 Install:
@@ -217,3 +218,7 @@ The core of nject is mostly unchanged.  Nvelope and nserve are new.
 
 Due to the use of strconv.ParseComplex in nvelope, the minimum supported
 version of Go is 1.15
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmuir%2Fnject.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmuir%2Fnject?ref=badge_large)
