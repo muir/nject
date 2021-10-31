@@ -1,3 +1,5 @@
+name: Fossa
+on: [push, pull_request]
 jobs:
   fossa-scan:
     runs-on: ubuntu-latest
