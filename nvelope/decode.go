@@ -712,14 +712,6 @@ func getUnpacker(
 		return unpack{single: func(from string, target reflect.Value, value string) error {
 			return errors.Wrapf(f(target, value), "decode %s %s", from, name)
 		}}, nil
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			i, err := strconv.ParseUint(value, 10, 64)
-			if err != nil {
-				return errors.Wrapf(err, "decode %s %s", from, name)
-			}
-			target.SetUint(i)
-			return nil
-		}}, nil
 
 	case reflect.Slice, reflect.Array:
 		switch base {
