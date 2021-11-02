@@ -678,54 +678,25 @@ func getUnpacker(
 				return unpacker.single(from, target.Elem(), value)
 			}}, nil
 		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64,
+		reflect.String,
+		reflect.Complex64, reflect.Complex128,
+		reflect.Bool:
+		f, err := reflectutils.MakeStringSetter(fieldType)
+		if err != nil {
+			return unpack{}, errors.Wrapf(err, "Cannot decode into %s, %s", fieldName, fieldType)
+		}
 		return unpack{single: func(from string, target reflect.Value, value string) error {
-			i, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				return errors.Wrapf(err, "decode %s %s", from, name)
-			}
-			target.SetInt(i)
-			return nil
+			return errors.Wrapf(f(target, value), "decode %s %s", from, name)
 		}}, nil
-	case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return unpack{single: func(from string, target reflect.Value, value string) error {
 			i, err := strconv.ParseUint(value, 10, 64)
 			if err != nil {
 				return errors.Wrapf(err, "decode %s %s", from, name)
 			}
 			target.SetUint(i)
-			return nil
-		}}, nil
-	case reflect.Float32, reflect.Float64:
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			f, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return errors.Wrapf(err, "decode %s %s", from, name)
-			}
-			target.SetFloat(f)
-			return nil
-		}}, nil
-	case reflect.String:
-		return unpack{single: func(_ string, target reflect.Value, value string) error {
-			target.SetString(value)
-			return nil
-		}}, nil
-	case reflect.Complex64, reflect.Complex128:
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			c, err := strconv.ParseComplex(value, 128)
-			if err != nil {
-				return errors.Wrapf(err, "decode %s %s", from, name)
-			}
-			target.SetComplex(c)
-			return nil
-		}}, nil
-	case reflect.Bool:
-		return unpack{single: func(from string, target reflect.Value, value string) error {
-			b, err := strconv.ParseBool(value)
-			if err != nil {
-				return errors.Wrapf(err, "decode %s %s", from, name)
-			}
-			target.SetBool(b)
 			return nil
 		}}, nil
 
