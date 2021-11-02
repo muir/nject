@@ -219,6 +219,3 @@ The core of nject is mostly unchanged.  Nvelope and nserve are new.
 Due to the use of strconv.ParseComplex in nvelope, the minimum supported
 version of Go is 1.15
 
-
-## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmuir%2Fnject.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmuir%2Fnject?ref=badge_large)
