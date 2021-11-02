@@ -95,6 +95,7 @@ func TestDecodeQueryComplexParameters(t *testing.T) {
 		Int32Slice   *[]*int8       `json:",omitempty" nvelope:"query,name=int32slice,explode=false,delimiter=pipe"`
 		MapIntBool   map[int]bool   `json:",omitempty" nvelope:"query,name=mapintbool,explode=false"`
 		MapIntString map[int]string `json:",omitempty" nvelope:"query,name=mapintstring,deepObject=true"`
+		IntArrayP    *[3]int        `json:",omitempty" nvelope:"query,name=intarrayp,explode=false"`
 		Emb1         *struct {
 			Int    int    `json:",omitempty" nvelope:"eint"`
 			Int8   int8   `json:",omitempty" nvelope:"eint8"`
@@ -118,6 +119,7 @@ func TestDecodeQueryComplexParameters(t *testing.T) {
 	assert.Equal(t, `200->{"MapIntString":{"-9":"hi","7":"bye"}}`, do("/x?mapintstring[7]=bye&mapintstring[-9]=hi"))
 	assert.Equal(t, `200->{"Emb1":{"Int":192,"Int8":-3,"String":"foo"}}`, do("/x?emb1=eint,192,eint8,-3,String,foo"))
 	assert.Equal(t, `200->{"Emb2":{"Int":193,"Int8":-4,"String":"bar"}}`, do("/x?emb2[eint]=193&emb2[eint8]=-4&emb2[String]=bar"))
+	assert.Equal(t, `200->{"IntArrayP":[7,22,0]}`, do("/x?intarrayp=7,22"))
 }
 
 type Foo string

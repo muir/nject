@@ -594,7 +594,7 @@ func mapUnpack(
 	return nil
 }
 
-func arrayUnpack(
+func sliceUnpack(
 	from string, f reflect.Value,
 	singleUnpack func(from string, target reflect.Value, value string) error,
 	values []string,
@@ -607,6 +607,27 @@ func arrayUnpack(
 		}
 	}
 	f.Set(a)
+	return nil
+}
+
+func arrayUnpack(
+	from string, f reflect.Value,
+	singleUnpack func(from string, target reflect.Value, value string) error,
+	values []string,
+) error {
+	arrayLen := f.Len()
+	if len(values) > arrayLen {
+		return errors.New("too many values for fixed length array")
+	}
+	for i, value := range values {
+		err := singleUnpack(from, f.Index(i), value)
+		if err != nil {
+			return err
+		}
+	}
+	for k := len(values); k < arrayLen; k++ {
+		f.Index(k).Set(reflect.Zero(f.Index(0).Type()))
+	}
 	return nil
 }
 
@@ -700,7 +721,7 @@ func getUnpacker(
 			return nil
 		}}, nil
 
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		switch base {
 		case "cookie", "path":
 			if tags.delimiter != "," {
@@ -718,19 +739,23 @@ func getUnpacker(
 		if err != nil {
 			return unpack{}, err
 		}
+		unslicer := sliceUnpack
+		if fieldType.Kind() == reflect.Array {
+			unslicer = arrayUnpack
+		}
 		switch base {
 		case "query", "header":
 			if tags.explode {
 				return unpack{
 					multi: func(from string, target reflect.Value, values []string) error {
-						return arrayUnpack(from, target, singleUnpack.single, values)
+						return unslicer(from, target, singleUnpack.single, values)
 					},
 				}, nil
 			}
 		}
 		return unpack{single: func(from string, target reflect.Value, value string) error {
 			values := strings.Split(value, tags.delimiter)
-			return arrayUnpack(from, target, singleUnpack.single, values)
+			return unslicer(from, target, singleUnpack.single, values)
 		}}, nil
 
 	case reflect.Struct:
@@ -826,9 +851,6 @@ func getUnpacker(
 			return mapUnpack(from, target, keyUnpack.single, elementUnpack.single, values)
 		}}, nil
 
-	case reflect.Array:
-		// TODO: handle arrays
-		fallthrough
 	case reflect.Chan, reflect.Interface, reflect.UnsafePointer, reflect.Func, reflect.Invalid:
 		fallthrough
 	default:
