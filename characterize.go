@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/muir/reflectutils"
 )
 
 type charContext struct {
@@ -106,10 +108,11 @@ func mappable(inputs ...reflect.Type) bool {
 		case reflect.Array:
 			ok = mappable(in.Elem())
 		case reflect.Struct:
-			fa := make([]reflect.Type, in.NumField())
-			for i := 0; i < len(fa); i++ {
-				fa[i] = in.Field(i).Type
-			}
+			fa := make([]reflect.Type, 0, in.NumField())
+			reflectutils.WalkStructElements(in, func(f reflect.StructField) bool {
+				fa = append(fa, f.Type)
+				return true
+			})
 			ok = mappable(fa...)
 		}
 		if !ok {
