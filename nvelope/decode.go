@@ -211,6 +211,11 @@ var deepObjectRE = regexp.MustCompile(`^([^\[]+)\[([^\]]+)\]$`) // id[name]
 // Generally setting "content" to something should be paired with "explode=false"
 //
 // GenerateDecoder depends upon and uses Gorilla mux.
+//
+// GenerateDecoder uses https://pkg.go.dev/github.com/muir/reflectutils#MakeStringSetter to
+// unpack strings into struct fields.  That provides support for time.Duration and anything
+// that implements encoding.TextUnmarshaler or flag.Value.  Additional custom decoders can
+// be registered with https://pkg.go.dev/github.com/muir/reflectutils#RegisterStringSetter .
 func GenerateDecoder(
 	genOpts ...DecodeInputsGeneratorOpt,
 ) interface{} {
