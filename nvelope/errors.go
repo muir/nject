@@ -22,6 +22,10 @@ type returnCode struct {
 	code  int
 }
 
+func (err returnCode) Unwrap() error {
+	return err.cause
+}
+
 func (err returnCode) Cause() error {
 	return err.cause
 }
