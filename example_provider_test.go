@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/muir/nject/nject"
+	"github.com/muir/nject"
 )
 
 // Provide does one job: it names an otherwise anonymous

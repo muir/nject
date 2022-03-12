@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/muir/nject/nject"
+	"github.com/muir/nject"
 )
 
 // ExampleGeneratedFromInjectionChain demonstrates how a special

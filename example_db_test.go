@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/muir/nject/nject"
+	"github.com/muir/nject"
 )
 
 // InjectDB injects both an *sql.DB and an *sql.Tx if they're needed.

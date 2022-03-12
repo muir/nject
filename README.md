@@ -1,4 +1,4 @@
-# nject, npoint, nserve, & nvelope - dependency injection 
+# nject - dependency injection 
 
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
 ![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
@@ -6,25 +6,24 @@
 [![codecov](https://codecov.io/gh/muir/nject/branch/main/graph/badge.svg)](https://codecov.io/gh/muir/nject)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmuir%2Fnject.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmuir%2Fnject?ref=badge_shield)
 
-
 Install:
 
 	go get github.com/muir/nject
 
 ---
 
-This is a quartet of packages that together make up a most of a
-golang API server framework:
+Prior to release 0.20, nject was bundled with other packages.  Those
+other packages are now in their own repos: 
+[npoint](https://github.com/muir/npoint)
+[nserve](https://github.com/muir/nserve)
+[nvelope](https://github.com/muir/nvelope).  Additionally, npoint
+was split apart so that the gorilla dependency is separate and is in
+[nape](https://github.com/muir/nape).
 
-nject: type safe dependency injection w/o requiring type assertions.
+---
 
-npoint: dependency injection wrappers for binding http endpoint handlers
-
-nvelope: injection chains for building endpoints
-
-nserve: injection chains for for starting and stopping servers
-
-### Basic idea
+This package provides type-safe dependency injection without requiring
+users to do type assertions.
 
 Dependencies are injected via a call chain: list functions to be called
 that take and return various parameters.  The functions will be called
@@ -43,7 +42,7 @@ remaing list zero or more times.
 Chains may be pre-compiled into closures so that they have very little
 runtime penealty.
 
-### nject example
+### example
 
 	func example() {
 		// Sequences can be reused.
@@ -64,158 +63,75 @@ runtime penealty.
 			})
 	}
 
-### npoint example
+### Main APIs
 
-CreateEndpoint is the simplest way to start using the npoint framework.  It
-generates an http.HandlerFunc from a list of handlers.  The handlers will be called
-in order.   In the example below, first WriteErrorResponse() will be called.  It
-has an inner() func that it uses to invoke the rest of the chain.  When 
-WriteErrorResponse() calls its inner() function, the db injector returned by
-InjectDB is called.  If that does not return error, then the inline function below
-to handle the endpint is called.  
+Nject provides two main APIs: Bind() and Run().
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/my/endpoint", npoint.CreateEndpoint(
-		WriteErrorResponse,
-		InjectDB("postgres", "postgres://..."),
-		func(r *http.Request, db *sql.DB, w http.ResponseWriter) error {
-			// Write response to w or return error...
-			return nil
-		}))
+Bind() is used when performance matters: given a chain of providers,
+it will write two functions: one to initialize the chain and another to
+invoke it.  As much as possible, all dependency injection work is done
+at the time of binding and initialization so that the invoke function
+operates with very little overhead.  The chain is initialized when the
+initialize function is called.  The chain is run when the invoke function
+is called.  Bind() does not run the chain.
 
-WriteErrorResponse invokes the remainder of the handler chain by calling inner().
+Run() is used when ad-hoc injection is desired and performance is not
+critical.  Run is appropriate when starting servers and running tests.
+It is not reccomended for http endpoint handlers.  Run exectes the
+chain immediately.
 
-	func WriteErrorResponse(inner func() nject.TerminalError, w http.ResponseWriter) {
-		err := inner()
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			w.WriteHeader(500)
-		}
-	}
+### Identified by type
 
-InjectDB returns a handler function that opens a database connection.   If the open
-fails, executation of the handler chain is terminated.  InjectDB returns an injector
-so that it can be called with arguments -- injectors are functions, not invocations
-and so we need to return a function.  InjectDB also closes the database connection.
+Rather than naming values, inputs and outputs are identified by their types.  
+Since Go makes it easy to create new types, this turns out to be quite easy to use.
 
-	func InjectDB(driver, uri string) func(func(*sql.DB) error) error {
-		return func(inner func(*sql.DB) error) (finalError error) {
-			db, err := sql.Open(driver, uri)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err := db.Close()
-				if err != nil && finalError == nil {
-					finalError = err
-				}
-			}()
-			return inner(db)
-		}
-	}
+### Types of providers
 
-### nvelope example
+Multiple types of providers are supported.
 
-Nvelope provides pre-defined handlers for basic endpoint tasks.  When used
-in combination with npoint, all that's left is the business logic.
+#### Literal values
 
-```go
-type ExampleRequestBundle struct {
-	Request     PostBodyModel `nvelope:"model"`
-	With        string        `nvelope:"path,name=with"`
-	Parameters  int64         `nvelope:"path,name=parameters"`
-	Friends     []int         `nvelope:"query,name=friends"`
-	ContentType string        `nvelope:"header,name=Content-Type"`
-}
+You can provide a constant if you have one.
 
-func Service(router *mux.Router) {
-	service := npoint.RegisterServiceWithMux("example", router)
-	service.RegisterEndpoint("/some/path",
-		nvelope.LoggerFromStd(log.Default()),
-		nvelope.InjectWriter,
-		nvelope.EncodeJSON,
-		nvelope.CatchPanic,
-		nvelope.Nil204,
-		nvelope.ReadBody,
-		nvelope.DecodeJSON,
-		func (req ExampleRequestBundle) (nvelope.Response, error) {
-			....
-		},
-	).Methods("POST")
-}
-```
+#### Injectors
 
-### nserve example
+Regular functions can provide values.  Injectors will be called at
+initialization time when they're marked as cacheable or at invocation
+time if they're not.
 
-On thing you might want to do with nserve is to use a `Hook` to trigger
-per-library database migrations using [libschema](https://github.com/muir/libschema).
+Injectors can be memoized.
 
-First create the hook:
+Injectors can return a special error type that stops the chain.
 
-```go
-package myhooks
+Injectors can use data produced by earlier injectors simply by having
+a function parameter that matches the type of a return value of an
+earlier injector.
 
-import "github.com/nject/nserve"
+#### Wrappers
 
-var MigrateMyDB = nserve.NewHook("migrate, nserve.Ascending)
-```
+Wrappers are special functions that are responsible for invoking
+the part of the injection chain that comes after themselves.  They
+do this by calling an `inner()` function that the nject framework
+defines for them.
 
-In each library, have a create function:
+Any arguments to the inner() function are injected as values available
+further down the chain.  Any return values from inner() must be returned
+by the final function in the chain or from another wrapper futher down
+the chain.
 
-```go
-package users
+### Composition
 
-import(
-	"github.com/muir/libschema/lspostgres"
-	"github.com/muir/nject/nserve"
-)
+Collections of injectors may be composed by including them in
+other collections.
 
-func NewUsersStore(app *nserve.App) *Store {
-	...
-	app.On(myhooks.MigrateMyDB, func(database *libschema.Database) {
-		database.Migrations("MyLibrary",
-			lspostgres.Script("create users", `
-				CREATE TABLE users (
-					id	bigint PRIMARY KEY,
-					name	text
-				)
-			`),
-		)
-	})
-	...
-	return &Store{}
-}
-```
+# Related packages
 
-Then as part of server startup, invoke the migration hook:
+The following use nject to provide nicer APIs:
 
-```go
-package main
-
-import(
-	"github.com/muir/libschema"
-	"github.com/muir/libschema/lspostgres"
-	"github.com/muir/nject/nject"
-)
-
-func main() {
-	app, err := nserve.CreateApp("myApp", users.NewUserStore, ...)
-	schema := libschema.NewSchema(ctx, libschema.Options{})
-	sqlDB, err := sql.Open("postgres", "....")
-	database, err := lspostgres.New(logger, "main-db", schema, sqlDB)
-	myhooks.MigrateMyDB.Using(database)
-	err = app.Do(myhooks.MigrateMyDB)
-```
-
-### Development status
-
-This repo represents continued development of Blue Owl's 
-[nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
-has been in production use for years and has been unchanged for years.
-The core of nject is mostly unchanged.  Nvelope and nserve are new.
-
-### Go version
-
-Due to the use of strconv.ParseComplex in nvelope, the minimum supported
-version of Go is 1.15
+- [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
+- [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorillia/mux
+- [nvelope](https://github.com/muir/nvelope): injection chains for building endpoints
+- [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
+- [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
+- [nfigure](https://github.com/muir/nfigure): configuration and flag processings
 

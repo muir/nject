@@ -3,7 +3,7 @@ package nject_test
 import (
 	"fmt"
 
-	"github.com/muir/nject/nject"
+	"github.com/muir/nject"
 )
 
 func ExamplePostActionByTag() {
