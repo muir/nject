@@ -14,8 +14,8 @@ Install:
 
 Prior to release 0.20, nject was bundled with other packages.  Those
 other packages are now in their own repos: 
-[npoint](https://github.com/muir/npoint)
-[nserve](https://github.com/muir/nserve)
+[npoint](https://github.com/muir/npoint),
+[nserve](https://github.com/muir/nserve), and
 [nvelope](https://github.com/muir/nvelope).  Additionally, npoint
 was split apart so that the gorilla dependency is separate and is in
 [nape](https://github.com/muir/nape).
