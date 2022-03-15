@@ -19,6 +19,7 @@ func ExampleGenerateFromInjectionChain() {
 			return 3
 		},
 		nject.GenerateFromInjectionChain(
+			"example",
 			func(before nject.Collection, after nject.Collection) (nject.Provider, error) {
 				full := before.Append("after", after)
 				inputs, outputs := full.DownFlows()

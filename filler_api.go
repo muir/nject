@@ -33,14 +33,18 @@ type postActionOption struct {
 // injection chain to replace itself with a regular provider.  The ReplaceSelf method will
 // be called only once.
 type generatedFromInjectionChain interface {
+	String() string
 	ReplaceSelf(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error)
 }
 
 var _ generatedFromInjectionChain = gfic{}
 
 type gfic struct {
-	f func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error)
+	name string
+	f    func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error)
 }
+
+func (g gfic) String() string { return g.name }
 
 func (g gfic) ReplaceSelf(before Collection, after Collection) (selfReplacement Provider, err error) {
 	return g.f(before, after)
@@ -53,9 +57,13 @@ func (g gfic) ReplaceSelf(before Collection, after Collection) (selfReplacement 
 // parameter is a Collection representing all the providers that are later
 // in the chain from the new special provider.
 func GenerateFromInjectionChain(
+	name string,
 	f func(chainBefore Collection, chainAfter Collection) (selfReplacement Provider, err error),
 ) generatedFromInjectionChain {
-	return gfic{f}
+	return gfic{
+		name: name,
+		f:    f,
+	}
 }
 
 type ignore struct{}
