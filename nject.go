@@ -299,7 +299,11 @@ func (c Collection) string(indent string) string {
 	var buf strings.Builder
 	_, _ = buf.WriteString(indent + c.name + ":\n")
 	for _, fm := range c.contents {
-		_, _ = buf.WriteString(fmt.Sprintf("%s %T\n", indent, fm.fn))
+		if s, ok := fm.fn.(interface{ String() string }); ok {
+			_, _ = buf.WriteString(indent + s.String())
+		} else {
+			_, _ = buf.WriteString(fmt.Sprintf("%s %T\n", indent, fm.fn))
+		}
 	}
 	return buf.String()
 }
