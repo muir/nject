@@ -102,12 +102,10 @@ true across injection chains.
 If the following provider is used in multiple chains, as long as the same integer
 is injected, all chains will share the same pointer.
 
-```go
-Provide("square", MustCache(func(int i) *int {
-	j := i*i
-	return &j
-}))
-```
+	Provide("square", MustCache(func(int i) *int {
+		j := i*i
+		return &j
+	}))
 
 Memoized injectors
 

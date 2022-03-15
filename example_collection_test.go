@@ -48,3 +48,21 @@ func ExampleCollection_Append() {
 	// from two, foo 3
 	// <nil>
 }
+
+func ExampleCollection_String() {
+	one := nject.Sequence("sequence",
+		func() string {
+			return "foo"
+		},
+		func(s string) error {
+			fmt.Println("from one,", s)
+			// the return value means this provider isn't
+			// automatically desired
+			return nil
+		},
+	)
+	fmt.Println(one)
+	// Output: sequence:
+	//  func() string
+	//  func(string) error
+}

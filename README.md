@@ -123,6 +123,21 @@ the chain.
 Collections of injectors may be composed by including them in
 other collections.
 
+## Debugging injector chains
+
+If you chain sucessfully binds but does not do what you expect, add
+something into your chain that recevies the `nject.Debugging` type:
+
+	func(d *nject.Debugging) {
+		fmt.Println("Injectors included\n", d.Included)
+	}
+
+If you chain does not bind, then `Debugging` won't help.
+Injection chain errors attempt to be self-explanatory, but sometimes that's not enough.
+
+If you're building your injection sequence dynamically, it may be useful to print
+the injection chain.  It has a `String()` method.
+
 # Related packages
 
 The following use nject to provide nicer APIs:
@@ -132,7 +147,7 @@ The following use nject to provide nicer APIs:
 - [nvelope](https://github.com/muir/nvelope): injection chains for building endpoints
 - [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
 - [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
-- [nfigure](https://github.com/muir/nfigure): configuration and flag processings
+- [nfigure](https://github.com/muir/nfigure): configuration and flag processing
 
 ### Development status
 

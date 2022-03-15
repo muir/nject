@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync/atomic"
 )
 
@@ -288,6 +289,19 @@ func newCollection(name string, funcs ...interface{}) *Collection {
 		name:     name,
 		contents: contents,
 	}
+}
+
+func (c Collection) String() string {
+	return c.string("")
+}
+
+func (c Collection) string(indent string) string {
+	var buf strings.Builder
+	_, _ = buf.WriteString(indent + c.name + ":\n")
+	for _, fm := range c.contents {
+		_, _ = buf.WriteString(fmt.Sprintf("%s %T\n", indent, fm.fn))
+	}
+	return buf.String()
 }
 
 func (fm provider) renameIfEmpty(i int, name string) *provider {
