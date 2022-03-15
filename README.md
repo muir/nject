@@ -142,12 +142,13 @@ the injection chain.  It has a `String()` method.
 
 The following use nject to provide nicer APIs:
 
-- [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
-- [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorillia/mux
+- [nfigure](https://github.com/muir/nfigure): configuration and flag processing
 - [nvelope](https://github.com/muir/nvelope): injection chains for building endpoints
+- [nchi](https://github.com/muir/nchi): http router on top of [httprouter](https://pkg.go.dev/github.com/julienschmidt/httprouter) with a go-chi-like API
 - [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
 - [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
-- [nfigure](https://github.com/muir/nfigure): configuration and flag processing
+- [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
+- [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorillia/mux
 
 ### Development status
 
