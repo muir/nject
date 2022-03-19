@@ -111,6 +111,9 @@ type thing interface {
 	// For single providers, Upflows includes all consumes and
 	// all returns.  For collections, Upflows only includes
 	// the net consumes and returns.
+	//
+	// Providers that return TerminalError are a special case and count as
+	// producting error.
 	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
@@ -446,6 +449,11 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	inputs := typesIn(fn)
 	if len(inputs) == 0 || inputs[0].Kind() != reflect.Func {
+		for _, out := range typesOut(fn) {
+			if out == terminalErrorType {
+				return nil, []reflect.Type{errorType}
+			}
+		}
 		return nil, nil
 	}
 	i0 := inputs[0]
@@ -456,6 +464,9 @@ func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
 // If a type is used both as value it consumes as a return value and also
 // as a value that it in turn returns, then the up flow for that provider will
 // be counted only by what it consumes.
+//
+// Providers that return TerminalError are a special case and count as
+// producting error.
 func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
 	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
 		return fm.UpFlows()

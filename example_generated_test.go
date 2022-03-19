@@ -83,3 +83,57 @@ func ExampleCollection_ForEachProvider() {
 	// Output: [] [int]
 	// [int string] []
 }
+
+func ExampleCollection_Upflows() {
+	var errorType = reflect.TypeOf((*error)(nil)).Elem()
+	errorIsReturned := func(c nject.Provider) bool {
+		_, produce := c.UpFlows()
+		for _, t := range produce {
+			if t == errorType {
+				return true
+			}
+		}
+		return false
+	}
+	collection1 := nject.Sequence("one",
+		func() string {
+			return "yah"
+		},
+		func(s string) nject.TerminalError {
+			if s == "yah" {
+				return fmt.Errorf("oops")
+			}
+			return nil
+		},
+		func(s string) {
+			fmt.Println(s)
+		},
+	)
+	collection2 := nject.Sequence("two",
+		func() string {
+			return "yah"
+		},
+		func(s string) {
+			fmt.Println(s)
+		},
+	)
+	collection3 := nject.Sequence("three",
+		func(inner func() string) error {
+			s := inner()
+			if s == "foo" {
+				return fmt.Errorf("not wanting foo")
+			}
+			return nil
+		},
+		func() string {
+			return "foo"
+		},
+	)
+	fmt.Println("collection1 returns error?", errorIsReturned(collection1))
+	fmt.Println("collection2 returns error?", errorIsReturned(collection2))
+	fmt.Println("collection3 returns error?", errorIsReturned(collection3))
+
+	// Output: collection1 returns error? true
+	// collection2 returns error? false
+	// collection3 returns error? true
+}
