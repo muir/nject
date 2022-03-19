@@ -84,7 +84,7 @@ func ExampleCollection_ForEachProvider() {
 	// [int string] []
 }
 
-func ExampleCollection_Upflows() {
+func ExampleCollection_UpFlows() {
 	var errorType = reflect.TypeOf((*error)(nil)).Elem()
 	errorIsReturned := func(c nject.Provider) bool {
 		_, produce := c.UpFlows()
