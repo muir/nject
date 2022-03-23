@@ -124,7 +124,7 @@ func Cacheable(fn interface{}) Provider {
 // in the first chain that invokes the provider.
 //
 // An alternative way to get singleton behavior is with Memoize() combined with
-// MustChace().
+// MustCache().
 func Singleton(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.singleton = true
@@ -153,10 +153,16 @@ func NotCacheable(fn interface{}) Provider {
 // further restrict that it cannot handle private (not exported)
 // fields inside structs.
 //
-// Memoize only works in the STATIC provider set.
+// Memoized providers will remember every combination of imputs they
+// have ever seen.  This can exhaust all memory.
 //
-// Combine Memoize with MustCache to make sure that Memoize can actually
-// function as expected.
+// By default, Memozied providers are Cachable, but that doesn't force
+// the provider into the STATIC set where it runs infrequently.
+// Combine Memoize with MustCache to make sure that Memoize is actually
+// in the STATIC set where it probably won't exhaust all memory.
+//
+// Use NotCacheable to exclude Memoized providers from the STATIC set.
+// Remember: they'll remember every combination of inputs.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
 //

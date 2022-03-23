@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/muir/reflectutils"
 )
 
 type charContext struct {
@@ -106,10 +108,11 @@ func mappable(inputs ...reflect.Type) bool {
 		case reflect.Array:
 			ok = mappable(in.Elem())
 		case reflect.Struct:
-			fa := make([]reflect.Type, in.NumField())
-			for i := 0; i < len(fa); i++ {
-				fa[i] = in.Field(i).Type
-			}
+			fa := make([]reflect.Type, 0, in.NumField())
+			reflectutils.WalkStructElements(in, func(f reflect.StructField) bool {
+				fa = append(fa, f.Type)
+				return true
+			})
 			ok = mappable(fa...)
 		}
 		if !ok {
@@ -344,6 +347,27 @@ var handlerRegistry = typeRegistry{
 	},
 
 	{
+		name: "fallible memoized injector",
+		tests: predicates{
+			isFunc,
+			noAnonymousFuncs,
+			returnsTerminalError,
+			notLast,
+			markedMemoized,
+			unstaticOkay,
+			notMarkedSingleton,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = runGroup
+			a.fm.class = fallibleInjectorFunc
+			a.fm.memoized = true
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(redactTerminalError(typesOut(a.t)))
+			a.fm.flows[returnParams] = toTypeCodes([]reflect.Type{errorType})
+		},
+	},
+
+	{
 		name: "fallible injector",
 		tests: predicates{
 			isFunc,
@@ -379,6 +403,25 @@ var handlerRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
 			a.fm.class = staticInjectorFunc
+			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
+			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
+		},
+	},
+
+	{
+		name: "memoized injector",
+		tests: predicates{
+			isFunc,
+			noAnonymousFuncs,
+			notLast,
+			markedMemoized,
+			unstaticOkay,
+			notMarkedSingleton,
+		},
+		mutate: func(a testArgs) {
+			a.fm.group = runGroup
+			a.fm.class = injectorFunc
+			a.fm.memoized = true
 			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
 			a.fm.flows[outputParams] = toTypeCodes(typesOut(a.t))
 		},

@@ -59,9 +59,14 @@ Collections
 
 Providers are grouped as into linear sequences.  When building an injection chain,
 the providers are grouped into several sets: LITERAL, STATIC, RUN.  The LITERAL
-and STATIC sets run once per binding.  The RUN set runs once per invoke.  Providers
+and STATIC sets run once per initialization.  The RUN set runs once per invocation.  Providers
 within a set are executed in the order that they were originally specified.
 Providers whose outputs are not consumed are omitted unless they are marked Required().
+
+Collections are bound with Bind(&invocationFunction, &initializationFunction).  The
+invocationFunction is expected to be used over and over, but the initializationFunction
+is expected to be used less frequently.  The STATIC set is re-invoked each time the
+initialization function is run.
 
 The LITERAL set is just the literal values in the collection.
 
@@ -86,14 +91,15 @@ in the handler chain.
 Cached injectors
 
 In injector that is annotated as Cacheable() may promoted to the STATIC set.
-An injector that is annotated as MustCache() or Memoize() must be promoted to
+An injector that is annotated as MustCache() must be promoted to
 the STATIC set: if it cannot be promoted then the colection is deemed invalid.
 
-An injector may not be promoted to the STATIC set if it takes as input data
-that comes from a provider that is not in the STATIC or LITERAL sets.  For
-example, when using Bind(), if the invoke function takes an int as one of its
-inputs, then no injector that takes an int as an argument may be promoted to
-the STATIC set.
+An injector may not be promoted to the STATIC set if it takes as
+input data that comes from a provider that is not in the STATIC or
+LITERAL sets.  For example, arguments to the invocation function,
+if the invoke function takes an int as one of its inputs, then no
+injector that takes an int as an argument may be promoted to the
+STATIC set.
 
 Injectors in the STATIC set will be run exactly once per set of input values.
 If the inputs are consistent, then the output will be a singleton.  This is
@@ -117,7 +123,7 @@ Memoized injectors are only run once per combination of inputs.   Their outputs
 are remembered.  If called enough times with different arguments, memory will
 be exhausted.
 
-Memoized injectors may not have more than 30 inputs.
+Memoized injectors may not have more than 90 inputs.
 
 Memoized injectors may not have any inputs that are go maps, slices, or functions.
 Arrays, structs, and interfaces are okay.  This requirement is recursive so a struct that
