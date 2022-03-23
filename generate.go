@@ -256,9 +256,18 @@ func generateWrappers(
 			return err
 		}
 		upVerrorIndex := upVmap[getTypeCode(errorType)]
+		var memoized cacherFunc
+		if fm.memoized {
+			memoized = generateCache(fm.id, fv, len(fm.flows[inputParams]), fm.mapKeyCheck)
+		}
 		fm.wrapFallibleInjector = func(v valueCollection) bool {
 			in := inMap(v)
-			out := fv.Call(in)
+			var out []reflect.Value
+			if fm.memoized {
+				out = memoized(in)
+			} else {
+				out = fv.Call(in)
+			}
 			if out[errorIndex].Interface() != nil {
 				zero(v)
 				v[upVerrorIndex] = out[errorIndex].Convert(errorType)
@@ -282,10 +291,19 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		fm.wrapFallibleInjector = func(v valueCollection) bool {
-			in := inMap(v)
-			outMap(v, fv.Call(in))
-			return false
+		if fm.memoized {
+			memoized := generateCache(fm.id, fv, len(fm.flows[inputParams]), fm.mapKeyCheck)
+			fm.wrapFallibleInjector = func(v valueCollection) bool {
+				in := inMap(v)
+				outMap(v, memoized(in))
+				return false
+			}
+		} else {
+			fm.wrapFallibleInjector = func(v valueCollection) bool {
+				in := inMap(v)
+				outMap(v, fv.Call(in))
+				return false
+			}
 		}
 
 	case staticInjectorFunc:
@@ -297,7 +315,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		lookup := generateLookup(fm, fv, len(inputParams))
+		lookup := generateLookup(fm, fv, len(fm.flows[inputParams]))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			in := inMap(v)
 			var out []reflect.Value
@@ -327,7 +345,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		lookup := generateLookup(fm, fv, len(inputParams))
+		lookup := generateLookup(fm, fv, len(fm.flows[inputParams]))
 		fm.wrapStaticInjector = func(v valueCollection) error {
 			debugf("RUNNING %s", fm)
 			in := inMap(v)
