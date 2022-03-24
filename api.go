@@ -317,6 +317,30 @@ func NonFinal(fn interface{}) Provider {
 	})
 }
 
+// Reorder annotates a provider to say that its position in the injection
+// chain is not fixed.  Such a provider will be placed after it's inputs
+// are available and before it's outputs are consumed.
+//
+// If there are multiple pass-through providers (that is to say, ones that
+// both consume and provide the same type) that pass through the same type,
+// then the ordering among these re-orderable providers is not defined but
+// will be implemented deterministically.
+//
+// Providers annotated as Reorder are also marked as NonFinal.  Marking
+// Reorder providers as NotCacheable is usually a good idea.
+//
+// When reordering, only exact type matches are considered.  Reorder does
+// not play well with Loose().
+//
+// Note: reordering may happen too late for UpFlows(), DownFlows(), and
+// GenerateFromInjectionChain() to correctly capture the final shape.
+func Reorder(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.reorder = true
+		fm.nonFinal = true
+	})
+}
+
 // Bind expects to receive two function pointers for functions
 // that are not yet defined.  Bind defines the functions.  The
 // first function is called to invoke the Collection of providers.
