@@ -25,6 +25,7 @@ type provider struct {
 	callsInner          bool
 	memoize             bool
 	loose               bool
+	overridesError      bool
 	desired             bool
 	shun                bool
 	notCacheable        bool
@@ -363,6 +364,9 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
+		if fm.group == finalGroup {
+			return typesIn(t), nil
+		}
 		return effectiveOutputs(t)
 	}
 	return nil, []reflect.Type{t}
@@ -439,6 +443,9 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
+		if fm.group == finalGroup {
+			return nil, typesOut(t)
+		}
 		return effectiveReturns(t)
 	}
 	return nil, []reflect.Type{t}

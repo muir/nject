@@ -34,6 +34,11 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			return err
 		}
 
+		err = checkForMissingOverridesError(afterInvoke)
+		if err != nil {
+			return err
+		}
+
 		// Add debugging provider
 		{
 			d := newProvider(func() *Debugging { return nil }, -1, "Debugging")
