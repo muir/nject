@@ -44,8 +44,9 @@ type provider struct {
 	mapKeyCheck func([]reflect.Value) bool
 
 	// added during reorder()
-	outside		[]int
-	inside		[]int
+	before    map[int]struct{}
+	after     map[int]struct{}
+	reordered bool // reorder && !reordered => exclude from chains
 
 	// added during include calculations
 	cannotInclude error
@@ -191,10 +192,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	afterInvoke := make([]*provider, 0, len(c.contents))
 
 	c.reorderNonFinal()
-	err := c.reorder()
-	if err != nil {
-		return nil, nil, err
-	}
+	c.reorder()
 
 	// Handle mutations
 	var mutated bool
@@ -229,10 +227,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	}
 	if mutated {
 		c.reorderNonFinal()
-		err := c.reorder()
-		if err != nil {
-			return nil, nil, err
-		}
+		c.reorder()
 	}
 
 	for ii, fm := range c.contents {
@@ -511,101 +506,5 @@ func (c Collection) reorderNonFinal() {
 		}
 		c.contents[len(c.contents)-1] = final
 		return
-	}
-}
-
-// Reorder collection to allow providers marked Reorder() to float to their
-// necessary spots.  This works by building a dependency graph based upon the
-// inputs and outputs of each function.
-func (c Collection) reorder() error {
-	var foundReorder bool
-	for _, fm := range c.contents {
-		if fm.reorder {
-			foundReorder = true
-			break
-		}
-	}
-	if !foundReorder {
-		return nil
-	}
-
-	type firstLast struct {
-		first map[reflect.Type]int
-		last  map[reflect.Type]int
-	}
-	type inOut struct {
-		in  firstLast
-		out firstLast
-	}
-	type upDown struct {
-		up   inOut
-		down inOut
-	}
-	var flows upDown
-
-	noteFirsts := func(i, m *map[reflect.Type]int, typ reflect.Type, direction func(int, int) bool) {
-		if m == nil {
-			*m = make(map[reflec.Type]int)
-		}
-		if first, ok := (*m)[typ]; ok {
-			if direction(first, i) {
-				(*m)[typ] = i
-			}
-		} else {
-			(*m)[typ] = i
-		}
-	}
-	noteInOut := func(i, firstLast *firstLast, types []reflec.Type, direction func(int, int) bool) {
-		for _, typ := range types {
-			noteFirsts(i, &firstLast.first, typ, direction)
-			noteFirsts(i, &firstLast.last, typ, func(i, j) bool { return direction(j, i) })
-		}
-	}
-	note := func(i int, inOut *inOut, flow func() ([]reflect.Type, []reflect.Type), direction func(int, int) bool) {
-		in, out := flow()
-		noteInOut(i, &inOut.in, in, direction)
-		noteInOut(i, &inOut.out, out, direction)
-	}
-	for i, fm := range c.contents {
-		if !fm.reorder {
-			note(i, &flows.down, fm.DownFlows, func(i, j int) bool { return i > j })
-			note(i, &flows.up, fm.UpFlows, func(i, j int) bool { return i < j })
-		}
-	}
-
-	// We will eventually pull dependencies out of the graph based upon what
-	// doesn't need to be before anything -- that is to say, we'll pull item 0 
-	// first in the normal situation.  That's the "outermost"
-	after := func(i, j int) {
-		c.contents[i].after = append(c.contents[i].after, j)
-		c.contents[j].before = append(c.contents[j].before, i)
-	}
-	for i, fm := range c.contents {
-		fm.outside = nil
-		fm.inside = nil
-	}
-	prior := -1
-	for i, fm := range c.contents {
-		if !fm.reorder {
-			if prior != -1 {
-				after(i, prior)
-			}
-			prior = i
-		}
-	}
-
-	for i, fm := range c.contents {
-		if fm.reorder {
-			fm.outside = nil
-			inputs, outputs := fm.DownFlows()
-			hasInput := has(inputs)
-			hasOutput := has(outputs)
-			for _, typ := range inputs {
-				if hasOutput(typ) {
-					// We both take and produce the same value so we need to be
-					// after the first and before the last
-				}
-					
-		}
 	}
 }
