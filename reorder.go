@@ -1,6 +1,7 @@
 package nject
 
 import (
+	"fmt" //XXX
 	"reflect"
 	"sort"
 )
@@ -28,6 +29,7 @@ import (
 // arrives.
 func Reorder(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
+		fmt.Println("XXX set reorder")
 		fm.reorder = true
 		fm.nonFinal = true
 	})
@@ -37,6 +39,7 @@ func Reorder(fn interface{}) Provider {
 // necessary spots.  This works by building a dependency graph based upon the
 // inputs and outputs of each function.
 func (c Collection) reorder() {
+	fmt.Println("XXX start reorder")
 	var foundReorder bool
 	for _, fm := range c.contents {
 		if fm.reorder {
@@ -45,26 +48,27 @@ func (c Collection) reorder() {
 		}
 	}
 	if !foundReorder {
-		return nil
+		fmt.Println("XXX no reorder")
+		return
 	}
 
 	type firstLast struct {
-		first map[reflect.Type]int
-		last  map[reflect.Type]int
+		First map[reflect.Type]int
+		Last  map[reflect.Type]int
 	}
 	type inOut struct {
-		in  firstLast
-		out firstLast
+		In  firstLast
+		Out firstLast
 	}
 	type upDown struct {
-		up   inOut
-		down inOut
+		Up   inOut
+		Down inOut
 	}
 	var flows upDown
 
-	noteFirsts := func(i, m *map[reflect.Type]int, typ reflect.Type, direction func(int, int) bool) {
-		if m == nil {
-			*m = make(map[reflec.Type]int)
+	noteFirsts := func(i int, m *map[reflect.Type]int, typ reflect.Type, direction func(int, int) bool) {
+		if *m == nil {
+			*m = make(map[reflect.Type]int)
 		}
 		if first, ok := (*m)[typ]; ok {
 			if direction(first, i) {
@@ -74,21 +78,21 @@ func (c Collection) reorder() {
 			(*m)[typ] = i
 		}
 	}
-	noteInOut := func(i, firstLast *firstLast, types []reflec.Type, direction func(int, int) bool) {
+	noteInOut := func(i int, firstLast *firstLast, types []reflect.Type, direction func(int, int) bool) {
 		for _, typ := range types {
-			noteFirsts(i, &firstLast.first, typ, direction)
-			noteFirsts(i, &firstLast.last, typ, func(i, j) bool { return direction(j, i) })
+			noteFirsts(i, &firstLast.First, typ, direction)
+			noteFirsts(i, &firstLast.Last, typ, func(i, j int) bool { return direction(j, i) })
 		}
 	}
 	note := func(i int, inOut *inOut, flow func() ([]reflect.Type, []reflect.Type), direction func(int, int) bool) {
 		in, out := flow()
-		noteInOut(i, &inOut.in, in, direction)
-		noteInOut(i, &inOut.out, out, direction)
+		noteInOut(i, &inOut.In, in, direction)
+		noteInOut(i, &inOut.Out, out, direction)
 	}
 	for i, fm := range c.contents {
 		if !fm.reorder {
-			note(i, &flows.down, fm.DownFlows, func(i, j int) bool { return i > j })
-			note(i, &flows.up, fm.UpFlows, func(i, j int) bool { return i < j })
+			note(i, &flows.Down, fm.DownFlows, func(i, j int) bool { return i > j })
+			note(i, &flows.Up, fm.UpFlows, func(i, j int) bool { return i < j })
 		}
 	}
 
@@ -102,7 +106,7 @@ func (c Collection) reorder() {
 		c.contents[i].after[j] = struct{}{}
 		c.contents[j].before[i] = struct{}{}
 	}
-	for i, fm := range c.contents {
+	for _, fm := range c.contents {
 		fm.before = make(map[int]struct{})
 		fm.after = make(map[int]struct{})
 		fm.reordered = false
@@ -115,6 +119,7 @@ func (c Collection) reorder() {
 		}
 	}
 
+	var potentialDesires [][2]int
 	desireAAfterB := func(i, j int) {
 		if i == -1 || j == -1 {
 			return
@@ -122,35 +127,37 @@ func (c Collection) reorder() {
 		potentialDesires = append(potentialDesires, [2]int{i, j})
 	}
 	lookup := func(inOut inOut, typ reflect.Type) (firstProduce, lastProduce, firstUse, lastUse int) {
-		if firstProduce, ok := out.first[typ]; !ok {
+		var ok bool
+		if firstProduce, ok = inOut.Out.First[typ]; !ok {
 			firstProduce = -1
 		}
-		if lastProduce, ok := out.last[typ]; !ok {
+		if lastProduce, ok = inOut.Out.Last[typ]; !ok {
 			lastProduce = -1
 		}
-		if firstUse, ok := in.first[typ]; !ok {
+		if firstUse, ok = inOut.In.First[typ]; !ok {
 			firstUse = -1
 		}
-		if lastUse, ok := in.last[typ]; !ok {
+		if lastUse, ok = inOut.In.Last[typ]; !ok {
 			lastUse = -1
 		}
+		return
 	}
-	isOrdered = func(i, j int) bool { return i < j }
-	floatDown := func(i int, inOut inOut, noSwap func(int, int) (int, int), inOut func() ([]reflect.Type, []reflect.Type)) {
-		inputs, outputs := inOut
+	isOrdered := func(i, j int) bool { return i < j }
+	floatDown := func(i int, inOut inOut, noSwap func(int, int) (int, int), inputsOutputs func() ([]reflect.Type, []reflect.Type)) {
+		inputs, outputs := inputsOutputs()
 		hasInput := has(inputs)
 		hasOutput := has(outputs)
-		firstProduce, lastProduce, firstUse, lastUse := lookup(inOut, typ)
 		for _, typ := range inputs {
+			firstProduce, lastProduce, firstUse, lastUse := lookup(inOut, typ)
 			if hasOutput(typ) {
 				// We both take and produce the same value
-				requireAAfterB(swap(i, firstProduce))
-				requireAAfterB(swap(lastUse, i))
-				desireAAfterB(swap(i, lastProduce))
-				desireAAfterB(swap(firstUse, i))
+				requireAAfterB(noSwap(i, firstProduce))
+				requireAAfterB(noSwap(lastUse, i))
+				desireAAfterB(noSwap(i, lastProduce))
+				desireAAfterB(noSwap(firstUse, i))
 			} else {
-				requireAAfterB(swap(i, firstProduce))
-				desireAAfterB(swap(i, lastProduce))
+				requireAAfterB(noSwap(i, firstProduce))
+				desireAAfterB(noSwap(i, lastProduce))
 			}
 		}
 		for _, typ := range outputs {
@@ -158,10 +165,11 @@ func (c Collection) reorder() {
 				// handled above
 				continue
 			}
-			requireAAfterB(swap(lastUse, i))
-			desireAAfterB(swap(firstUse, i))
-			if isOrdered(swap(lastProduce, firstUse)) {
-				desireAAfterB(swap(i, lastProduce))
+			_, lastProduce, firstUse, lastUse := lookup(inOut, typ)
+			requireAAfterB(noSwap(lastUse, i))
+			desireAAfterB(noSwap(firstUse, i))
+			if isOrdered(noSwap(lastProduce, firstUse)) {
+				desireAAfterB(noSwap(i, lastProduce))
 			}
 		}
 	}
@@ -169,14 +177,14 @@ func (c Collection) reorder() {
 		if !fm.reorder {
 			continue
 		}
-		floatDown(i, flows.down, func(i, j int) { return i, j }, fm.DownFlows)
-		floatUp(i, flows.up, func(i, j int) { return j, i }, fm.UpFlows)
+		floatDown(i, flows.Down, func(i, j int) (int, int) { return i, j }, fm.DownFlows)
+		floatDown(i, flows.Up, func(i, j int) (int, int) { return j, i }, fm.UpFlows)
 	}
 
 	// Establish all requirements before putting in the desires
-	var desires := make([][2]int, 0, len(potentialDesires))
+	desires := make([][2]int, 0, len(potentialDesires))
 	for _, potential := range potentialDesires {
-		i, j = potential[0], potential[1]
+		i, j := potential[0], potential[1]
 		if _, ok := c.contents[i].after[j]; ok {
 			continue
 		}
@@ -229,12 +237,25 @@ func (c Collection) reorder() {
 	}
 	if len(newOrder) < len(c.contents) {
 		// found a dependency loop
+		fmt.Println("XXX found a dependency loop, giving up on reorder")
 		return
 	}
 	tmp := make([]*provider, len(c.contents))
 	copy(tmp, c.contents)
 	c.contents = make([]*provider, 0, len(c.contents))
 	for _, i := range newOrder {
+		fmt.Println("XXX, new order", tmp[i])
 		c.contents = append(c.contents, tmp[i])
+	}
+}
+
+func has(types []reflect.Type) func(reflect.Type) bool {
+	m := make(map[reflect.Type]struct{})
+	for _, typ := range types {
+		m[typ] = struct{}{}
+	}
+	return func(typ reflect.Type) bool {
+		_, ok := m[typ]
+		return ok
 	}
 }

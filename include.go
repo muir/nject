@@ -103,7 +103,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		return err
 	}
 
-	debugln("check chain validity, no provider excluded")
+	debugln("check chain validity, no provider excluded, except failed reorders")
 	err = validateChainMarkIncludeExclude(funcs, true)
 	if err != nil {
 		return err
@@ -204,6 +204,9 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 func validateChainMarkIncludeExclude(funcs []*provider, canRemoveDesired bool) error {
 	remainingFuncs := make([]*provider, 0, len(funcs))
 	for _, fm := range funcs {
+		if fm.reorder && !fm.reordered && fm.d.excluded == nil {
+			fm.d.excluded = fmt.Errorf("marked Reorder, but no valid ordering found")
+		}
 		if fm.d.excluded == nil {
 			fm.include = true
 			fm.cannotInclude = nil
