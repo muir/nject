@@ -143,6 +143,7 @@ var (
 	hasOutputs           = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
 	mustNotMemoize       = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
 	markedMemoized       = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
+	notMarkedReorder     = predicate("is marked Reorder", func(a testArgs) bool { return !a.fm.reorder })
 	markedCacheable      = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
 	markedSingleton      = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
 	notMarkedSingleton   = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
@@ -237,6 +238,7 @@ var handlerRegistry = typeRegistry{
 			markedSingleton,
 			isFunc,
 			inStatic,
+			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			returnsTerminalError,
@@ -259,6 +261,7 @@ var handlerRegistry = typeRegistry{
 			markedSingleton,
 			isFunc,
 			inStatic,
+			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			notLast,
@@ -280,6 +283,7 @@ var handlerRegistry = typeRegistry{
 			markedMemoized,
 			isFunc,
 			inStatic,
+			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			returnsTerminalError,
@@ -305,6 +309,7 @@ var handlerRegistry = typeRegistry{
 			isFunc,
 			markedMemoized,
 			markedCacheable,
+			notMarkedReorder,
 			inStatic,
 			notLast,
 			hasOutputs,
@@ -330,6 +335,7 @@ var handlerRegistry = typeRegistry{
 			isFunc,
 			returnsTerminalError,
 			markedCacheable,
+			notMarkedReorder,
 			inStatic,
 			notLast,
 			noAnonymousFuncs,

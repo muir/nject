@@ -44,9 +44,11 @@ type provider struct {
 	mapKeyCheck func([]reflect.Value) bool
 
 	// added during reorder()
-	before    map[int]struct{}
-	after     map[int]struct{}
-	reordered bool // reorder && !reordered => exclude from chains
+	before           map[int]struct{}
+	after            map[int]struct{}
+	reordered        bool // reorder && !reordered => exclude from chains
+	newPosition      int
+	originalPosition int
 
 	// added during include calculations
 	cannotInclude error

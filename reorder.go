@@ -15,30 +15,65 @@ import (
 // then the ordering among these re-orderable providers is not defined but
 // will be implemented deterministically.
 //
-// Providers annotated as Reorder are also marked as NonFinal.  Marking
-// Reorder providers as NotCacheable is usually a good idea.
-//
 // When reordering, only exact type matches are considered.  Reorder does
 // not play well with Loose().
 //
-// Note: reordering may happen too late for UpFlows(), DownFlows(), and
+// Note: reordering will happen too late for UpFlows(), DownFlows(), and
 // GenerateFromInjectionChain() to correctly capture the final shape.
 //
 // Reorder should be considered experimental in the sense that the rules
 // for placement of such providers are likely to be adjusted as feedback
-// arrives.
+// arrives.  This initial version requires that Reorder()ed producers are
+// before the first consumer of that type.  This strict placement may be
+// relaxed in a future release of nject.
 func Reorder(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fmt.Println("XXX set reorder")
 		fm.reorder = true
-		fm.nonFinal = true
 	})
 }
 
-// Reorder collection to allow providers marked Reorder() to float to their
-// necessary spots.  This works by building a dependency graph based upon the
-// inputs and outputs of each function.
-func (c Collection) reorder() {
+// Reorder re-arranges an array of funcs with the functions that are
+// marked Reorder potentially moving to no positions within the array.
+//
+// This is accomplished by looking at what's provided and consumed and
+// make sure that the consumers are after the providers.
+//
+// The challenge comes when there is more than one provider or when the
+// same type is both provided and consumed.
+//
+// Rules:
+//
+// Functions that are not marked Reorder must be in their original
+// order with respect to each other.
+//
+// For functions are marked Reorder:
+//
+//	If function A provides type T (and does not consume type T)
+//	then function A must be before any consumers of type T.
+//
+//	If function B provides and consumes type T, then it must be
+//	after the first provider of type T but before the first consumer of T.
+//	Function B does not count as consumer of type T for other Reorder
+//	functions.
+//
+//	If function C consumes type T, then it must be after the
+//	last producer of type T.
+//
+// Functions marked Reorder are addedd to the provide/consume graph in
+// the order that they're processed.
+//
+// If a new order isn't possible, that is a fatal error
+
+func rememberOriginalOrder(funcs []*provider) {
+	for i, fm := range funcs {
+		fm.originalPosition = i
+	}
+}
+
+func restoreOriginalOrder(funcs []*provider) {
+}
+
+func reorder(funcs []*provider) error {
 	fmt.Println("XXX start reorder")
 	var foundReorder bool
 	for _, fm := range c.contents {
