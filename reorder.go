@@ -64,26 +64,33 @@ func Reorder(fn interface{}) Provider {
 //
 // If a new order isn't possible, that is a fatal error
 
-func rememberOriginalOrder(funcs []*provider) {
+func rememberOriginalOrder(funcs []*provider) bool {
+	var someReorder bool
 	for i, fm := range funcs {
 		fm.originalPosition = i
+		if fm.reorder {
+			someReorder = true
+		}
 	}
+	return someReorder
 }
 
 func restoreOriginalOrder(funcs []*provider) {
+	panic()
 }
 
 func reorder(funcs []*provider) error {
-	fmt.Println("XXX start reorder")
 	var foundReorder bool
-	for _, fm := range c.contents {
+	for _, fm := range funcs {
+		if fm.cannotInclude != nil {
+			continue
+		}
 		if fm.reorder {
 			foundReorder = true
 			break
 		}
 	}
 	if !foundReorder {
-		fmt.Println("XXX no reorder")
 		return
 	}
 
@@ -124,7 +131,7 @@ func reorder(funcs []*provider) error {
 		noteInOut(i, &inOut.In, in, direction)
 		noteInOut(i, &inOut.Out, out, direction)
 	}
-	for i, fm := range c.contents {
+	for i, fm := range funcs {
 		if !fm.reorder {
 			note(i, &flows.Down, fm.DownFlows, func(i, j int) bool { return i > j })
 			note(i, &flows.Up, fm.UpFlows, func(i, j int) bool { return i < j })
@@ -138,16 +145,16 @@ func reorder(funcs []*provider) error {
 		if i == -1 || j == -1 {
 			return
 		}
-		c.contents[i].after[j] = struct{}{}
-		c.contents[j].before[i] = struct{}{}
+		funcs[i].after[j] = struct{}{}
+		funcs[j].before[i] = struct{}{}
 	}
-	for _, fm := range c.contents {
+	for _, fm := range funcs {
 		fm.before = make(map[int]struct{})
 		fm.after = make(map[int]struct{})
 		fm.reordered = false
 	}
 	prior := -1
-	for i, fm := range c.contents {
+	for i, fm := range funcs {
 		if !fm.reorder {
 			requireAAfterB(i, prior)
 			prior = i
@@ -208,7 +215,7 @@ func reorder(funcs []*provider) error {
 			}
 		}
 	}
-	for i, fm := range c.contents {
+	for i, fm := range funcs {
 		if !fm.reorder {
 			continue
 		}
@@ -220,26 +227,26 @@ func reorder(funcs []*provider) error {
 	desires := make([][2]int, 0, len(potentialDesires))
 	for _, potential := range potentialDesires {
 		i, j := potential[0], potential[1]
-		if _, ok := c.contents[i].after[j]; ok {
+		if _, ok := funcs[i].after[j]; ok {
 			continue
 		}
 		desires = append(desires, [2]int{i, j})
 		requireAAfterB(i, j)
 	}
 
-	free := make([]int, 0, len(c.contents))
-	for i, fm := range c.contents {
+	free := make([]int, 0, len(funcs))
+	for i, fm := range funcs {
 		if len(fm.after) == 0 {
 			free = append(free, i)
 		}
 	}
 
-	newOrder := make([]int, 0, len(c.contents))
-	for len(newOrder) < len(c.contents) && (len(free) > 0 || len(desires) > 0) {
+	newOrder := make([]int, 0, len(funcs))
+	for len(newOrder) < len(funcs) && (len(free) > 0 || len(desires) > 0) {
 		for len(free) > 0 {
 			i := free[0]
 			free = free[1:]
-			fm := c.contents[i]
+			fm := funcs[i]
 			fm.reordered = true
 			before := make([]int, 0, len(fm.before))
 			for b := range fm.before {
@@ -247,8 +254,8 @@ func reorder(funcs []*provider) error {
 			}
 			sort.Sort(sort.IntSlice(before)) // determanistic behavior
 			for _, b := range before {
-				delete(c.contents[b].after, i)
-				if len(c.contents[b].after) == 0 {
+				delete(funcs[b].after, i)
+				if len(funcs[b].after) == 0 {
 					free = append(free, b)
 				}
 			}
@@ -260,27 +267,27 @@ func reorder(funcs []*provider) error {
 		for len(desires) > 0 && len(free) == 0 {
 			i, j := desires[0][0], desires[0][1]
 			desires = desires[1:]
-			if _, ok := c.contents[i].after[j]; ok {
-				delete(c.contents[i].after, j)
-				delete(c.contents[j].before, i)
-				if len(c.contents[i].after) == 0 {
+			if _, ok := funcs[i].after[j]; ok {
+				delete(funcs[i].after, j)
+				delete(funcs[j].before, i)
+				if len(funcs[i].after) == 0 {
 					free = append(free, i)
 					break
 				}
 			}
 		}
 	}
-	if len(newOrder) < len(c.contents) {
+	if len(newOrder) < len(funcs) {
 		// found a dependency loop
 		fmt.Println("XXX found a dependency loop, giving up on reorder")
 		return
 	}
-	tmp := make([]*provider, len(c.contents))
-	copy(tmp, c.contents)
-	c.contents = make([]*provider, 0, len(c.contents))
+	tmp := make([]*provider, len(funcs))
+	copy(tmp, funcs)
+	funcs = make([]*provider, 0, len(funcs))
 	for _, i := range newOrder {
 		fmt.Println("XXX, new order", tmp[i])
-		c.contents = append(c.contents, tmp[i])
+		funcs = append(funcs, tmp[i])
 	}
 }
 
