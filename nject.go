@@ -43,22 +43,16 @@ type provider struct {
 	isSynthetic bool
 	mapKeyCheck func([]reflect.Value) bool
 
-	// added during reorder()
-	before           map[int]struct{}
-	after            map[int]struct{}
-	reordered        bool // reorder && !reordered => exclude from chains
-	newPosition      int
-	originalPosition int
-
 	// added during include calculations
-	cannotInclude error
-	wanted        bool
-	whyIncluded   string
-	upRmap        map[typeCode]typeCode //  overrides types of returned parameters
-	downRmap      map[typeCode]typeCode //  overrides types of input parameters
-	bypassRmap    map[typeCode]typeCode //  overrides types of returning parameters
-	include       bool
-	d             includeWorkingData
+	cannotInclude    error
+	wanted           bool
+	whyIncluded      string
+	upRmap           map[typeCode]typeCode //  overrides types of returned parameters
+	downRmap         map[typeCode]typeCode //  overrides types of input parameters
+	bypassRmap       map[typeCode]typeCode //  overrides types of returning parameters
+	include          bool
+	d                includeWorkingData
+	originalPosition int
 
 	// added during binding
 	chainPosition              int
@@ -103,7 +97,6 @@ func (fm *provider) copy() *provider {
 		memoized:            fm.memoized,
 		before:              fm.before,
 		after:               fm.after,
-		reordered:           fm.reordered,
 		class:               fm.class,
 		group:               fm.group,
 		flows:               fm.flows,
@@ -198,7 +191,6 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	afterInvoke := make([]*provider, 0, len(c.contents))
 
 	c.reorderNonFinal()
-	c.reorder()
 
 	// Handle mutations
 	var mutated bool
@@ -233,7 +225,6 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	}
 	if mutated {
 		c.reorderNonFinal()
-		c.reorder()
 	}
 
 	for ii, fm := range c.contents {
@@ -378,10 +369,14 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
-		if fm.group == finalGroup {
+		switch fm.group {
+		case finalGroup:
 			return typesIn(t), nil
+		case invokeGroup:
+			return nil, typesIn(t)
+		default:
+			return effectiveOutputs(t)
 		}
-		return effectiveOutputs(t)
 	}
 	return nil, []reflect.Type{t}
 }
@@ -457,10 +452,14 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
-		if fm.group == finalGroup {
+		switch fm.group {
+		case finalGroup:
 			return nil, typesOut(t)
+		case invokeGroup:
+			return typesOut(t), nil
+		default:
+			return effectiveReturns(t)
 		}
-		return effectiveReturns(t)
 	}
 	return nil, []reflect.Type{t}
 }

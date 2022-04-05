@@ -143,7 +143,6 @@ var (
 	hasOutputs           = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
 	mustNotMemoize       = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
 	markedMemoized       = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
-	notMarkedReorder     = predicate("is marked Reorder", func(a testArgs) bool { return !a.fm.reorder })
 	markedCacheable      = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
 	markedSingleton      = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
 	notMarkedSingleton   = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
@@ -195,6 +194,7 @@ var invokeRegistry = typeRegistry{
 			a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.t.Elem()))
 			a.fm.required = true
 			a.fm.isSynthetic = true
+			a.fm.reorder = false
 		},
 	},
 
@@ -211,6 +211,7 @@ var invokeRegistry = typeRegistry{
 			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.t.Elem()))
 			a.fm.required = true
 			a.fm.isSynthetic = true
+			a.fm.reorder = false
 		},
 	},
 }
@@ -238,7 +239,6 @@ var handlerRegistry = typeRegistry{
 			markedSingleton,
 			isFunc,
 			inStatic,
-			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			returnsTerminalError,
@@ -261,7 +261,6 @@ var handlerRegistry = typeRegistry{
 			markedSingleton,
 			isFunc,
 			inStatic,
-			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			notLast,
@@ -283,7 +282,6 @@ var handlerRegistry = typeRegistry{
 			markedMemoized,
 			isFunc,
 			inStatic,
-			notMarkedReorder,
 			markedCacheable,
 			noAnonymousFuncs,
 			returnsTerminalError,
@@ -309,7 +307,6 @@ var handlerRegistry = typeRegistry{
 			isFunc,
 			markedMemoized,
 			markedCacheable,
-			notMarkedReorder,
 			inStatic,
 			notLast,
 			hasOutputs,
@@ -335,7 +332,6 @@ var handlerRegistry = typeRegistry{
 			isFunc,
 			returnsTerminalError,
 			markedCacheable,
-			notMarkedReorder,
 			inStatic,
 			notLast,
 			noAnonymousFuncs,
@@ -490,6 +486,7 @@ var handlerRegistry = typeRegistry{
 			a.fm.flows[inputParams] = toTypeCodes(typesIn(a.t))
 			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
 			a.fm.required = true
+			a.fm.reorder = false
 		},
 	},
 }

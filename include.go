@@ -66,6 +66,7 @@ type includeWorkingData struct {
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	debugln("initial set of functions")
+	doingReorder := rememberOriginalOrder(funcs)
 	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
@@ -104,7 +105,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	}
 
 	debugln("check chain validity, no provider excluded, except failed reorders")
-	err = validateChainMarkIncludeExclude(funcs, true)
+	err = validateChainMarkIncludeExclude(doingReorder, funcs, true)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		}
 		debugf("lenth of without before: %d", len(without))
 		// nolint:govet
-		err := validateChainMarkIncludeExclude(funcs, false)
+		err := validateChainMarkIncludeExclude(doingReorder, funcs, false)
 		debugf("lenth of without after: %d", len(without))
 		for _, fm := range without {
 			if err == nil {
@@ -193,7 +194,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		return fmt.Errorf("internal error: uh oh")
 	}
 	debugf("final check chain validity")
-	err = validateChainMarkIncludeExclude(funcs, true)
+	err = validateChainMarkIncludeExclude(doingReorder, funcs, true)
 	if err != nil {
 		return fmt.Errorf("internal error: uh oh #2")
 	}
@@ -201,12 +202,12 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	return nil
 }
 
-func validateChainMarkIncludeExclude(funcs []*provider, canRemoveDesired bool) error {
+func validateChainMarkIncludeExclude(doingReorder bool, funcs []*provider, canRemoveDesired bool) error {
+	if doingReorder {
+		restoreOriginalOrder(funcs)
+	}
 	remainingFuncs := make([]*provider, 0, len(funcs))
 	for _, fm := range funcs {
-		if fm.reorder && !fm.reordered && fm.d.excluded == nil {
-			fm.d.excluded = fmt.Errorf("marked Reorder, but no valid ordering found")
-		}
 		if fm.d.excluded == nil {
 			fm.include = true
 			fm.cannotInclude = nil
@@ -218,6 +219,9 @@ func validateChainMarkIncludeExclude(funcs []*provider, canRemoveDesired bool) e
 			fm.cannotInclude = fm.d.excluded
 			fm.include = false
 		}
+	}
+	if doingReorder {
+		remainingFuncs = reorder(remainingFuncs)
 	}
 	return checkFlows(remainingFuncs, len(funcs), canRemoveDesired)
 }

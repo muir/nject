@@ -1,6 +1,7 @@
 package nject
 
 import (
+	"container/heap"
 	"fmt" //XXX
 	"reflect"
 	"sort"
@@ -12,8 +13,8 @@ import (
 //
 // If there are multiple pass-through providers (that is to say, ones that
 // both consume and provide the same type) that pass through the same type,
-// then the ordering among these re-orderable providers is not defined but
-// will be implemented deterministically.
+// then the ordering among these re-orderable providers will be in their
+// original order with respect to each other.
 //
 // When reordering, only exact type matches are considered.  Reorder does
 // not play well with Loose().
@@ -23,9 +24,7 @@ import (
 //
 // Reorder should be considered experimental in the sense that the rules
 // for placement of such providers are likely to be adjusted as feedback
-// arrives.  This initial version requires that Reorder()ed producers are
-// before the first consumer of that type.  This strict placement may be
-// relaxed in a future release of nject.
+// arrives.
 func Reorder(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.reorder = true
@@ -41,28 +40,19 @@ func Reorder(fn interface{}) Provider {
 // The challenge comes when there is more than one provider or when the
 // same type is both provided and consumed.
 //
+//
 // Rules:
 //
-// Functions that are not marked Reorder must be in their original
-// order with respect to each other.
+//	A provider can be strictly after another provider.  This is
+//	what's done to handle providers that are not marked Reorder.
 //
-// For functions are marked Reorder:
+//	A provider that consumes a type T on the downchain is after
+//	a pseudo node that represents that T has been provided.
 //
-//	If function A provides type T (and does not consume type T)
-//	then function A must be before any consumers of type T.
+//	A provider that returns a type T on the up-chain, is after
+//	a pseudo node that represents that T has been recevied as
+//	as a return value in the up-chain.
 //
-//	If function B provides and consumes type T, then it must be
-//	after the first provider of type T but before the first consumer of T.
-//	Function B does not count as consumer of type T for other Reorder
-//	functions.
-//
-//	If function C consumes type T, then it must be after the
-//	last producer of type T.
-//
-// Functions marked Reorder are addedd to the provide/consume graph in
-// the order that they're processed.
-//
-// If a new order isn't possible, that is a fatal error
 
 func rememberOriginalOrder(funcs []*provider) bool {
 	var someReorder bool
@@ -76,219 +66,130 @@ func rememberOriginalOrder(funcs []*provider) bool {
 }
 
 func restoreOriginalOrder(funcs []*provider) {
-	panic()
+	n := make([]*provider, len(funcs))
+	for _, fm := range funcs {
+		n[fm.originalPosition] = fm
+	}
+	return n
 }
 
-func reorder(funcs []*provider) error {
-	var foundReorder bool
-	for _, fm := range funcs {
-		if fm.cannotInclude != nil {
-			continue
-		}
-		if fm.reorder {
-			foundReorder = true
-			break
-		}
-	}
-	if !foundReorder {
-		return
-	}
+func reorder(funcs []*provider) []*provider {
+	receviedTypes := make(map[reflect.Type]int)
+	providedTypes := make(map[reflect.Type]int)
 
-	type firstLast struct {
-		First map[reflect.Type]int
-		Last  map[reflect.Type]int
-	}
-	type inOut struct {
-		In  firstLast
-		Out firstLast
-	}
-	type upDown struct {
-		Up   inOut
-		Down inOut
-	}
-	var flows upDown
+	counter := len(funcs) + 1
 
-	noteFirsts := func(i int, m *map[reflect.Type]int, typ reflect.Type, direction func(int, int) bool) {
-		if *m == nil {
-			*m = make(map[reflect.Type]int)
-		}
-		if first, ok := (*m)[typ]; ok {
-			if direction(first, i) {
-				(*m)[typ] = i
-			}
-		} else {
-			(*m)[typ] = i
-		}
-	}
-	noteInOut := func(i int, firstLast *firstLast, types []reflect.Type, direction func(int, int) bool) {
-		for _, typ := range types {
-			noteFirsts(i, &firstLast.First, typ, direction)
-			noteFirsts(i, &firstLast.Last, typ, func(i, j int) bool { return direction(j, i) })
-		}
-	}
-	note := func(i int, inOut *inOut, flow func() ([]reflect.Type, []reflect.Type), direction func(int, int) bool) {
-		in, out := flow()
-		noteInOut(i, &inOut.In, in, direction)
-		noteInOut(i, &inOut.Out, out, direction)
-	}
-	for i, fm := range funcs {
-		if !fm.reorder {
-			note(i, &flows.Down, fm.DownFlows, func(i, j int) bool { return i > j })
-			note(i, &flows.Up, fm.UpFlows, func(i, j int) bool { return i < j })
-		}
-	}
-
-	// We will eventually pull dependencies out of the graph based upon what
-	// doesn't need to be before anything -- that is to say, we'll pull item 0
-	// first in the normal situation.  That's the "outermost"
-	requireAAfterB := func(i, j int) {
+	pairs := make([][2]int, 0, len(funcs)*6)
+	aAfterB = func(i, j int) {
 		if i == -1 || j == -1 {
 			return
 		}
-		funcs[i].after[j] = struct{}{}
-		funcs[j].before[i] = struct{}{}
-	}
-	for _, fm := range funcs {
-		fm.before = make(map[int]struct{})
-		fm.after = make(map[int]struct{})
-		fm.reordered = false
+		pairs = append(pairs, [2]int{i, j})
 	}
 	prior := -1
 	for i, fm := range funcs {
 		if !fm.reorder {
-			requireAAfterB(i, prior)
+			aAfterB(i, prior)
 			prior = i
 		}
-	}
-
-	var potentialDesires [][2]int
-	desireAAfterB := func(i, j int) {
-		if i == -1 || j == -1 {
-			return
-		}
-		potentialDesires = append(potentialDesires, [2]int{i, j})
-	}
-	lookup := func(inOut inOut, typ reflect.Type) (firstProduce, lastProduce, firstUse, lastUse int) {
-		var ok bool
-		if firstProduce, ok = inOut.Out.First[typ]; !ok {
-			firstProduce = -1
-		}
-		if lastProduce, ok = inOut.Out.Last[typ]; !ok {
-			lastProduce = -1
-		}
-		if firstUse, ok = inOut.In.First[typ]; !ok {
-			firstUse = -1
-		}
-		if lastUse, ok = inOut.In.Last[typ]; !ok {
-			lastUse = -1
-		}
-		return
-	}
-	isOrdered := func(i, j int) bool { return i < j }
-	floatDown := func(i int, inOut inOut, noSwap func(int, int) (int, int), inputsOutputs func() ([]reflect.Type, []reflect.Type)) {
-		inputs, outputs := inputsOutputs()
-		hasInput := has(inputs)
-		hasOutput := has(outputs)
-		for _, typ := range inputs {
-			firstProduce, lastProduce, firstUse, lastUse := lookup(inOut, typ)
-			if hasOutput(typ) {
-				// We both take and produce the same value
-				requireAAfterB(noSwap(i, firstProduce))
-				requireAAfterB(noSwap(lastUse, i))
-				desireAAfterB(noSwap(i, lastProduce))
-				desireAAfterB(noSwap(firstUse, i))
+		in, _ := fm.DownFlows()
+		for _, t := range in {
+			if num, ok := providedTypes[t]; ok {
+				aAfterB(i, num)
 			} else {
-				requireAAfterB(noSwap(i, firstProduce))
-				desireAAfterB(noSwap(i, lastProduce))
+				providedTypes[t] = counter
+				aAfterB(i, counter)
+				counter++
 			}
 		}
-		for _, typ := range outputs {
-			if hasInput(typ) {
-				// handled above
-				continue
-			}
-			_, lastProduce, firstUse, lastUse := lookup(inOut, typ)
-			requireAAfterB(noSwap(lastUse, i))
-			desireAAfterB(noSwap(firstUse, i))
-			if isOrdered(noSwap(lastProduce, firstUse)) {
-				desireAAfterB(noSwap(i, lastProduce))
+		_, produce := fm.UpFlows()
+		for _, t := range produce {
+			if num, ok := receivedTypes[t]; ok {
+				aAfterB(i, num)
+			} else {
+				receivedTypes[t] = counter
+				aAfterB(i, counter)
+				counter++
 			}
 		}
 	}
+
+	type node struct {
+		before map[int]struct{}
+		after  map[int]struct{}
+	}
+	nodes := make([]node, counter)
 	for i, fm := range funcs {
-		if !fm.reorder {
-			continue
-		}
-		floatDown(i, flows.Down, func(i, j int) (int, int) { return i, j }, fm.DownFlows)
-		floatDown(i, flows.Up, func(i, j int) (int, int) { return j, i }, fm.UpFlows)
-	}
-
-	// Establish all requirements before putting in the desires
-	desires := make([][2]int, 0, len(potentialDesires))
-	for _, potential := range potentialDesires {
-		i, j := potential[0], potential[1]
-		if _, ok := funcs[i].after[j]; ok {
-			continue
-		}
-		desires = append(desires, [2]int{i, j})
-		requireAAfterB(i, j)
-	}
-
-	free := make([]int, 0, len(funcs))
-	for i, fm := range funcs {
-		if len(fm.after) == 0 {
-			free = append(free, i)
+		nodes[i] = node{
+			before: make(map[int]struct{}),
+			after:  make(map[int]struct{}),
 		}
 	}
+	for i := len(funcs); i < counter; i++ {
+		nodes[i] = node{
+			before: make(map[int]struct{}),
+			after:  make(map[int]struct{}),
+		}
+	}
+	for _, pair := range pairs {
+		nodes[pair[0]].before[pair[1]] = struct{}{}
+		nodes[pair[1]].after[pair[0]] = struct{}{}
+	}
 
-	newOrder := make([]int, 0, len(funcs))
-	for len(newOrder) < len(funcs) && (len(free) > 0 || len(desires) > 0) {
-		for len(free) > 0 {
-			i := free[0]
-			free = free[1:]
+	var underlying IntHeap
+	for i, node := range nodes {
+		if len(node.after) == 0 && len(node.before) > 0 {
+			todo = append(todo, i)
+		}
+	}
+	todo := &underlying
+	heap.Init(todo)
+
+	release := func(n, i int) {
+		if n >= len(funcs) {
+			heap.Push(todo, n)
+		} else {
+			delete(nodes[n].after, i)
+			if len(nodes[n].after) == 0 {
+				heap.Push(todo, n)
+			}
+		}
+	}
+	reorderedFuncs := make([]*provider, 0, len(funcs))
+	for todo.Len() > 0 {
+		i := heap.Pop(todo).(int)
+		for n := range nodes[i].before {
+			release(n, i)
+		}
+		nodes[i].before = nil
+		if i < len(funcs) {
 			fm := funcs[i]
-			fm.reordered = true
-			before := make([]int, 0, len(fm.before))
-			for b := range fm.before {
-				before = append(before, b)
+			reorderedFuncs = append(reorderedFuncs, fm)
+			_, out := fm.DownFlows()
+			for _, t := range out {
+				if num, ok := providedTypes[t]; ok {
+					release(num, i)
+				}
 			}
-			sort.Sort(sort.IntSlice(before)) // determanistic behavior
-			for _, b := range before {
-				delete(funcs[b].after, i)
-				if len(funcs[b].after) == 0 {
-					free = append(free, b)
+			receive, _ := fm.UpFlows()
+			for _, t := range receive {
+				if num, ok := receviedTypes[t]; ok {
+					release(num, i)
 				}
 			}
 		}
-		if len(free) == 0 {
-			break
-		}
+	}
 
-		for len(desires) > 0 && len(free) == 0 {
-			i, j := desires[0][0], desires[0][1]
-			desires = desires[1:]
-			if _, ok := funcs[i].after[j]; ok {
-				delete(funcs[i].after, j)
-				delete(funcs[j].before, i)
-				if len(funcs[i].after) == 0 {
-					free = append(free, i)
-					break
-				}
+	if len(reorderedFuncs) < len(funcs) {
+		for i := 0; i < len(funcs); i++ {
+			if len(nodes[i].after) > 0 {
+				funcs[i].cannotInclude = fmt.Error("member of dependency cycle")
+				reorderedFuncs = append(reorderedFuncs, funcs[i])
 			}
 		}
 	}
-	if len(newOrder) < len(funcs) {
-		// found a dependency loop
-		fmt.Println("XXX found a dependency loop, giving up on reorder")
-		return
-	}
-	tmp := make([]*provider, len(funcs))
-	copy(tmp, funcs)
-	funcs = make([]*provider, 0, len(funcs))
-	for _, i := range newOrder {
-		fmt.Println("XXX, new order", tmp[i])
-		funcs = append(funcs, tmp[i])
-	}
+	reorderedFuncs = append(reorderedFuncs)
+	return reorderedFuncs
 }
 
 func has(types []reflect.Type) func(reflect.Type) bool {
@@ -300,4 +201,25 @@ func has(types []reflect.Type) func(reflect.Type) bool {
 		_, ok := m[typ]
 		return ok
 	}
+}
+
+// Code below originated with the container/heap documentation
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *IntHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(int))
+}
+
+func (h *IntHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
 }
