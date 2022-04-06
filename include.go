@@ -45,7 +45,7 @@ type includeWorkingData struct {
 // the chain with each one removed.  If the chain remains valid,
 // that provider is excluded.  If the chain becomes invalid, the
 // provider is restored to the chain.  This is an expensive
-// process.  Call to validate the chain is somewhat larger than
+// process.  Calls to validate the chain are somewhat larger than
 // O(n) so this entire process is somewhat worse than O(n^2).
 //
 // When we're done with the proposed eliminations, we have our
@@ -63,8 +63,19 @@ type includeWorkingData struct {
 //	fm.whyIncluded
 //	fm.wanted
 //
+// fm.cannnotInclude explains why something is not included.  It
+// can be set and cleared on a per-experiment basis.
+//
+// fm.include is the final arbitrar of what's in and what's out but
+// changes on a per-experiment basis.
+//
+// fm.whyIncluded is the error that would happen if something is not
+// included.
+//
+// fm.exclude is a ephemeral indication of what the current
+// experiment includes.
 
-func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
+func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
 	debugln("initial set of functions")
 	doingReorder := rememberOriginalOrder(funcs)
 	clusterLeaders := make(map[int32]*provider)
@@ -101,13 +112,13 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	debugln("calculate flows, initial")
 	err := providesReturns(funcs, initF)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	debugln("check chain validity, no provider excluded, except failed reorders")
 	err = validateChainMarkIncludeExclude(doingReorder, funcs, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, fm := range funcs {
@@ -160,7 +171,6 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	}
 
 	// Attempt to eliminate providers
-	postCheck := make([]*provider, 0, len(funcs))
 	for _, fm := range proposeEliminations(funcs) {
 		if fm.d.excluded != nil {
 			continue
@@ -172,8 +182,6 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		}
 		tryWithout(fm)
 	}
-
-	eliminateUnused(postCheck)
 
 	debugln("final set of functions")
 	for _, fm := range funcs {
@@ -188,24 +196,25 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		}
 	}
 
+	if doingReorder {
+		funcs = reorder(funcs)
+	}
+
 	debugln("final calculate flows")
 	err = providesReturns(funcs, initF)
 	if err != nil {
-		return fmt.Errorf("internal error: uh oh")
+		return nil, fmt.Errorf("internal error: uh oh")
 	}
 	debugf("final check chain validity")
-	err = validateChainMarkIncludeExclude(doingReorder, funcs, true)
+	err = validateChainMarkIncludeExclude(false, funcs, true)
 	if err != nil {
-		return fmt.Errorf("internal error: uh oh #2")
+		return nil, fmt.Errorf("internal error: uh oh #2")
 	}
 
-	return nil
+	return funcs, nil
 }
 
 func validateChainMarkIncludeExclude(doingReorder bool, funcs []*provider, canRemoveDesired bool) error {
-	if doingReorder {
-		restoreOriginalOrder(funcs)
-	}
 	remainingFuncs := make([]*provider, 0, len(funcs))
 	for _, fm := range funcs {
 		if fm.d.excluded == nil {

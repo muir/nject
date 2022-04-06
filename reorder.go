@@ -4,7 +4,6 @@ import (
 	"container/heap"
 	"fmt" //XXX
 	"reflect"
-	"sort"
 )
 
 // Reorder annotates a provider to say that its position in the injection
@@ -65,29 +64,26 @@ func rememberOriginalOrder(funcs []*provider) bool {
 	return someReorder
 }
 
-func restoreOriginalOrder(funcs []*provider) {
-	n := make([]*provider, len(funcs))
-	for _, fm := range funcs {
-		n[fm.originalPosition] = fm
-	}
-	return n
-}
-
 func reorder(funcs []*provider) []*provider {
-	receviedTypes := make(map[reflect.Type]int)
+	receivedTypes := make(map[reflect.Type]int)
 	providedTypes := make(map[reflect.Type]int)
 
 	counter := len(funcs) + 1
 
 	pairs := make([][2]int, 0, len(funcs)*6)
-	aAfterB = func(i, j int) {
+	aAfterB := func(i, j int) {
 		if i == -1 || j == -1 {
 			return
 		}
 		pairs = append(pairs, [2]int{i, j})
 	}
+	excluded := make([]*provider, 0, len(funcs))
 	prior := -1
 	for i, fm := range funcs {
+		if !fm.include {
+			excluded = append(excluded, fm)
+			continue
+		}
 		if !fm.reorder {
 			aAfterB(i, prior)
 			prior = i
@@ -120,9 +116,11 @@ func reorder(funcs []*provider) []*provider {
 	}
 	nodes := make([]node, counter)
 	for i, fm := range funcs {
-		nodes[i] = node{
-			before: make(map[int]struct{}),
-			after:  make(map[int]struct{}),
+		if fm.include {
+			nodes[i] = node{
+				before: make(map[int]struct{}),
+				after:  make(map[int]struct{}),
+			}
 		}
 	}
 	for i := len(funcs); i < counter; i++ {
@@ -139,7 +137,7 @@ func reorder(funcs []*provider) []*provider {
 	var underlying IntHeap
 	for i, node := range nodes {
 		if len(node.after) == 0 && len(node.before) > 0 {
-			todo = append(todo, i)
+			underlying = append(underlying, i)
 		}
 	}
 	todo := &underlying
@@ -164,6 +162,10 @@ func reorder(funcs []*provider) []*provider {
 		nodes[i].before = nil
 		if i < len(funcs) {
 			fm := funcs[i]
+			for len(excluded) > 0 && fm.originalPosition > excluded[0].originalPosition {
+				reorderedFuncs = append(reorderedFuncs, excluded[0])
+				excluded = excluded[1:]
+			}
 			reorderedFuncs = append(reorderedFuncs, fm)
 			_, out := fm.DownFlows()
 			for _, t := range out {
@@ -173,17 +175,18 @@ func reorder(funcs []*provider) []*provider {
 			}
 			receive, _ := fm.UpFlows()
 			for _, t := range receive {
-				if num, ok := receviedTypes[t]; ok {
+				if num, ok := receivedTypes[t]; ok {
 					release(num, i)
 				}
 			}
 		}
 	}
+	reorderedFuncs = append(reorderedFuncs, excluded...)
 
 	if len(reorderedFuncs) < len(funcs) {
 		for i := 0; i < len(funcs); i++ {
 			if len(nodes[i].after) > 0 {
-				funcs[i].cannotInclude = fmt.Error("member of dependency cycle")
+				funcs[i].cannotInclude = fmt.Errorf("member of dependency cycle")
 				reorderedFuncs = append(reorderedFuncs, funcs[i])
 			}
 		}

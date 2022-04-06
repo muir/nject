@@ -95,8 +95,6 @@ func (fm *provider) copy() *provider {
 		singleton:           fm.singleton,
 		cluster:             fm.cluster,
 		memoized:            fm.memoized,
-		before:              fm.before,
-		after:               fm.after,
 		class:               fm.class,
 		group:               fm.group,
 		flows:               fm.flows,
