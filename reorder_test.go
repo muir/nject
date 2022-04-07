@@ -19,7 +19,6 @@ type R09 string
 type R10 string
 
 func TestReorderSimpleMove(t *testing.T) {
-	t.Skip("not yet")
 	assert.NoError(t, Run(t.Name(),
 		NotCacheable(func() R00 { return "00" }),
 		func(r2 R02) R03 { return R03(r2) + "foo" },

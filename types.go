@@ -72,12 +72,14 @@ const (
 type groupType string
 
 const (
+	invokeGroup  groupType = "invoke"
 	literalGroup groupType = "literal"
 	staticGroup  groupType = "static"
 	runGroup     groupType = "run"
 	finalGroup   groupType = "final"
-	invokeGroup  groupType = "invoke"
 )
+
+var allGroups = []groupType{invokeGroup, literalGroup, staticGroup, runGroup, finalGroup}
 
 type flowType string
 

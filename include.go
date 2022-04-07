@@ -77,7 +77,7 @@ type includeWorkingData struct {
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
 	debugln("initial set of functions")
-	doingReorder := rememberOriginalOrder(funcs)
+	funcs, doingReorder := rememberOriginalOrder(funcs)
 	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
@@ -229,13 +229,49 @@ func validateChainMarkIncludeExclude(doingReorder bool, funcs []*provider, canRe
 			fm.include = false
 		}
 	}
-	if doingReorder {
-		remainingFuncs = reorder(remainingFuncs)
-	}
-	return checkFlows(remainingFuncs, len(funcs), canRemoveDesired)
+	// if doingReorder {
+	err, _ := reorder(remainingFuncs)
+	return err
+	// }
+	// err := checkRequired(remainingFuncs)
+	// err := checkFlows(remainingFuncs, len(funcs), canRemoveDesired)
+	//f err != nil {
+	//fmt.Println("XXX error after reorder", err)
+	//
+	//return err
 }
 
-func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
+/*
+// check required verifies two things:
+// 1. No required function is excluded
+// 2. MustConsume values are consumed
+func checkRequired(funcs []*provider, canRemoveDesired bool) error {
+	todo := funcs
+	redo := make([]*provider, 0, len(funcs)*6)
+	for len(todo) > 0 {
+
+		if fm.cannotInclude != nil {
+			if fm.required {
+				debugf("\tchain invalid required but: %s: %s", fm, fm.cannotInclude)
+				return fm.errorf("required but %s", fm.cannotInclude)
+			}
+			if (fm.wanted || fm.desired) && !canRemoveDesired && fm.d.excluded == nil {
+				debugf("\tchain invalid wanted but: %s: %s", fm, fm.cannotInclude)
+				return fm.errorf("wanted but %s", fm.cannotInclude)
+			}
+			if fm.include {
+				debugf("\tprovider now excluded: %s: %s", fm, fm.cannotInclude)
+				fm.include = false
+				redo = append(redo, fm.d.usedBy...)
+			} else {
+				debugf("\tprovider already excluded: %s: %s", fm, fm.cannotInclude)
+			}
+			continue
+		}
+}
+*/
+
+func XXXcheckFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 	todo := funcs
 	redo := make([]*provider, 0, len(funcs)*6)
 	for len(todo) > 0 {

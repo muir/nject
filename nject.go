@@ -44,15 +44,17 @@ type provider struct {
 	mapKeyCheck func([]reflect.Value) bool
 
 	// added during include calculations
-	cannotInclude    error
-	wanted           bool
-	whyIncluded      string
-	upRmap           map[typeCode]typeCode //  overrides types of returned parameters
-	downRmap         map[typeCode]typeCode //  overrides types of input parameters
-	bypassRmap       map[typeCode]typeCode //  overrides types of returning parameters
-	include          bool
-	d                includeWorkingData
-	originalPosition int
+	cannotInclude     error
+	wanted            bool
+	whyIncluded       string
+	upRmap            map[typeCode]typeCode //  overrides types of returned parameters
+	downRmap          map[typeCode]typeCode //  overrides types of input parameters
+	bypassRmap        map[typeCode]typeCode //  overrides types of returning parameters
+	include           bool
+	d                 includeWorkingData
+	originalPosition  int
+	ultimatePosition  int
+	transitiveRequire error // error if this not included due to blocking something else required
 
 	// added during binding
 	chainPosition              int
@@ -370,11 +372,12 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 		switch fm.group {
 		case finalGroup:
 			return typesIn(t), nil
-		case invokeGroup:
-			return nil, typesIn(t)
 		default:
 			return effectiveOutputs(t)
 		}
+	}
+	if fm.group == invokeGroup && t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func {
+		return nil, typesIn(t.Elem())
 	}
 	return nil, []reflect.Type{t}
 }
@@ -453,11 +456,12 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 		switch fm.group {
 		case finalGroup:
 			return nil, typesOut(t)
-		case invokeGroup:
-			return typesOut(t), nil
 		default:
 			return effectiveReturns(t)
 		}
+	}
+	if fm.group == invokeGroup && t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func {
+		return typesOut(t.Elem()), nil
 	}
 	return nil, []reflect.Type{t}
 }
