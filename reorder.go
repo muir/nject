@@ -334,19 +334,6 @@ func (t *topo) releaseProvider(i int, fm *provider) {
 	}
 }
 
-/* XXX
-func has(types []reflect.Type) func(reflect.Type) bool {
-	m := make(map[reflect.Type]struct{})
-	for _, typ := range types {
-		m[typ] = struct{}{}
-	}
-	return func(typ reflect.Type) bool {
-		_, ok := m[typ]
-		return ok
-	}
-}
-*/
-
 // Code below originated with the container/heap documentation
 type IntHeap []int
 

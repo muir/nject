@@ -5,15 +5,25 @@ import (
 )
 
 type includeWorkingData struct {
-	usesDetail      map[flowType]map[typeCode][]*provider
-	uses            []*provider
-	usesError       map[flowType]map[typeCode]error
-	usedBy          []*provider
-	usedByDetail    map[flowType]map[typeCode][]*provider
-	mustConsumeFlow map[flowType]bool
-	excluded        error
-	clusterMembers  []*provider
-	wantedInCluster bool
+	usesDetail        map[flowType]map[typeCode][]*provider
+	uses              []*provider
+	usesError         map[flowType]map[typeCode]error
+	usedBy            []*provider
+	usedByDetail      map[flowType]map[typeCode][]*provider
+	mustConsumeFlow   map[flowType]bool
+	excluded          error
+	clusterMembers    []*provider
+	wantedInCluster   bool
+	transitiveRequire error       // error if this not included due to blocking something else required
+	transitiveDesire  error       // error if this not included due to blocking something else required
+	provides          []*provider // outbound down chain
+	requires          []*provider // inbound down chain
+	returns           []*provider // outbound up chain
+	receives          []*provider // inbound up chain
+	hasProvide        func(reflec.Type) bool
+	hasRequire        func(reflec.Type) bool
+	hasReturns        func(reflec.Type) bool
+	hasReceives       func(reflec.Type) bool
 }
 
 //

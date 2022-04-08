@@ -44,17 +44,14 @@ type provider struct {
 	mapKeyCheck func([]reflect.Value) bool
 
 	// added during include calculations
-	cannotInclude     error
-	wanted            bool
-	whyIncluded       string
-	upRmap            map[typeCode]typeCode //  overrides types of returned parameters
-	downRmap          map[typeCode]typeCode //  overrides types of input parameters
-	bypassRmap        map[typeCode]typeCode //  overrides types of returning parameters
-	include           bool
-	d                 includeWorkingData
-	originalPosition  int
-	ultimatePosition  int
-	transitiveRequire error // error if this not included due to blocking something else required
+	cannotInclude error
+	wanted        bool
+	whyIncluded   string
+	upRmap        map[typeCode]typeCode //  overrides types of returned parameters
+	downRmap      map[typeCode]typeCode //  overrides types of input parameters
+	bypassRmap    map[typeCode]typeCode //  overrides types of returning parameters
+	include       bool
+	d             includeWorkingData
 
 	// added during binding
 	chainPosition              int
