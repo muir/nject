@@ -24,6 +24,8 @@ type includeWorkingData struct {
 	hasRequire        func(reflec.Type) bool
 	hasReturns        func(reflec.Type) bool
 	hasReceives       func(reflec.Type) bool
+	originalPosition  int
+	ultimatePosition  int
 }
 
 //

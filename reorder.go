@@ -81,6 +81,7 @@ func rememberOriginalOrder(funcs []*provider) ([]*provider, bool) {
 // XXX pre-compute MustConsume checker
 
 // XXX reorder and check
+// generateCheckers must be called before reorder()
 func reorder(funcs []*provider, canRemoveDesired bool) []*provider {
 	fmt.Println("XXX begin reorder ----------------------------------------------------------")
 	receivedTypes := make(map[reflect.Type]int)
@@ -88,14 +89,24 @@ func reorder(funcs []*provider, canRemoveDesired bool) []*provider {
 
 	counter := len(funcs) + 1
 
-	pairs := make([][2]int, 0, len(funcs)*6)
-	aAfterB := func(i, j int) {
+	strongPairs := make([][2]int, 0, len(funcs)*6) // required relationships
+	weakPairs := make([][2]int, 0, len(funcs)*6)   // desired relationships
+	aAfterB := func(pairs *[][2]int, i, j int) {
 		if i == -1 || j == -1 {
 			return
 		}
 		fmt.Println("XXX", i, "comes after", j)
-		pairs = append(pairs, [2]int{i, j})
+		*pairs = append(*pairs, [2]int{i, j})
 	}
+	provideByNotRequire := make(map[reflect.Type][]*provider)
+	for i, fm := range funcs {
+		for _, t := range fm.d.provides {
+			if !fm.d.hasRequire(t) {
+				provideByNotRequire[t] = append(provideByNotRequire[t], i)
+			}
+		}
+	}
+
 	excluded := make([]*provider, 0, len(funcs))
 	cannotReorder := make([]int, 0, len(funcs))
 	for i, fm := range funcs {
@@ -107,52 +118,59 @@ func reorder(funcs []*provider, canRemoveDesired bool) []*provider {
 		if !fm.reorder {
 			cannotReorder = append(cannotReorder, i)
 		}
-		in, _ := fm.DownFlows()
-		for _, t := range in {
+		for _, t := range fm.d.requires {
 			if num, ok := providedTypes[t]; ok {
-				aAfterB(i, num)
+				aAfterB(&strongPairs, i, num)
 			} else {
 				fmt.Println("XXX downtype", counter, t)
 				providedTypes[t] = counter
-				aAfterB(i, counter)
+				aAfterB(&strongPairs, i, counter)
 				counter++
 			}
+			for _, j := range provideByNotRequire[t] {
+				aAaferB(&weakPairs, i, j)
+			}
 		}
+
 		// XXX change!
-		// if produce but do not receive:
+		// if returns but do not receives:
 		// 	must be after all receviers that don't produce t
 		//	this is WEAK: if a particular recevier is not included, that's
 		//	okay as long as some recevier is included
 		// if produce and receiver:
 		//	must be after any receiver
 		//
-		// XXX change!
-		// 	if consumptionOptional then only create dependencies where
-		//	a recevier of a type exists.  Create a list of such dependencies
-		// 	and remove them when stuck.
-		_, produce := fm.UpFlows()
-		for _, t := range produce {
+
+		for _, t := range fm.d.returns {
+			pairs := &strongPairs
+			if fm.consumptionOptional {
+				pairs = &weakPairs
+			}
 			if num, ok := receivedTypes[t]; ok {
-				aAfterB(i, num)
+				aAfterB(pairs, i, num)
 			} else {
 				fmt.Println("XXX uptype", counter, t)
 				receivedTypes[t] = counter
-				aAfterB(i, counter)
+				aAfterB(pairs, i, counter)
 				counter++
 			}
 		}
 	}
 
 	type node struct {
-		before map[int]struct{}
-		after  map[int]struct{}
+		before     map[int]struct{}
+		after      map[int]struct{}
+		weakBefore map[int]struct{}
+		weakAfter  map[int]struct{}
 	}
 	nodes := make([]node, counter)
 	for i, fm := range funcs {
 		if fm.include {
 			nodes[i] = node{
-				before: make(map[int]struct{}),
-				after:  make(map[int]struct{}),
+				before:     make(map[int]struct{}),
+				after:      make(map[int]struct{}),
+				weakBefore: make(map[int]struct{}),
+				weakAfter:  make(map[int]struct{}),
 			}
 		}
 	}
@@ -162,22 +180,29 @@ func reorder(funcs []*provider, canRemoveDesired bool) []*provider {
 			after:  make(map[int]struct{}),
 		}
 	}
-	for _, pair := range pairs {
+	for _, pair := range strongPairs {
 		nodes[pair[1]].before[pair[0]] = struct{}{}
 		nodes[pair[0]].after[pair[1]] = struct{}{}
+	}
+	for _, pair := range weakPairs {
+		nodes[pair[1]].weakBefore[pair[0]] = struct{}{}
+		nodes[pair[0]].weakAfter[pair[1]] = struct{}{}
 	}
 
 	// XXX pre-compute transitive require
 
-	var underlying IntHeap
-	todo := &underlying
-	heap.Init(todo)
+	unblocked := &IntHeap{}
+	heap.Init(unblocked)
+	weakBlocked := &IntHeap{}
+	heap.Init(weakBlocked)
 	t := topo{
 		funcs:          funcs,
 		nodes:          nodes,
 		cannotReorder:  cannotReorder,
-		todo:           todo,
+		unblocked:      unblocked,
+		weakBlocked:    weakBlocked,
 		errors:         make([]error, len(funcs)),
+		done:           make([]bool, len(funcs)),
 		reorderedFuncs: make([]*provider, 0, len(funcs)),
 	}
 	err := t.run()
@@ -193,7 +218,9 @@ type topo struct {
 	funcs            []*provider
 	nodes            []node
 	cannotReorder    []int
-	todo             *IntHeap
+	unblocked        *IntHeap // no weak or strong blocks
+	weakBlocked      *IntHeap // only weak blocks
+	done             []bool   // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
 	errors           []error
 	reorderedFuncs   []*provider
 	canRemoveDesired bool
@@ -202,7 +229,9 @@ type topo struct {
 func (t *topo) overwrite(v *topo) {
 	t.nodes = v.nodes
 	t.cannotReorder = v.cannotReorder
-	t.todo = v.todo
+	t.unblocked = v.unblocked
+	t.weakBlocked = v.weakBlocked
+	t.done = v.done
 	t.errors = v.errors
 	t.reorderedFuncs = v.reorderedFuncs
 }
@@ -212,23 +241,31 @@ func (t *topo) copy() *topo {
 	copy(nodes, t.nodes)
 	for i, n := range nodes {
 		nodes[i] = node{
-			before: copySet(n.before),
-			after:  copySet(n.after),
+			before:     copySet(n.before),
+			after:      copySet(n.after),
+			weakBefore: copySet(n.before),
+			weakAfter:  copySet(n.after),
 		}
 	}
 	cannotReorder := make([]int, len(t.cannotReorder))
 	copy(cannotReorder, t.cannotReorder)
-	underlying := make([]IntHeap, len(*t.todo))
-	copy(underlying, *t.todo)
+	unblocked := make([]IntHeap, len(*t.unblocked))
+	copy(unblocked, *t.unblocked)
+	weakBlocked := make([]IntHeap, len(*t.weakBlocked))
+	copy(weakBlocked, *t.weakBlocked)
 	errors := make([]error, len(t.errors))
 	copy(errors, t.errros)
 	reorderedFuncs := make([]*provider, len(t.reorderedFuncs), len(t.funcs))
 	copy(reorderedFuncs, t.reorderedFuncs)
+	done := make([]bool, len(t.funcs))
+	copy(done, t.done)
 	return &topo{
 		funcs:            t.funcs,
 		nodes:            nodes,
 		cannotReorder:    cannotReorder,
-		todo:             &underlying,
+		unblocked:        &underlying,
+		weakBlocked:      &weakBlocked,
+		done:             done,
 		errors:           errors,
 		reorderedFuncs:   reorderedFuncs,
 		canRemoveDesired: t.canRemoveDesired,
@@ -237,13 +274,19 @@ func (t *topo) copy() *topo {
 
 func (t *topo) release(n, i int) {
 	if n >= len(t.funcs) {
+		// types only have strong relationships
 		fmt.Println("XXX released", n)
-		heap.Push(t.todo, n)
+		heap.Push(t.unblocked, n)
 	} else {
 		delete(t.nodes[n].after, i)
+		delete(t.nodes[n].weakAfter, i)
 		if len(t.nodes[n].after) == 0 {
 			fmt.Println("XXX released", n)
-			heap.Push(t.todo, n)
+			if len(t.nodes[n].weakAfter) == 0 {
+				heap.Push(t.unblocked, n)
+			} else {
+				heap.Push(t.weakBlocked, n)
+			}
 		} else {
 			fmt.Println("XXX cannot release", n, t.nodes[n].after)
 		}
@@ -252,8 +295,11 @@ func (t *topo) release(n, i int) {
 
 func (t *topo) run() error {
 	for {
-		if t.todo.Len() > 0 {
-			i := heap.Pop(t.todo).(int)
+		if t.unblocked.Len() > 0 {
+			i := heap.Pop(t.unblocked).(int)
+			processOne(i, true)
+		} else if t.weakBlocked.Len() > 0 {
+			i := heap.Pop(t.weakBlocked).(int)
 			processOne(i, true)
 		} else if len(t.cannotReorder) > 0 {
 			i := t.cannotReorder[0]
@@ -286,10 +332,16 @@ func (t *topo) releaseNode(i int) {
 	}
 }
 
-func (t *topo) processOne(i int, released bool) {
+func (t *topo) processOne(i int, release bool) {
 	fmt.Println("XXX popped", i, released)
+	if release {
+		if t.done[i] {
+			return
+		}
+		t.done[i] = true
+	}
 	if i > len(t.funcs) {
-		if released {
+		if release {
 			t.releaseNode(i)
 		}
 		return
@@ -318,39 +370,16 @@ func (t *topo) processOne(i int, released bool) {
 func (t *topo) releaseProvider(i int, fm *provider) {
 	fmt.Println("XXX include", fm)
 	t.reorderedFuncs = append(t.reorderedFuncs, fm)
-	_, out := fm.DownFlows()
-	for _, t := range out {
+	for _, t := range fm.d.provides {
 		if num, ok := providedTypes[t]; ok {
 			fmt.Println("XXX release down", t)
 			t.release(num, i)
 		}
 	}
-	receive, _ := fm.UpFlows()
-	for _, t := range receive {
+	for _, t := range fm.d.recevies {
 		if num, ok := receivedTypes[t]; ok {
 			fmt.Println("XXX release up", t)
 			t.release(num, i)
 		}
 	}
-}
-
-// Code below originated with the container/heap documentation
-type IntHeap []int
-
-func (h IntHeap) Len() int           { return len(h) }
-func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
-func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
-
-func (h *IntHeap) Push(x interface{}) {
-	// Push and Pop use pointer receivers because they modify the slice's length,
-	// not just its contents.
-	*h = append(*h, x.(int))
-}
-
-func (h *IntHeap) Pop() interface{} {
-	old := *h
-	n := len(old)
-	x := old[n-1]
-	*h = old[0 : n-1]
-	return x
 }
