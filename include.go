@@ -2,6 +2,7 @@ package nject
 
 import (
 	"fmt"
+	"reflect"
 )
 
 type includeWorkingData struct {
@@ -14,16 +15,16 @@ type includeWorkingData struct {
 	excluded          error
 	clusterMembers    []*provider
 	wantedInCluster   bool
-	transitiveRequire error       // error if this not included due to blocking something else required
-	transitiveDesire  error       // error if this not included due to blocking something else required
-	provides          []*provider // outbound down chain
-	requires          []*provider // inbound down chain
-	returns           []*provider // outbound up chain
-	receives          []*provider // inbound up chain
-	hasProvide        func(reflec.Type) bool
-	hasRequire        func(reflec.Type) bool
-	hasReturns        func(reflec.Type) bool
-	hasReceives       func(reflec.Type) bool
+	transitiveRequire error          // error if this not included due to blocking something else required
+	transitiveDesire  error          // error if this not included due to blocking something else required
+	provides          []reflect.Type // outbound down chain
+	requires          []reflect.Type // inbound down chain
+	returns           []reflect.Type // outbound up chain
+	receives          []reflect.Type // inbound up chain
+	hasProvide        func(reflect.Type) bool
+	hasRequire        func(reflect.Type) bool
+	hasReturns        func(reflect.Type) bool
+	hasReceives       func(reflect.Type) bool
 	originalPosition  int
 	ultimatePosition  int
 }
@@ -90,6 +91,8 @@ type includeWorkingData struct {
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
 	debugln("initial set of functions")
 	funcs, doingReorder := rememberOriginalOrder(funcs)
+	checker := generateCheckers(funcs)
+
 	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
@@ -128,7 +131,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 	}
 
 	debugln("check chain validity, no provider excluded, except failed reorders")
-	err = validateChainMarkIncludeExclude(doingReorder, funcs, true)
+	_, err = validateChainMarkIncludeExclude(doingReorder, funcs, true, checker)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +167,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		}
 		debugf("lenth of without before: %d", len(without))
 		// nolint:govet
-		err := validateChainMarkIncludeExclude(doingReorder, funcs, false)
+		_, err := validateChainMarkIncludeExclude(doingReorder, funcs, false, checker)
 		debugf("lenth of without after: %d", len(without))
 		for _, fm := range without {
 			if err == nil {
@@ -208,49 +211,50 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		}
 	}
 
-	if doingReorder {
-		funcs = reorder(funcs)
-	}
-
 	debugln("final calculate flows")
 	err = providesReturns(funcs, initF)
 	if err != nil {
 		return nil, fmt.Errorf("internal error: uh oh")
 	}
 	debugf("final check chain validity")
-	err = validateChainMarkIncludeExclude(false, funcs, true)
+	reordered, err := validateChainMarkIncludeExclude(false, funcs, true, checker)
 	if err != nil {
 		return nil, fmt.Errorf("internal error: uh oh #2")
 	}
 
-	return funcs, nil
+	return reordered, nil
 }
 
-func validateChainMarkIncludeExclude(doingReorder bool, funcs []*provider, canRemoveDesired bool) error {
-	remainingFuncs := make([]*provider, 0, len(funcs))
-	for _, fm := range funcs {
-		if fm.d.excluded == nil {
-			fm.include = true
-			fm.cannotInclude = nil
-			remainingFuncs = append(remainingFuncs, fm)
-		} else {
-			if fm.required {
-				return fmt.Errorf("is required and excluded")
+func validateChainMarkIncludeExclude(doingReorder bool, funcs []*provider, canRemoveDesired bool, checker func([]*provider, bool) error) ([]*provider, error) {
+	return reorder(funcs, func(funcs []*provider) error {
+		return checker(funcs, canRemoveDesired)
+	})
+	/*
+		remainingFuncs := make([]*provider, 0, len(funcs))
+		for _, fm := range funcs {
+			if fm.d.excluded == nil {
+				fm.include = true
+				fm.cannotInclude = nil
+				remainingFuncs = append(remainingFuncs, fm)
+			} else {
+				if fm.required {
+					return fmt.Errorf("is required and excluded")
+				}
+				fm.cannotInclude = fm.d.excluded
+				fm.include = false
 			}
-			fm.cannotInclude = fm.d.excluded
-			fm.include = false
 		}
-	}
-	// if doingReorder {
-	err, _ := reorder(remainingFuncs)
-	return err
-	// }
-	// err := checkRequired(remainingFuncs)
-	// err := checkFlows(remainingFuncs, len(funcs), canRemoveDesired)
-	//f err != nil {
-	//fmt.Println("XXX error after reorder", err)
-	//
-	//return err
+		// if doingReorder {
+		err, _ := reorder(remainingFuncs)
+		return err
+		// }
+		// err := checkRequired(remainingFuncs)
+		// err := checkFlows(remainingFuncs, len(funcs), canRemoveDesired)
+		//f err != nil {
+		//fmt.Println("XXX error after reorder", err)
+		//
+		//return err
+	*/
 }
 
 /*

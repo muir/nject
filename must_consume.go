@@ -16,7 +16,7 @@ import (
 //	fm.d.hasReceives
 //	fm.d.transitiveRequire
 //	fm.d.transitiveDesire
-func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
+func generateCheckers(funcs []*provider) func(funcs []*provider, canRemoveDesired bool) error {
 	providersIndex := make(map[reflect.Type][]int)
 	returnsIndex := make(map[reflect.Type][]int)
 	requiresIndex := make(map[reflect.Type][]int)
@@ -27,7 +27,7 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 	receviesFuncs := make(map[reflect.Type][]*provider)
 	for _, fm := range funcs {
 		fm.d.receives, fm.d.returns = fm.UpFlows()
-		fm.d.hasReceive, fm.d.hasReturn = has(fm.d.recevies), has(fm.d.returns)
+		fm.d.hasReceives, fm.d.hasReturns = has(fm.d.receives), has(fm.d.returns)
 		for i, t := range fm.d.returns {
 			returnsIndex[t] = append(returnsIndex[t], i)
 			returnsFuncs[t] = append(returnsFuncs[t], fm)
@@ -44,33 +44,31 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 		}
 		for i, t := range fm.d.requires {
 			requiresIndex[t] = append(requiresIndex[t], i)
-			requiresFuncs[t] = append(requiresFuncs[t], i)
+			requiresFuncs[t] = append(requiresFuncs[t], fm)
 		}
 	}
 	deps := make(map[int][]int) // if key is required then list is required
 	for i, fm := range funcs {
-		recevied, returned := fm.UpFlows()
-		for _, t := range recevied {
+		for _, t := range fm.d.receives {
 			if len(returnsIndex[t]) == 1 {
 				deps[i] = append(deps[i], returnsIndex[t][0])
 			}
 		}
 		if !fm.consumptionOptional {
-			for _, t := range returned {
+			for _, t := range fm.d.returns {
 				if len(receviesIndex[t]) == 1 {
 					deps[i] = append(deps[i], receviesIndex[t][0])
 				}
 			}
 		}
-		in_, out := fm.DownFlows()
 		if fm.mustConsume {
-			for _, t := range out {
+			for _, t := range fm.d.provides {
 				if len(requiresIndex[t]) == 1 {
 					deps[i] = append(deps[i], requiresIndex[t][0])
 				}
 			}
 		}
-		for _, t := range in {
+		for _, t := range fm.d.requires {
 			if len(providersIndex[t]) == 1 {
 				deps[i] = append(deps[i], providersIndex[t][0])
 			}
@@ -80,13 +78,13 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 	seen := make([]bool, len(funcs))
 	todo := make([]int, 0, len(funcs))
 	for i, fm := range funcs {
-		if fm.required || (canRemoveDesired && fm.desired) {
+		if fm.required || fm.desired {
 			todo = append(todo, i)
 			seen[i] = true
 			if fm.required {
 				fm.d.transitiveRequire = fm.errorf("required")
 			} else {
-				fm.d.transitiveDesired = fm.errorf("desired")
+				fm.d.transitiveDesire = fm.errorf("desired")
 			}
 		}
 	}
@@ -98,9 +96,9 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 		}
 		seen[i] = true
 		source := funcs[i]
-		for _, d := range desp[i] {
+		for _, d := range deps[i] {
 			fm := funcs[d]
-			if source.d.transitiveRequire {
+			if source.d.transitiveRequire != nil {
 				if fm.d.transitiveRequire == nil {
 					fm.d.transitiveRequire = fm.errorf("required to satisfy %s", funcs[i].d.transitiveRequire)
 				}
@@ -119,7 +117,7 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 	for _, fm := range funcs {
 		if fm.d.transitiveRequire != nil {
 			required = append(required, fm)
-		} else if fm.d.transitveDiesire != nil {
+		} else if fm.d.transitiveDesire != nil {
 			desired = append(desired, fm)
 		}
 		if fm.mustConsume {
@@ -128,37 +126,37 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 	}
 	return func(funcs []*provider, canRemoveDesired bool) error {
 		for _, fm := range required {
-			if !fm.include || fm.exclude || fm.cannotIncude {
-				return fm.d.transtiveRequire
+			if !fm.include || fm.d.excluded != nil || fm.cannotInclude != nil {
+				return fm.d.transitiveRequire
 			}
 		}
 		if !canRemoveDesired {
 			for _, fm := range desired {
-				if !fm.include || fm.exclude || fm.cannotIncude != nil {
-					return fm.d.transitveDesire
+				if !fm.include || fm.d.excluded != nil || fm.cannotInclude != nil {
+					return fm.d.transitiveDesire
 				}
 			}
 		}
 		if len(mustConsume) > 0 {
 			for i, fm := range funcs {
-				fm.ultimatePosition = i
+				fm.d.ultimatePosition = i
 			}
 		MustConsumer:
 			for _, fm := range mustConsume {
-				if fm.include && !fm.exlcude && fm.cannotInclude == nil {
+				if fm.include && fm.d.excluded == nil && fm.cannotInclude == nil {
 					for _, t := range fm.d.provides {
 						explain := make([]string, 0, len(requiresFuncs[t]))
 						for _, rfm := range requiresFuncs[t] {
-							if !rfm.include && rfm.exclude {
-								explain = append(explain, fm.error("not included").String())
+							if rfm.d.excluded != nil || !rfm.include {
+								explain = append(explain, fm.errorf("not included").Error())
 								continue
 							}
 							if rfm.cannotInclude != nil {
-								explain = append(explain, rfm.cannotInclude.String())
+								explain = append(explain, rfm.cannotInclude.Error())
 								continue
 							}
-							if rfm.ultimatePosition < fm.ultimatePosition {
-								explain = append(explain, rfm.error("in the wrong order").String())
+							if rfm.d.ultimatePosition < fm.d.ultimatePosition {
+								explain = append(explain, rfm.errorf("in the wrong order").Error())
 								continue
 							}
 							continue MustConsumer
@@ -166,8 +164,10 @@ func generateCheckers(funcs []*provider) func(canRemoveDesired bool) error {
 						if len(explain) == 0 {
 							explain = []string{"no functions consume"}
 						}
-						// XXX should set fm.cannotInclude?
-						return fm.error("no consumer found for %s (%s)", t, strings.Join(explain, ", "))
+						fm.cannotInclude = MustConsumeError{
+							cause: fm.errorf("no consumer found for %s (%s)", t, strings.Join(explain, ", ")),
+						}
+						return fm.cannotInclude
 					}
 				}
 			}
@@ -185,4 +185,16 @@ func has(types []reflect.Type) func(reflect.Type) bool {
 		_, ok := m[typ]
 		return ok
 	}
+}
+
+type MustConsumeError struct {
+	cause error
+}
+
+func (e MustConsumeError) Error() string {
+	return e.cause.Error()
+}
+
+func (e MustConsumeError) Unwrap() error {
+	return e.cause
 }
