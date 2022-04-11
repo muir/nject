@@ -377,6 +377,8 @@ func generateWrappers(
 	case invokeFunc, initFunc, literalValue:
 		// handled elsewhere
 		return nil
+	case unsetClassType:
+		fallthrough
 	default:
 		return fmt.Errorf("internal error #11: unexpected class")
 	}

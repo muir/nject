@@ -81,8 +81,6 @@ const (
 	finalGroup                    // final
 )
 
-var allGroups = []groupType{invokeGroup, literalGroup, staticGroup, runGroup, finalGroup}
-
 type flowType int
 
 const (
