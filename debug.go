@@ -132,7 +132,7 @@ func dumpF(context string, fm *provider) {
 	out += fmt.Sprintf("\n\tclass: %s\n\tgroup: %s", fm.class, fm.group)
 	for name, flow := range fm.flows {
 		if len(flow) > 0 {
-			out += fmt.Sprintf("\n\t%s flow: %s", name, formatFlow(flow))
+			out += fmt.Sprintf("\n\t%s flow: %s", flowType(name), formatFlow(flow))
 		}
 	}
 	for upDown, rMap := range map[string]map[typeCode]typeCode{
@@ -168,7 +168,7 @@ func dumpF(context string, fm *provider) {
 	}
 	for param, users := range fm.d.usesDetail {
 		for tc, dep := range users {
-			out += fmt.Sprintf("\n\tUSES: %s (%s %s)", dep, param, tc)
+			out += fmt.Sprintf("\n\tUSES: %s (%s %s)", dep, flowType(param), tc)
 		}
 	}
 	for _, dep := range fm.d.usedBy {

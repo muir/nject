@@ -162,8 +162,8 @@ func (fm *provider) String() string {
 		t = reflect.TypeOf(fm.fn).String()
 	}
 	class := ""
-	if fm.class != "" {
-		class = string(fm.class) + ": "
+	if fm.class != unsetClassType {
+		class = fm.class.String() + ": "
 	}
 	if fm.index >= 0 {
 		return fmt.Sprintf("%s%s(%d) [%s]", class, fm.origin, fm.index, t)

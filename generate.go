@@ -31,10 +31,7 @@ func generateParameterMap(
 	vmap map[typeCode]int, // map of types in valueCollection to their positions
 	purpose string, // debug string
 ) (parameterMap, error) {
-	flow, found := fm.flows[param]
-	if !found {
-		return parameterMap{}, fm.errorf("internal error #12: flow %s missing", param)
-	}
+	flow := fm.flows[param]
 	m := make([]int, len(flow))
 	types := make([]reflect.Type, len(flow))
 	for i, p := range flow {
@@ -380,6 +377,8 @@ func generateWrappers(
 	case invokeFunc, initFunc, literalValue:
 		// handled elsewhere
 		return nil
+	case unsetClassType:
+		fallthrough
 	default:
 		return fmt.Errorf("internal error #11: unexpected class")
 	}

@@ -1,3 +1,4 @@
+//go:generate stringer -type=groupType,classType,flowType -linecomment -output stringer_generated.go
 package nject
 
 // TODO: switch flowType, groupType, classType to ints and define a Stringer
@@ -55,38 +56,46 @@ type Debugging struct {
 	Reproduce string
 }
 
-type classType string
+type classType int
 
 const (
-	fallibleInjectorFunc       classType = "fallible-injector"
-	fallibleStaticInjectorFunc classType = "fallible-static-injector"
-	injectorFunc               classType = "injector"
-	wrapperFunc                classType = "wrapper-func"
-	finalFunc                  classType = "final-func"
-	staticInjectorFunc         classType = "static-injector"
-	literalValue               classType = "literal-value"
-	initFunc                   classType = "init-func"
-	invokeFunc                 classType = "invoke-func"
+	unsetClassType             classType = iota // ?
+	fallibleInjectorFunc                        // fallible-injector
+	fallibleStaticInjectorFunc                  // fallible-static-injector
+	injectorFunc                                // injector
+	wrapperFunc                                 // wrapper-func
+	finalFunc                                   // final-func
+	staticInjectorFunc                          // static-injector
+	literalValue                                // literal-value
+	initFunc                                    // init-func
+	invokeFunc                                  // invoke-func
 )
 
-type groupType string
+type groupType int
 
 const (
-	literalGroup groupType = "literal"
-	staticGroup  groupType = "static"
-	runGroup     groupType = "run"
-	finalGroup   groupType = "final"
-	invokeGroup  groupType = "invoke"
+	invokeGroup  groupType = iota // invoke
+	literalGroup                  // literal
+	staticGroup                   // static
+	runGroup                      // run
+	finalGroup                    // final
 )
 
-type flowType string
+type flowType int
 
 const (
-	returnParams   flowType = "returns"  // going up
-	outputParams   flowType = "outputs"  // going down
-	inputParams    flowType = "inputs"   // recevied from above
-	returnedParams flowType = "returned" // received from below
-	bypassParams   flowType = "bypass"   // returned from init
+	// going up
+	returnParams flowType = iota // returns
+	// going down
+	outputParams // outputs
+	// recevied from above
+	inputParams // inputs
+	// received from below
+	returnedParams // returned
+	// returned from init
+	bypassParams // bypass
+	//
+	lastFlowType // UNUSED
 )
 
 var terminalErrorType = reflect.TypeOf((*TerminalError)(nil)).Elem()

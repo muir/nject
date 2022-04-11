@@ -84,6 +84,8 @@ linters:
   enable:
     - megacheck
     - govet
+    - exportloopref
+    - errcheck
   enable-all: false
   disable:
     - maligned
@@ -92,6 +94,7 @@ linters:
     - funlen
     - gocognit
     - gocyclo
+    - scopelint
   presets:
     - bugs
     - unused
