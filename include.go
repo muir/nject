@@ -5,12 +5,12 @@ import (
 )
 
 type includeWorkingData struct {
-	usesDetail      map[flowType]map[typeCode][]*provider
+	usesDetail      [lastFlowType + 1]map[typeCode][]*provider
 	uses            []*provider
-	usesError       map[flowType]map[typeCode]error
+	usesError       [lastFlowType + 1]map[typeCode]error
 	usedBy          []*provider
-	usedByDetail    map[flowType]map[typeCode][]*provider
-	mustConsumeFlow map[flowType]bool
+	usedByDetail    [lastFlowType + 1]map[typeCode][]*provider
+	mustConsumeFlow [lastFlowType + 1]bool
 	excluded        error
 	clusterMembers  []*provider
 	wantedInCluster bool
@@ -78,7 +78,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 				fm.d.clusterMembers = []*provider{fm}
 			}
 		}
-		fm.d.mustConsumeFlow = make(map[flowType]bool)
+		fm.d.mustConsumeFlow = [lastFlowType + 1]bool{}
 		if fm.mustConsume {
 			fm.d.mustConsumeFlow[outputParams] = true
 		}
@@ -276,7 +276,7 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 						debugf("\t\t\tcannot provide %s %s: %s: %s", param, tc, p, p.cannotInclude)
 						extra = fmt.Sprintf(" (not provided by %s because %s)", p, p.cannotInclude)
 					}
-					fm.cannotInclude = fmt.Errorf("no provider for %s in %s%s", tc, param, extra)
+					fm.cannotInclude = fmt.Errorf("no provider for %s in %s%s", tc, flowType(param), extra)
 					redo = append(redo, fm)
 					debugf("\t\tno source %s %s  %s: %s", param, tc, fm, fm.cannotInclude)
 					continue Todo
@@ -299,7 +299,7 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 						debugf("\t\t\tcannot consume %s %s: %s: %s", param, tc, p, p.cannotInclude)
 						extra = fmt.Sprintf(" (not consumed by %s because %s)", p, p.cannotInclude)
 					}
-					fm.cannotInclude = fmt.Errorf("no consumer for %s in %s%s", tc, param, extra)
+					fm.cannotInclude = fmt.Errorf("no consumer for %s in %s%s", tc, flowType(param), extra)
 					redo = append(redo, fm)
 					debugf("\t\tnot consumed %s %s %s: %s", param, tc, fm, fm.cannotInclude)
 					continue Todo
@@ -317,10 +317,10 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 func providesReturns(funcs []*provider, initF *provider) error {
 	debugln("calculating provides/returns")
 	for _, fm := range funcs {
-		fm.d.usedByDetail = make(map[flowType]map[typeCode][]*provider)
-		fm.d.usesDetail = make(map[flowType]map[typeCode][]*provider)
+		fm.d.usedByDetail = [lastFlowType + 1]map[typeCode][]*provider{}
+		fm.d.usesDetail = [lastFlowType + 1]map[typeCode][]*provider{}
 		fm.d.uses = nil
-		fm.d.usesError = make(map[flowType]map[typeCode]error)
+		fm.d.usesError = [lastFlowType + 1]map[typeCode]error{}
 		fm.d.usedBy = nil
 	}
 	provide := make(interfaceMap)

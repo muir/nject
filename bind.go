@@ -21,9 +21,6 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		if err != nil {
 			return err
 		}
-		if invokeF.flows == nil {
-			return fmt.Errorf("internal error #4: no flows for invoke")
-		}
 		nonStaticTypes := make(map[typeCode]bool)
 		for _, tc := range invokeF.flows[outputParams] {
 			nonStaticTypes[tc] = true
@@ -58,9 +55,6 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			initF, err = characterizeInitInvoke(originalInitF, charContext{inputsAreStatic: true})
 			if err != nil {
 				return err
-			}
-			if initF.flows == nil {
-				return fmt.Errorf("internal error #5: no flows for initF")
 			}
 			funcs = append(funcs, initF)
 		}

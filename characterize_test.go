@@ -52,7 +52,7 @@ type doesJ struct {
 func (dj *doesJ) I() int { return dj.j * 3 }
 
 func params() flowMapType {
-	return make(flowMapType)
+	return [bypassParams + 1][]typeCode{}
 }
 
 func (flows flowMapType) returns(f ...typeCode) flowMapType {
@@ -185,21 +185,21 @@ var characterizeTests = []struct {
 		func() {},
 		injectorFunc,
 		lastF, staticF, panicF,
-		nil,
+		params(),
 	},
 	{
 		"cacheable notCacheable",
 		Cacheable(NotCacheable(func() {})),
 		injectorFunc,
 		lastF, staticT, panicF,
-		nil,
+		params(),
 	},
 	{
 		"cacheable notCacheable",
 		Cacheable(NotCacheable(func() {})),
 		injectorFunc,
 		lastF, staticF, panicF,
-		nil,
+		params(),
 	},
 	{
 		"minimal fallible injector",
@@ -244,14 +244,14 @@ var characterizeTests = []struct {
 		func(int) func() { return func() {} },
 		finalFunc,
 		lastT, staticF, panicT,
-		nil,
+		params(),
 	},
 	{
 		"invalid: anonymous func that isn't a wrap #2",
 		func(func(), int) {},
 		finalFunc,
 		lastT, staticF, panicT,
-		nil,
+		params(),
 	},
 	{
 		"middleware func",
@@ -296,14 +296,14 @@ var characterizeTests = []struct {
 		&nadaFunc,
 		invokeFunc,
 		lastF, staticF, panicF,
-		nil,
+		params(),
 	},
 	{
 		"init: nada",
 		&nadaFunc,
 		initFunc,
 		lastF, staticT, panicF,
-		nil,
+		params(),
 	},
 	{
 		"literal: int",
@@ -317,7 +317,7 @@ var characterizeTests = []struct {
 		"foobar",
 		literalValue,
 		lastF, staticF, panicT,
-		nil,
+		params(),
 	},
 }
 
@@ -389,13 +389,13 @@ func TestCharacterize(t *testing.T) {
 				}
 			}
 			for ft, ev := range test.flows {
-				t.Logf("flow %s: %s", ft, een(ev))
-				assert.EqualValues(t, een(ev), een(fm.flows[ft]), fmt.Sprintf("%s flow: %s", ft, test.name))
+				t.Logf("flow %s: %s", flowType(ft), een(ev))
+				assert.EqualValues(t, een(ev), een(fm.flows[ft]), fmt.Sprintf("%s flow: %s", flowType(ft), test.name))
 			}
 			for ft, gv := range fm.flows {
 				if test.flows[ft] == nil {
-					t.Logf("flow %s: %s", ft, een(gv))
-					assert.EqualValues(t, een(test.flows[ft]), een(gv), fmt.Sprintf("%s flow %s", ft, test.name))
+					t.Logf("flow %s: %s", flowType(ft), een(gv))
+					assert.EqualValues(t, een(test.flows[ft]), een(gv), fmt.Sprintf("%s flow %s", flowType(ft), test.name))
 				}
 			}
 		}
