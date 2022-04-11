@@ -60,11 +60,12 @@ func _() {
 	_ = x[inputParams-2]
 	_ = x[returnedParams-3]
 	_ = x[bypassParams-4]
+	_ = x[lastFlowType-5]
 }
 
-const _flowType_name = "returnsoutputsinputsreturnedbypass"
+const _flowType_name = "returnsoutputsinputsreturnedbypassUNUSED"
 
-var _flowType_index = [...]uint8{0, 7, 14, 20, 28, 34}
+var _flowType_index = [...]uint8{0, 7, 14, 20, 28, 34, 40}
 
 func (i flowType) String() string {
 	if i < 0 || i >= flowType(len(_flowType_index)-1) {

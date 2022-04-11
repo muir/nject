@@ -5,12 +5,12 @@ import (
 )
 
 type includeWorkingData struct {
-	usesDetail      [lastFlowType + 1]map[typeCode][]*provider
+	usesDetail      [lastFlowType]map[typeCode][]*provider
 	uses            []*provider
-	usesError       [lastFlowType + 1]map[typeCode]error
+	usesError       [lastFlowType]map[typeCode]error
 	usedBy          []*provider
-	usedByDetail    [lastFlowType + 1]map[typeCode][]*provider
-	mustConsumeFlow [lastFlowType + 1]bool
+	usedByDetail    [lastFlowType]map[typeCode][]*provider
+	mustConsumeFlow [lastFlowType]bool
 	excluded        error
 	clusterMembers  []*provider
 	wantedInCluster bool
@@ -78,7 +78,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 				fm.d.clusterMembers = []*provider{fm}
 			}
 		}
-		fm.d.mustConsumeFlow = [lastFlowType + 1]bool{}
+		fm.d.mustConsumeFlow = [lastFlowType]bool{}
 		if fm.mustConsume {
 			fm.d.mustConsumeFlow[outputParams] = true
 		}
@@ -317,10 +317,10 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 func providesReturns(funcs []*provider, initF *provider) error {
 	debugln("calculating provides/returns")
 	for _, fm := range funcs {
-		fm.d.usedByDetail = [lastFlowType + 1]map[typeCode][]*provider{}
-		fm.d.usesDetail = [lastFlowType + 1]map[typeCode][]*provider{}
+		fm.d.usedByDetail = [lastFlowType]map[typeCode][]*provider{}
+		fm.d.usesDetail = [lastFlowType]map[typeCode][]*provider{}
 		fm.d.uses = nil
-		fm.d.usesError = [lastFlowType + 1]map[typeCode]error{}
+		fm.d.usesError = [lastFlowType]map[typeCode]error{}
 		fm.d.usedBy = nil
 	}
 	provide := make(interfaceMap)

@@ -96,9 +96,9 @@ const (
 	returnedParams // returned
 	// returned from init
 	bypassParams // bypass
+	//
+	lastFlowType // UNUSED
 )
-
-const lastFlowType = bypassParams
 
 var terminalErrorType = reflect.TypeOf((*TerminalError)(nil)).Elem()
 

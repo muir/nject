@@ -525,6 +525,7 @@ Match:
 		}
 		a.fm.upRmap = make(map[typeCode]typeCode)
 		a.fm.downRmap = make(map[typeCode]typeCode)
+		a.fm.flows = [lastFlowType][]typeCode{}
 		match.mutate(a)
 		return a.fm, nil
 	}
