@@ -13,7 +13,7 @@ type charContext struct {
 	inputsAreStatic bool
 }
 
-type flowMapType [bypassParams + 1][]typeCode
+type flowMapType [lastFlowType][]typeCode
 
 type characterization struct {
 	name   string
