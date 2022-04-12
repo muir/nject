@@ -86,6 +86,7 @@ linters:
     - govet
     - exportloopref
     - errcheck
+    - exhaustive
   enable-all: false
   disable:
     - maligned
@@ -159,7 +160,7 @@ linters-settings:
     # indicates that switch statements are to be considered exhaustive if a
     # 'default' case is present, even if all enum members aren't listed in the
     # switch
-    default-signifies-exhaustive: false
+    default-signifies-exhaustive: true
 
   exhaustivestruct:
     # Struct Patterns is list of expressions to match struct packages and names
