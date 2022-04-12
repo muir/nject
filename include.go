@@ -159,7 +159,6 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	}
 
 	// Attempt to eliminate providers
-	postCheck := make([]*provider, 0, len(funcs))
 	for _, fm := range proposeEliminations(funcs) {
 		if fm.d.excluded != nil {
 			continue
@@ -171,8 +170,6 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		}
 		tryWithout(fm)
 	}
-
-	eliminateUnused(postCheck)
 
 	debugln("final set of functions")
 	for _, fm := range funcs {
