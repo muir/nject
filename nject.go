@@ -364,10 +364,15 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
-		if fm.group == finalGroup {
+		switch fm.group {
+		case finalGroup:
 			return typesIn(t), nil
+		default:
+			return effectiveOutputs(t)
 		}
-		return effectiveOutputs(t)
+	}
+	if fm.group == invokeGroup && t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func {
+		return nil, typesIn(t.Elem())
 	}
 	return nil, []reflect.Type{t}
 }
@@ -443,10 +448,15 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Func {
-		if fm.group == finalGroup {
+		switch fm.group {
+		case finalGroup:
 			return nil, typesOut(t)
+		default:
+			return effectiveReturns(t)
 		}
-		return effectiveReturns(t)
+	}
+	if fm.group == invokeGroup && t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func {
+		return typesOut(t.Elem()), nil
 	}
 	return nil, []reflect.Type{t}
 }
