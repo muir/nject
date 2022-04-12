@@ -58,12 +58,12 @@ func _() {
 	_ = x[returnParams-0]
 	_ = x[outputParams-1]
 	_ = x[inputParams-2]
-	_ = x[returnedParams-3]
+	_ = x[receviedParams-3]
 	_ = x[bypassParams-4]
 	_ = x[lastFlowType-5]
 }
 
-const _flowType_name = "returnsoutputsinputsreturnedbypassUNUSED"
+const _flowType_name = "returnsoutputsinputsreceviedbypassUNUSED"
 
 var _flowType_index = [...]uint8{0, 7, 14, 20, 28, 34, 40}
 
