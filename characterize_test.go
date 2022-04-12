@@ -52,7 +52,7 @@ type doesJ struct {
 func (dj *doesJ) I() int { return dj.j * 3 }
 
 func params() flowMapType {
-	return [bypassParams + 1][]typeCode{}
+	return [lastFlowType][]typeCode{}
 }
 
 func (flows flowMapType) returns(f ...typeCode) flowMapType {
