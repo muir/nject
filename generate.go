@@ -186,7 +186,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		retMap, err := generateInputMapper(fm, 0, returnedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
+		retMap, err := generateInputMapper(fm, 0, receviedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
 		if err != nil {
 			return err
 		}
@@ -199,8 +199,8 @@ func generateWrappers(
 			vCopy := v.Copy()
 			callCount := 0
 
-			rTypes := make([]reflect.Type, len(fm.flows[returnedParams]))
-			for i, tc := range fm.flows[returnedParams] {
+			rTypes := make([]reflect.Type, len(fm.flows[receviedParams]))
+			for i, tc := range fm.flows[receviedParams] {
 				rTypes[i] = tc.Type()
 			}
 

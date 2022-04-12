@@ -350,7 +350,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			return err
 		}
 
-		inMap, err := generateInputMapper(invokeF, 0, returnedParams, invokeF.upRmap, upVmap, "invoke results")
+		inMap, err := generateInputMapper(invokeF, 0, receviedParams, invokeF.upRmap, upVmap, "invoke results")
 		if err != nil {
 			return err
 		}

@@ -13,7 +13,7 @@ type charContext struct {
 	inputsAreStatic bool
 }
 
-type flowMapType [bypassParams + 1][]typeCode
+type flowMapType [lastFlowType][]typeCode
 
 type characterization struct {
 	name   string
@@ -207,7 +207,7 @@ var invokeRegistry = typeRegistry{
 			a.fm.group = invokeGroup
 			a.fm.class = invokeFunc
 			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
-			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.t.Elem()))
+			a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.Elem()))
 			a.fm.required = true
 			a.fm.isSynthetic = true
 		},
@@ -464,7 +464,7 @@ var handlerRegistry = typeRegistry{
 			a.fm.flows[inputParams] = toTypeCodes(in)
 			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.In(0)))
 			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
-			a.fm.flows[returnedParams] = toTypeCodes(typesOut(a.t.In(0)))
+			a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.In(0)))
 		},
 	},
 

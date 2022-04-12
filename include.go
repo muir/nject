@@ -351,11 +351,11 @@ func providesReturns(funcs []*provider, initF *provider) error {
 			debugf("\tskipping on upward path %s: %s", fm, fm.cannotInclude)
 			continue
 		}
-		err := requireParameters(fm, returns, returnedParams, returnParams, fm.upRmap, "expected return")
+		err := requireParameters(fm, returns, receviedParams, returnParams, fm.upRmap, "expected return")
 		if err != nil {
 			return err
 		}
-		provideParameters(fm, returns, returnParams, returnedParams, len(funcs)-i+2)
+		provideParameters(fm, returns, returnParams, receviedParams, len(funcs)-i+2)
 	}
 	return nil
 }
@@ -457,7 +457,7 @@ func proposeEliminations(funcs []*provider) []*provider {
 		useLast    bool
 	}{
 		{"down", []flowType{inputParams, bypassParams}, true},
-		{"up", []flowType{returnedParams}, false},
+		{"up", []flowType{receviedParams}, false},
 	} {
 		keep := make([]bool, len(funcs))
 		toKeep := make([]*provider, 0, len(funcs))

@@ -90,8 +90,8 @@ const (
 	outputParams // outputs
 	// recevied from above
 	inputParams // inputs
-	// received from below
-	returnedParams // returned
+	// received from below (callee returned)
+	receviedParams // recevied
 	// returned from init
 	bypassParams // bypass
 	//
