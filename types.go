@@ -92,7 +92,7 @@ const (
 	inputParams // inputs
 	// received from below (callee returned)
 	receviedParams // recevied
-	// returned from init
+	// gathered from the end of the static chain and returned from init
 	bypassParams // bypass
 	//
 	lastFlowType // UNUSED

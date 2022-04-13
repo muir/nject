@@ -14,6 +14,7 @@ type includeWorkingData struct {
 	excluded        error
 	clusterMembers  []*provider
 	wantedInCluster bool
+	hasFlow         [lastFlowType]func(typeCode) bool // populated and used in reorder
 }
 
 //
@@ -65,6 +66,7 @@ type includeWorkingData struct {
 //
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
+	funcs, err = reorder(funcs, initF)
 	debugln("initial set of functions")
 	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
