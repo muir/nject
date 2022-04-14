@@ -65,8 +65,15 @@ type includeWorkingData struct {
 //	fm.wanted
 //
 
-func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
+func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
+	var err error
 	funcs, err = reorder(funcs, initF)
+	if err != nil {
+		return nil, err
+	}
+	for i, fm := range funcs {
+		fm.chainPosition = i
+	}
 	debugln("initial set of functions")
 	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
@@ -100,15 +107,15 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 		}
 	}
 	debugln("calculate flows, initial")
-	err := providesReturns(funcs, initF)
+	err = providesReturns(funcs, initF)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	debugln("check chain validity, no provider excluded")
 	err = validateChainMarkIncludeExclude(funcs, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, fm := range funcs {
@@ -189,15 +196,15 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) error {
 	debugln("final calculate flows")
 	err = providesReturns(funcs, initF)
 	if err != nil {
-		return fmt.Errorf("internal error: uh oh")
+		return nil, fmt.Errorf("internal error: uh oh")
 	}
 	debugf("final check chain validity")
 	err = validateChainMarkIncludeExclude(funcs, true)
 	if err != nil {
-		return fmt.Errorf("internal error: uh oh #2")
+		return nil, fmt.Errorf("internal error: uh oh #2")
 	}
 
-	return nil
+	return funcs, nil
 }
 
 func validateChainMarkIncludeExclude(funcs []*provider, canRemoveDesired bool) error {

@@ -34,10 +34,9 @@ func noNoType(types []typeCode) []typeCode {
 	if found == -1 {
 		return types
 	}
-	n := make([]typeCode, i, len(types)-1)
-	copy(n, types[0:n])
-	i++
-	for ; i < len(types); i++ {
+	n := make([]typeCode, found, len(types)-1)
+	copy(n, types[0:found])
+	for i := found + 1; i < len(types); i++ {
 		if types[i] != noTypeCode {
 			n = append(n, types[i])
 		}

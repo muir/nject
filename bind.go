@@ -64,8 +64,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		funcs = append(funcs, invokeF)
 		funcs = append(funcs, afterInvoke...)
 
-		for i, fm := range funcs {
-			fm.chainPosition = i
+		for _, fm := range funcs {
 			if fm.required {
 				fm.include = true
 			}
@@ -93,7 +92,8 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 	// Compute dependencies: set fm.downRmap, fm.upRmap, fm.cannotInclude,
 	// fm.whyIncluded, fm.include
-	err := computeDependenciesAndInclusion(funcs, initF)
+	var err error
+	funcs, err = computeDependenciesAndInclusion(funcs, initF)
 	if err != nil {
 		return err
 	}

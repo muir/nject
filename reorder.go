@@ -2,9 +2,7 @@ package nject
 
 import (
 	"container/heap"
-	"errors"
 	"fmt" //XXX
-	"reflect"
 )
 
 // Reorder annotates a provider to say that its position in the injection
@@ -56,10 +54,6 @@ func Reorder(fn interface{}) Provider {
 //	as a return value in the up-chain.
 //
 
-// XXX pre-compute transitive require
-// XXX pre-compute MustConsume checker
-
-// XXX reorder and check
 // generateCheckers must be called before reorder()
 func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 	fmt.Println("XXX begin reorder ----------------------------------------------------------")
@@ -74,35 +68,35 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		return funcs, nil
 	}
 
-	downAvailable := make(interfaceMap)
-	upAvailable := make(interfaceMap)
+	availableDown := make(interfaceMap)
+	availableUp := make(interfaceMap)
 
 	provideByNotRequire := make(map[typeCode][]int)
 	if initF != nil {
-		for _, t := range noNoType(fm.flows[outputParams]) {
-			downAvailable.Add(t, 0, initF)
+		for _, t := range noNoType(initF.flows[outputParams]) {
+			availableDown.Add(t, 0, initF)
 			provideByNotRequire[t] = append(provideByNotRequire[t], -1)
 		}
 	}
 
 	lastStatic := -1
 	for i, fm := range funcs {
-		for j := 0; j < lastFlowType; j++ {
-			fm.hasFlow[j] = has(noNoType(fm.flow[j]))
+		for j := flowType(0); j < lastFlowType; j++ {
+			fm.d.hasFlow[j] = has(fm.flows[j])
 		}
 		for _, t := range noNoType(fm.flows[outputParams]) {
-			downAvailable.Add(t, i, fm)
+			availableDown.Add(t, i, fm)
 		}
 		for _, t := range noNoType(fm.flows[returnParams]) {
-			upAvailable.Add(t, i, fm)
+			availableUp.Add(t, i, fm)
 		}
-		if fm.class == staticClass && !fm.reorder {
+		if fm.group == staticGroup && !fm.reorder {
 			lastStatic = i
 		}
 	}
 
-	receivedTypes := make(map[typeCode]int)
-	providedTypes := make(map[typeCode]int)
+	upTypes := make(map[typeCode]int)
+	downTypes := make(map[typeCode]int)
 
 	counter := len(funcs) + 1
 	receviedNotReturned := make(map[typeCode][]int)
@@ -113,7 +107,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			}
 		}
 		for _, t := range noNoType(fm.flows[receviedParams]) {
-			if !fm.d.hasFlow[returnedParams](t) {
+			if !fm.d.hasFlow[returnParams](t) {
 				receviedNotReturned[t] = append(receviedNotReturned[t], i)
 			}
 		}
@@ -137,10 +131,10 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		}
 		*pp = append(*pp, [2]int{i, j})
 	}
-	excluded := make([]*provider, 0, len(funcs))
 	cannotReorder := make([]int, 0, len(funcs))
+	lastNoReorder := -1
 	for i, fm := range funcs {
-		if fm.reorder && fm.class != staticClass {
+		if fm.reorder && fm.group == runGroup {
 			// All reorder functions must be after the end of the
 			// static set
 			aAfterB(true, i, lastStatic)
@@ -150,18 +144,21 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			// providers that cannot be reordered will be forced out
 			// one after another
 			cannotReorder = append(cannotReorder, i)
+			aAfterB(true, i, lastNoReorder)
+			lastNoReorder = i
 		}
-		for _, tRaw := range fm.d.requires {
+		for _, tRaw := range noNoType(fm.flows[inputParams]) {
 			t, _, err := availableDown.bestMatch(tRaw, "downflow")
 			if err != nil {
-				return nil, err
+				// we'll simply ignore the type since it cannot be provided
+				continue
 			}
 			// If you take a T as input, you MUST be after some provider that outputs a T
-			if num, ok := providedTypes[t]; ok {
+			if num, ok := downTypes[t]; ok {
 				aAfterB(true, i, num)
 			} else {
 				fmt.Println("XXX downtype", counter, t)
-				providedTypes[t] = counter
+				downTypes[t] = counter
 				aAfterB(true, i, counter)
 				counter++
 			}
@@ -172,18 +169,19 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			}
 		}
 
-		for _, tRaw := range fm.d.returns {
-			t, _, err := availableUp.bestMatch(tRaw, "downflow")
+		for _, tRaw := range noNoType(fm.flows[returnParams]) {
+			t, _, err := availableUp.bestMatch(tRaw, "upflow")
 			if err != nil {
-				return nil, err
+				// we'll simply ignore the type since it cannot be provided
+				continue
 			}
 			// if you return a T, you're not marked consumptionOptional, then you
 			// MUST be be after a provider that recevies a T as a returned value
-			if num, ok := receivedTypes[t]; ok {
+			if num, ok := upTypes[t]; ok {
 				aAfterB(!fm.consumptionOptional, i, num)
 			} else {
 				fmt.Println("XXX uptype", counter, t)
-				receivedTypes[t] = counter
+				upTypes[t] = counter
 				aAfterB(!fm.consumptionOptional, i, counter)
 				counter++
 			}
@@ -196,16 +194,15 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 	}
 
 	nodes := make([]node, counter)
-	for i, fm := range funcs {
-		if fm.include {
-			nodes[i] = node{
-				before:     make(map[int]struct{}),
-				after:      make(map[int]struct{}),
-				weakBefore: make(map[int]struct{}),
-				weakAfter:  make(map[int]struct{}),
-			}
+	for i := range funcs {
+		nodes[i] = node{
+			before:     make(map[int]struct{}),
+			after:      make(map[int]struct{}),
+			weakBefore: make(map[int]struct{}),
+			weakAfter:  make(map[int]struct{}),
 		}
 	}
+	fmt.Println("XXX counter:", len(funcs), counter)
 	for i := len(funcs); i < counter; i++ {
 		nodes[i] = node{
 			before: make(map[int]struct{}),
@@ -213,11 +210,12 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		}
 	}
 	for _, pair := range strongPairs {
+		fmt.Println("XXX strong", pair)
 		nodes[pair[1]].before[pair[0]] = struct{}{}
 		nodes[pair[0]].after[pair[1]] = struct{}{}
 	}
 	for _, pair := range weakPairs {
-		fmt.Println("XXX", pair, len(funcs))
+		fmt.Println("XXX weak", pair)
 		nodes[pair[1]].weakBefore[pair[0]] = struct{}{}
 		nodes[pair[0]].weakAfter[pair[1]] = struct{}{}
 	}
@@ -229,10 +227,9 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 
 	if initF != nil {
 		for _, t := range noNoType(initF.flows[outputParams]) {
-			if num, ok := providedTypes[t]; ok {
+			if num, ok := downTypes[t]; ok {
 				fmt.Println("XXX release down for InitF", t)
 				heap.Push(unblocked, num)
-				x.release(num, i)
 			}
 		}
 	}
@@ -243,17 +240,18 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		cannotReorder:  cannotReorder,
 		unblocked:      unblocked,
 		weakBlocked:    weakBlocked,
-		done:           make([]bool, len(funcs)),
+		done:           make([]bool, counter), // XXX would len(funcs) work instead?
 		reorderedFuncs: make([]*provider, 0, len(funcs)),
-		receivedTypes:  receivedTypes,
-		providedTypes:  providedTypes,
+		upTypes:        upTypes,
+		downTypes:      downTypes,
 	}
-	err := x.run()
-	fmt.Println("XXX final order ...", err)
+	x.run()
+	fmt.Println("XXX final order ...")
 	for i, fm := range x.reorderedFuncs {
-		fmt.Println("XXX", i, fm, fm.cannotInclude)
+		fmt.Println("XXX", i, fm)
 	}
-	return x.reorderedFuncs, err
+	fmt.Println("XXX ------------------")
+	return x.reorderedFuncs, nil
 }
 
 type node struct {
@@ -262,8 +260,6 @@ type node struct {
 	weakBefore map[int]struct{}
 	weakAfter  map[int]struct{}
 }
-
-// XXX all non-static must be after all static
 
 // topo is the working data for a toplogical sort
 type topo struct {
@@ -275,8 +271,8 @@ type topo struct {
 	done           []bool   // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
 	reorderedFuncs []*provider
 	check          func([]*provider) error
-	receivedTypes  map[reflect.Type]int
-	providedTypes  map[reflect.Type]int
+	upTypes        map[typeCode]int
+	downTypes      map[typeCode]int
 }
 
 func (x *topo) overwrite(v *topo) {
@@ -286,54 +282,6 @@ func (x *topo) overwrite(v *topo) {
 	x.weakBlocked = v.weakBlocked
 	x.done = v.done
 	x.reorderedFuncs = v.reorderedFuncs
-}
-
-func (x *topo) copy() *topo {
-	nodes := make([]node, len(x.nodes))
-	copy(nodes, x.nodes)
-	for i, n := range nodes {
-		nodes[i] = node{
-			before:     copySet(n.before),
-			after:      copySet(n.after),
-			weakBefore: copySet(n.before),
-			weakAfter:  copySet(n.after),
-		}
-	}
-	cannotReorder := make([]int, len(x.cannotReorder))
-	copy(cannotReorder, x.cannotReorder)
-
-	unblocked := make(IntHeap, len(*x.unblocked))
-	copy(unblocked, *x.unblocked)
-
-	weakBlocked := make(IntHeap, len(*x.weakBlocked))
-	copy(weakBlocked, *x.weakBlocked)
-
-	reorderedFuncs := make([]*provider, len(x.reorderedFuncs), len(x.funcs))
-	copy(reorderedFuncs, x.reorderedFuncs)
-
-	done := make([]bool, len(x.funcs))
-	copy(done, x.done)
-
-	return &topo{
-		funcs:          x.funcs,
-		nodes:          nodes,
-		cannotReorder:  cannotReorder,
-		unblocked:      &unblocked,
-		weakBlocked:    &weakBlocked,
-		done:           done,
-		reorderedFuncs: reorderedFuncs,
-		check:          x.check,
-		receivedTypes:  x.receivedTypes,
-		providedTypes:  x.providedTypes,
-	}
-}
-
-func copySet(s map[int]struct{}) map[int]struct{} {
-	n := make(map[int]struct{})
-	for k := range s {
-		n[k] = struct{}{}
-	}
-	return n
 }
 
 func (x *topo) release(n, i int) {
@@ -357,7 +305,7 @@ func (x *topo) release(n, i int) {
 	}
 }
 
-func (x *topo) run() error {
+func (x *topo) run() {
 	for {
 		if x.unblocked.Len() > 0 {
 			i := heap.Pop(x.unblocked).(int)
@@ -369,16 +317,7 @@ func (x *topo) run() error {
 			i := x.cannotReorder[0]
 			x.cannotReorder = x.cannotReorder[1:]
 			released := len(x.nodes[i].after) == 0
-			if !released {
-				fm := x.funcs[i]
-				fm.cannotInclude = fmt.Errorf("XXX unmet dependency")
-				if fm.required {
-					return fmt.Errorf("required, but cannot")
-				}
-				x.processOne(i, false)
-			} else {
-				x.processOne(i, true)
-			}
+			x.processOne(i, released)
 		} else {
 			fmt.Println("XXX all done")
 			break
@@ -391,7 +330,6 @@ func (x *topo) run() error {
 			x.reorderedFuncs = append(x.reorderedFuncs, fm)
 		}
 	}
-	return x.check(x.reorderedFuncs)
 }
 
 func (x *topo) releaseNode(i int) {
@@ -415,48 +353,39 @@ func (x *topo) processOne(i int, release bool) {
 		return
 	}
 	fm := x.funcs[i]
+	x.reorderedFuncs = append(x.reorderedFuncs, fm)
 	if !release {
 		fmt.Println("XXX exclude", fm)
 		return
 	}
 
-	/* XXX
-	if fm.mustConsume && !fm.required {
-		alternate := x.copy()
-		errorsCopy := make([]error, len(x.funcs))
-		for i, fm := range x.funcs {
-			errorsCopy[i] = fm.cannotInclude
-		}
-		x.releaseProvider(i, fm)
-		err := x.run()
-		if errors.Is(err, MustConsumeError{}) {
-			for i, fm := range x.funcs {
-				fm.cannotInclude = errorsCopy[i]
-			}
-			err := alternate.run()
-			if err == nil {
-				x.overwrite(alternate)
-			}
-		}
-	} else {
-	*/
+	x.releaseNode(i)
 	x.releaseProvider(i, fm)
-	// XXX }
 }
 
 func (x *topo) releaseProvider(i int, fm *provider) {
 	fmt.Println("XXX include", fm)
-	x.reorderedFuncs = append(x.reorderedFuncs, fm)
 	for _, t := range noNoType(fm.flows[outputParams]) {
-		if num, ok := x.providedTypes[t]; ok {
+		if num, ok := x.downTypes[t]; ok {
 			fmt.Println("XXX release down", t)
 			x.release(num, i)
 		}
 	}
 	for _, t := range noNoType(fm.flows[receviedParams]) {
-		if num, ok := x.receivedTypes[t]; ok {
+		if num, ok := x.upTypes[t]; ok {
 			fmt.Println("XXX release up", t)
 			x.release(num, i)
 		}
+	}
+}
+
+func has(types []typeCode) func(typeCode) bool {
+	m := make(map[typeCode]struct{})
+	for _, t := range noNoType(types) {
+		m[t] = struct{}{}
+	}
+	return func(t typeCode) bool {
+		_, ok := m[t]
+		return ok
 	}
 }
