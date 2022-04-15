@@ -130,6 +130,7 @@ func TestReorderUnused(t *testing.T) {
 }
 
 func TestReorderOverride(t *testing.T) {
+	t.Parallel()
 	var dd *Debugging
 	seq1 := Sequence("example",
 		Shun(func() string {
