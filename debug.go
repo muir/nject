@@ -188,16 +188,24 @@ func formatFlow(flow []typeCode) string {
 	return strings.Join(types, ", ")
 }
 
+func elem(i interface{}) reflect.Type {
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		return t.Elem()
+	}
+	return t
+}
+
 func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) string {
 	subs := make(map[typeCode]string)
 	t := ""
 	f := "func TestRegression(t *testing.T) {\n"
 	f += "\twrapTest(t, func(t *testing.T) {\n"
 	f += "\t\tcalled := make(map[string]int)\n"
-	f += "\t\tvar invoker " + funcSig(subs, &t, reflect.TypeOf(invokeF.fn).Elem()) + "\n"
+	f += "\t\tvar invoker " + funcSig(subs, &t, elem(invokeF.fn)) + "\n"
 	initName := "nil"
 	if initF != nil {
-		f += "\t\tvar initer " + funcSig(subs, &t, reflect.TypeOf(initF.fn).Elem()) + "\n"
+		f += "\t\tvar initer " + funcSig(subs, &t, elem(initF.fn)) + "\n"
 		initName = "&initer"
 	}
 	f += "\t\trequire.NoError(t,\n"
@@ -277,9 +285,9 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 	}
 	f += "\t\t\t).Bind(&invoker, " + initName + "))\n"
 	if initF != nil {
-		f += "\t\tiniter(" + strings.Join(substituteDefaults(subs, typesIn(reflect.TypeOf(initF.fn).Elem())), ", ") + ")\n"
+		f += "\t\tiniter(" + strings.Join(substituteDefaults(subs, typesIn(elem(initF.fn))), ", ") + ")\n"
 	}
-	f += "\t\tinvoker(" + strings.Join(substituteDefaults(subs, typesIn(reflect.TypeOf(invokeF.fn).Elem())), ", ") + ")\n"
+	f += "\t\tinvoker(" + strings.Join(substituteDefaults(subs, typesIn(elem(invokeF.fn))), ", ") + ")\n"
 	f += "\t})\n"
 	f += "}\n"
 	return t + "\n" + f

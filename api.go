@@ -334,7 +334,14 @@ func NonFinal(fn interface{}) Provider {
 // head of the provider chain.  The static portion of the provider
 // chain will run once.  The values returned from the initialization
 // function come from the values available after the static portion
-// of the provider chain runs.
+// of the provider chain runs.  For example, if the static portion
+// of an injection chain consists of:
+//
+//	func(int) string { ... }
+//	func(string) int64 { ... }
+//
+// Then the return value from the initialization could include int,
+// int64, and string but no other types.
 //
 // Bind pre-computes as much as possible so that the invokeFunc is fast.
 //

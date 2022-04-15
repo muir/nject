@@ -22,6 +22,28 @@ const noTypeExampleValue noType = false
 
 var noTypeCode = getTypeCode(noTypeExampleValue)
 
+// noNoType filters out noTypeCode from an array of typeCode
+func noNoType(types []typeCode) []typeCode {
+	found := -1
+	for i, t := range types {
+		if t == noTypeCode {
+			found = i
+			break
+		}
+	}
+	if found == -1 {
+		return types
+	}
+	n := make([]typeCode, found, len(types)-1)
+	copy(n, types[0:found])
+	for i := found + 1; i < len(types); i++ {
+		if types[i] != noTypeCode {
+			n = append(n, types[i])
+		}
+	}
+	return n
+}
+
 // getTypeCode maps reflect.Type to integers.
 func getTypeCode(a interface{}) typeCode {
 	if a == nil {

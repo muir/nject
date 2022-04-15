@@ -145,6 +145,7 @@ var (
 	markedMemoized       = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
 	markedCacheable      = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })
 	markedSingleton      = predicate("is not marked Singleton", func(a testArgs) bool { return a.fm.singleton })
+	notMarkedReorder     = predicate("is marked Reorder", func(a testArgs) bool { return !a.fm.reorder })
 	notMarkedSingleton   = predicate("is marked Singleton", func(a testArgs) bool { return !a.fm.singleton })
 	notMarkedNoCache     = predicate("is marked NotCacheable", func(a testArgs) bool { return !a.fm.notCacheable })
 	mappableInputs       = predicate("has inputs that cannot be map keys", func(a testArgs) bool { return mappable(typesIn(a.t)...) })
@@ -244,6 +245,7 @@ var handlerRegistry = typeRegistry{
 			mappableInputs,
 			notMarkedNoCache,
 			mustNotMemoize,
+			notMarkedReorder,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -265,6 +267,7 @@ var handlerRegistry = typeRegistry{
 			mappableInputs,
 			notMarkedNoCache,
 			mustNotMemoize,
+			notMarkedReorder,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -288,6 +291,7 @@ var handlerRegistry = typeRegistry{
 			notMarkedNoCache,
 			possibleMapKey,
 			notMarkedSingleton,
+			notMarkedReorder,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -313,6 +317,7 @@ var handlerRegistry = typeRegistry{
 			notMarkedNoCache,
 			possibleMapKey,
 			notMarkedSingleton,
+			notMarkedReorder,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -336,6 +341,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			notMarkedNoCache,
 			notMarkedSingleton,
+			notMarkedReorder,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -504,8 +510,10 @@ func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*
 		var isNil bool
 		// nolint:exhaustive
 		switch v.Type().Kind() {
-		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		case reflect.Chan, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			isNil = v.IsNil()
+		default:
+			isNil = false
 		}
 		a = testArgs{
 			fm:    fm.copy(),
@@ -531,7 +539,7 @@ Match:
 	}
 
 	// panic(fmt.Sprintf("%s: %s - %s", fm.describe(), t, strings.Join(rejectReasons, "; ")))
-	return nil, fm.errorf("Could not type %s to any prototype: %s", a.t, strings.Join(rejectReasons, "; "))
+	return nil, fm.errorf("Could not match type %s to any prototype: %s", a.t, strings.Join(rejectReasons, "; "))
 }
 
 func characterizeInitInvoke(fm *provider, context charContext) (*provider, error) {

@@ -25,6 +25,7 @@ type provider struct {
 	callsInner          bool
 	memoize             bool
 	loose               bool
+	reorder             bool
 	overridesError      bool
 	desired             bool
 	shun                bool
@@ -51,9 +52,9 @@ type provider struct {
 	bypassRmap    map[typeCode]typeCode //  overrides types of returning parameters
 	include       bool
 	d             includeWorkingData
+	chainPosition int
 
 	// added during binding
-	chainPosition              int
 	mustZeroIfRemainderSkipped []typeCode
 	mustZeroIfInnerNotCalled   []typeCode
 	vmapCount                  int
@@ -84,6 +85,7 @@ func (fm *provider) copy() *provider {
 		callsInner:          fm.callsInner,
 		memoize:             fm.memoize,
 		loose:               fm.loose,
+		reorder:             fm.reorder,
 		desired:             fm.desired,
 		shun:                fm.shun,
 		notCacheable:        fm.notCacheable,
