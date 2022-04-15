@@ -54,7 +54,7 @@ func Reorder(fn interface{}) Provider {
 //
 
 // generateCheckers must be called before reorder()
-func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
+func reorder(funcs []*provider, initF *provider) []*provider {
 	debugln("begin reorder ----------------------------------------------------------")
 	var someReorder bool
 	for i, fm := range funcs {
@@ -64,7 +64,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		}
 	}
 	if !someReorder {
-		return funcs, nil
+		return funcs
 	}
 
 	availableDown := make(interfaceMap)
@@ -250,7 +250,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		debugln("\t\t", i, fm)
 	}
 	debugln("------------------")
-	return x.reorderedFuncs, nil
+	return x.reorderedFuncs
 }
 
 type node struct {
@@ -269,7 +269,6 @@ type topo struct {
 	weakBlocked    *IntHeap // only weak blocks
 	done           []bool   // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
 	reorderedFuncs []*provider
-	check          func([]*provider) error
 	upTypes        map[typeCode]int
 	downTypes      map[typeCode]int
 }
@@ -298,9 +297,11 @@ func (x *topo) release(n, i int) {
 func (x *topo) run() {
 	for {
 		if x.unblocked.Len() > 0 {
+			//nolint:errcheck // cast is safe
 			i := heap.Pop(x.unblocked).(int)
 			x.processOne(i, true)
 		} else if x.weakBlocked.Len() > 0 {
+			//nolint:errcheck // cast is safe
 			i := heap.Pop(x.weakBlocked).(int)
 			x.processOne(i, true)
 		} else if len(x.cannotReorder) > 0 {

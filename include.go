@@ -67,10 +67,7 @@ type includeWorkingData struct {
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
 	var err error
-	funcs, err = reorder(funcs, initF)
-	if err != nil {
-		return nil, err
-	}
+	funcs = reorder(funcs, initF)
 	for i, fm := range funcs {
 		fm.chainPosition = i
 	}
