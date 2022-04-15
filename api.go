@@ -207,9 +207,9 @@ func Desired(fn interface{}) Provider {
 // TODO: add ExampleShun
 
 // Shun creates a new provider and annotates it as not
-// desired: even if it appears to be needed because another
-// provider uses its output, the chain will be built without
-// it if possible.
+// desired.  If the chain can be assembled without including
+// the provider, then it will be.  See the example for
+// Reorder to see Shun in action.
 func Shun(fn interface{}) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.shun = true

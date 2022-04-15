@@ -157,6 +157,4 @@ This repo represents continued development of Blue Owl's
 has been in production use for years and has been unchanged for years.
 The core of nject is mostly unchanged since taking over development from Blue Owl.
 
-With the version 0.2.0 release, nject is anticipated to be stable.
-
 
