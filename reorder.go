@@ -2,7 +2,6 @@ package nject
 
 import (
 	"container/heap"
-	"fmt" //XXX
 )
 
 // Reorder annotates a provider to say that its position in the injection
@@ -56,10 +55,10 @@ func Reorder(fn interface{}) Provider {
 
 // generateCheckers must be called before reorder()
 func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
-	fmt.Println("XXX begin reorder ----------------------------------------------------------")
+	debugln("begin reorder ----------------------------------------------------------")
 	var someReorder bool
 	for i, fm := range funcs {
-		fmt.Println("XXX START", i, fm, fm.cannotInclude, fm.include)
+		debugln("\tSTART", i, fm, fm.cannotInclude, fm.include)
 		if fm.reorder {
 			someReorder = true
 		}
@@ -119,7 +118,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		if i == -1 || j == -1 {
 			return
 		}
-		fmt.Println("XXX", i, "comes after", j, map[bool]string{
+		debugln("\t", i, "comes after", j, map[bool]string{
 			false: "weak",
 			true:  "strong",
 		}[strong])
@@ -139,7 +138,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			// static set
 			aAfterB(true, i, lastStatic)
 		}
-		fmt.Println("XXX", i, "is", fm)
+		debugln("\t", i, "is", fm)
 		if !fm.reorder {
 			// providers that cannot be reordered will be forced out
 			// one after another
@@ -157,7 +156,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			if num, ok := downTypes[t]; ok {
 				aAfterB(true, i, num)
 			} else {
-				fmt.Println("XXX downtype", counter, t)
+				debugln("\tdowntype", counter, t)
 				downTypes[t] = counter
 				aAfterB(true, i, counter)
 				counter++
@@ -180,7 +179,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			if num, ok := upTypes[t]; ok {
 				aAfterB(!fm.consumptionOptional, i, num)
 			} else {
-				fmt.Println("XXX uptype", counter, t)
+				debugln("\tuptype", counter, t)
 				upTypes[t] = counter
 				aAfterB(!fm.consumptionOptional, i, counter)
 				counter++
@@ -202,7 +201,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			weakAfter:  make(map[int]struct{}),
 		}
 	}
-	fmt.Println("XXX counter:", len(funcs), counter)
+	debugln("\tcounter:", len(funcs), counter)
 	for i := len(funcs); i < counter; i++ {
 		nodes[i] = node{
 			before: make(map[int]struct{}),
@@ -210,12 +209,12 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		}
 	}
 	for _, pair := range strongPairs {
-		fmt.Println("XXX strong", pair)
+		debugln("\tstrong", pair)
 		nodes[pair[1]].before[pair[0]] = struct{}{}
 		nodes[pair[0]].after[pair[1]] = struct{}{}
 	}
 	for _, pair := range weakPairs {
-		fmt.Println("XXX weak", pair)
+		debugln("\tweak", pair)
 		nodes[pair[1]].weakBefore[pair[0]] = struct{}{}
 		nodes[pair[0]].weakAfter[pair[1]] = struct{}{}
 	}
@@ -228,7 +227,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 	if initF != nil {
 		for _, t := range noNoType(initF.flows[outputParams]) {
 			if num, ok := downTypes[t]; ok {
-				fmt.Println("XXX release down for InitF", t)
+				debugln("\trelease down for InitF", t)
 				heap.Push(unblocked, num)
 			}
 		}
@@ -240,17 +239,17 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		cannotReorder:  cannotReorder,
 		unblocked:      unblocked,
 		weakBlocked:    weakBlocked,
-		done:           make([]bool, counter), // XXX would len(funcs) work instead?
+		done:           make([]bool, counter),
 		reorderedFuncs: make([]*provider, 0, len(funcs)),
 		upTypes:        upTypes,
 		downTypes:      downTypes,
 	}
 	x.run()
-	fmt.Println("XXX final order ...")
+	debugln("\tfinal order ...")
 	for i, fm := range x.reorderedFuncs {
-		fmt.Println("XXX", i, fm)
+		debugln("\t\t", i, fm)
 	}
-	fmt.Println("XXX ------------------")
+	debugln("------------------")
 	return x.reorderedFuncs, nil
 }
 
@@ -275,32 +274,23 @@ type topo struct {
 	downTypes      map[typeCode]int
 }
 
-func (x *topo) overwrite(v *topo) {
-	x.nodes = v.nodes
-	x.cannotReorder = v.cannotReorder
-	x.unblocked = v.unblocked
-	x.weakBlocked = v.weakBlocked
-	x.done = v.done
-	x.reorderedFuncs = v.reorderedFuncs
-}
-
 func (x *topo) release(n, i int) {
 	if n >= len(x.funcs) {
 		// types only have strong relationships
-		fmt.Println("XXX released", n)
+		debugln("\treleased", n)
 		heap.Push(x.unblocked, n)
 	} else {
 		delete(x.nodes[n].after, i)
 		delete(x.nodes[n].weakAfter, i)
 		if len(x.nodes[n].after) == 0 {
-			fmt.Println("XXX released", n)
+			debugln("\treleased", n)
 			if len(x.nodes[n].weakAfter) == 0 {
 				heap.Push(x.unblocked, n)
 			} else {
 				heap.Push(x.weakBlocked, n)
 			}
 		} else {
-			fmt.Println("XXX cannot release", n, x.nodes[n].after)
+			debugln("\tcannot release", n, x.nodes[n].after)
 		}
 	}
 }
@@ -319,7 +309,7 @@ func (x *topo) run() {
 			released := len(x.nodes[i].after) == 0
 			x.processOne(i, released)
 		} else {
-			fmt.Println("XXX all done")
+			debugln("\tall done")
 			break
 		}
 	}
@@ -339,7 +329,7 @@ func (x *topo) releaseNode(i int) {
 }
 
 func (x *topo) processOne(i int, release bool) {
-	fmt.Println("XXX popped", i, release)
+	debugln("\tpopped", i, release)
 	if release {
 		if x.done[i] {
 			return
@@ -355,7 +345,7 @@ func (x *topo) processOne(i int, release bool) {
 	fm := x.funcs[i]
 	x.reorderedFuncs = append(x.reorderedFuncs, fm)
 	if !release {
-		fmt.Println("XXX exclude", fm)
+		debugln("\texclude", fm)
 		return
 	}
 
@@ -364,16 +354,16 @@ func (x *topo) processOne(i int, release bool) {
 }
 
 func (x *topo) releaseProvider(i int, fm *provider) {
-	fmt.Println("XXX include", fm)
+	debugln("\tinclude", fm)
 	for _, t := range noNoType(fm.flows[outputParams]) {
 		if num, ok := x.downTypes[t]; ok {
-			fmt.Println("XXX release down", t)
+			debugln("\trelease down", t)
 			x.release(num, i)
 		}
 	}
 	for _, t := range noNoType(fm.flows[receviedParams]) {
 		if num, ok := x.upTypes[t]; ok {
-			fmt.Println("XXX release up", t)
+			debugln("\trelease up", t)
 			x.release(num, i)
 		}
 	}

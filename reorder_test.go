@@ -21,6 +21,7 @@ type R09 string
 type R10 string
 
 func TestReorderSimpleMove(t *testing.T) {
+	t.Parallel()
 	assert.NoError(t, Run(t.Name(),
 		NotCacheable(func() R00 {
 			t.Log("1. -> R00 ")
@@ -43,9 +44,10 @@ func TestReorderSimpleMove(t *testing.T) {
 }
 
 func TestReorderWrappers(t *testing.T) {
+	t.Parallel()
 	var ini func(R00) R01
 	var invoke func(R02) R03
-	require.NoError(t, Sequence("test",
+	require.NoError(t, Sequence(t.Name(),
 		Memoize(func(r00 R00) (R01, R04) { return R01(r00) + "A", R04(r00) + "A" }),
 		Reorder(func(inner func(r04 R04) R06, r04 R04) R05 {
 			return R05(inner(r04+"C1")) + "C2"
@@ -56,19 +58,73 @@ func TestReorderWrappers(t *testing.T) {
 		func(r02 R02, r04 R04) (R05, R06, R03) {
 			assert.Equal(t, R02("02"), r02)
 			assert.Equal(t, R04("00AB1C1"), r04)
-			return "05", "06", "03"
+			return "05", "06", R03(r04) + "D"
 		},
 	).Bind(&invoke, &ini))
 	assert.Equal(t, R01("00A"), ini("00"))
-	assert.Equal(t, R03("03"), invoke("02"))
+	assert.Equal(t, R03("00AB1C1D"), invoke("02"))
 }
 
-/*
-	func(r00 R00) R04 { return R04(r00) + "r04" },
-	func(r04 R04) (R01, R05) { return R01(r04), R05(r04) },
-	Reorder(func(inner func(R06, R07) R08, r02 R02, r09 R09) R03 {
-		return R03(inner(R06(r02), R07(r04)))
-	}),
-	Reorder(func(r04 R04) R09 { return R09(r04) },
-	Reorder(func(inner func(R10) R08,
-*/
+func TestReorderChaos(t *testing.T) {
+	t.Parallel()
+	var invoke func(R00) R10
+	require.NoError(t, Sequence("outer", Reorder(Sequence(t.Name(),
+		func(r03 R03, r04 R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
+		func(r00 R00, r01 R01) R00 { return "<" + r00 + R00(r01) + ">B" },
+		func() R01 { return "<C>" },
+		func(r05 R05) (R06, R04) { return "<" + R06(r05) + ">D1", "<" + R04(r05) + ">D2" },
+		func(inner func(R07) R08, r06 R06) (R09, R10) {
+			x := inner("<" + R07(r06) + ">E1")
+			return "<" + R09(x) + ">E2", "<" + R10(x) + ">E3"
+		},
+		func(inner func(R06) R09, r05 R05) R10 {
+			return "<" + R10(inner("<"+R06(r05)+">F1")) + ">F2"
+		},
+		func(r02 R02) R03 { return "<" + R03(r02) + ">G" },
+		func(r04 R04, r06 R06) R07 { return "<" + R07(r04) + "><" + R07(r06) + ">H" },
+		func(r03 R03) R06 { return "<" + R06(r03) + ">I" },
+		func(r00 R00) R05 { return "<" + R05(r00) + ">J" },
+		func(r01 R01, r07 R07) R08 { return "<" + R08(r01) + "><" + R08(r07) + ">K" },
+	))).Bind(&invoke, nil))
+	r := invoke("invoke")
+	t.Log("got:", r)
+	assert.NotEmpty(t, r)
+	t.Log("because every value gets wrapped with <> if we have an empty <> that indicates an unwrapped value")
+	assert.NotContains(t, r, "<>")
+}
+
+func TestReorderUnused(t *testing.T) {
+	t.Parallel()
+	var invoke func(R00) R08
+	var dd *Debugging
+	require.NoError(t, Sequence("outer", Reorder(Sequence(t.Name(),
+		func(r03 R03, r04 R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
+		func(r00 R00, r01 R01) R00 { return "<" + r00 + R00(r01) + ">B" },
+		func() R01 { return "<C>" },
+		func(r05 R05) (R06, R04) { return "<" + R06(r05) + ">D1", "<" + R04(r05) + ">D2" },
+		func(inner func(R07) R08, r06 R06) (R09, R10) {
+			x := inner("<" + R07(r06) + ">E1")
+			return "<" + R09(x) + ">E2", "<" + R10(x) + ">E3"
+		},
+		func(inner func(R06) R09, r05 R05) R10 {
+			return "<" + R10(inner("<"+R06(r05)+">F1")) + ">F2"
+		},
+		func(r02 R02) R03 { return "<" + R03(r02) + ">G" },
+		func(r04 R04, r06 R06) R07 { return "<" + R07(r04) + "><" + R07(r06) + ">H" },
+		func(r03 R03) R06 { return "<" + R06(r03) + ">I" },
+		func(r00 R00) R05 { return "<" + R05(r00) + ">J" },
+		func(r04 R04, d *Debugging) R08 {
+			dd = d
+			return "<" + R08(r04) + ">K"
+		},
+	))).Bind(&invoke, nil))
+	r := invoke("invoke")
+	t.Log("got:", r)
+	assert.NotEmpty(t, r)
+	t.Log("because every value gets wrapped with <> if we have an empty <> that indicates an unwrapped value")
+	assert.NotContains(t, r, "<>")
+	t.Log(strings.Join(dd.IncludeExclude, "\n"))
+	if assert.NotNil(t, dd) {
+		assert.Less(t, len(dd.Included)+3, len(dd.IncludeExclude))
+	}
+}
