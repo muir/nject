@@ -110,3 +110,28 @@ func ExampleNonFinal() {
 	// Output: final 20 some string
 	// <nil>
 }
+
+// This demonstrates how it to have a default that gets overridden by
+// by later inputs.
+func ExampleReorder() {
+	seq1 := nject.Sequence("example",
+		nject.Shun(func() string {
+			fmt.Println("fallback default included")
+			return "fallback default"
+		}),
+	)
+	seq2 := nject.Sequence("later inputs",
+		nject.Reorder(func() string {
+			return "override value"
+		}),
+	)
+	fmt.Println(nject.Run("combination",
+		seq1,
+		seq2,
+		func(s string) {
+			fmt.Println(s)
+		},
+	))
+	// Output: override value
+	// <nil>
+}

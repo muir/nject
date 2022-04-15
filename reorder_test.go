@@ -128,3 +128,29 @@ func TestReorderUnused(t *testing.T) {
 		assert.Less(t, len(dd.Included)+3, len(dd.IncludeExclude))
 	}
 }
+
+func TestReorderOverride(t *testing.T) {
+	var dd *Debugging
+	seq1 := Sequence("example",
+		Shun(func() string {
+			assert.Fail(t, "fallback used")
+			return "fallback default"
+		}),
+	)
+	seq2 := Sequence("later inputs",
+		Reorder(func() string {
+			return "override value"
+		}),
+	)
+	require.NoError(t, Run("combination",
+		seq1,
+		seq2,
+		func(s string, d *Debugging) {
+			dd = d
+			assert.Equal(t, "override value", s)
+		},
+	))
+	if t.Failed() {
+		t.Log(dd.Trace)
+	}
+}

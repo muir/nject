@@ -26,7 +26,9 @@ type TerminalError interface {
 }
 
 // Debugging is provided to help diagnose injection issues. *Debugging
-// is injected into every chain that consumes it.
+// is injected into every chain that consumes it.  Injecting debugging
+// into any change can slow down the processing of all other chains because
+// debugging is controlled with a global.
 type Debugging struct {
 	// Included is a list of the providers included in the chain.
 	//
