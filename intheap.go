@@ -35,6 +35,7 @@ func push(h *IntsHeap, funcs []*provider, i int) {
 }
 
 func pop(h *IntsHeap) int {
+	//nolint:errcheck // we trust the type
 	x := heap.Pop(h).([2]int)
 	return x[1]
 }
