@@ -33,10 +33,7 @@ func debugln(stuff ...interface{}) {
 	if debuglnHook != nil {
 		debuglnHook(stuff...)
 	} else {
-		for _, s := range stuff {
-			debugOutput += fmt.Sprint(s)
-		}
-		debugOutput += "\n"
+		debugOutput += fmt.Sprintln(stuff...)
 	}
 	debugOutputMu.Unlock()
 }

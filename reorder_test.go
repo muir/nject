@@ -130,6 +130,7 @@ func TestReorderUnused(t *testing.T) {
 }
 
 func TestReorderOverride(t *testing.T) {
+	t.Parallel()
 	var dd *Debugging
 	seq1 := Sequence("example",
 		Shun(func() string {
@@ -150,6 +151,35 @@ func TestReorderOverride(t *testing.T) {
 			assert.Equal(t, "override value", s)
 		},
 	))
+	if t.Failed() {
+		t.Log(dd.Trace)
+	}
+}
+
+func TestReorderInOut(t *testing.T) {
+	t.Parallel()
+	type r string
+	var final string
+	var dd *Debugging
+	assert.NoError(t, Run(t.Name(),
+		func() string {
+			return "start"
+		},
+		func(s string) r {
+			return r(s)
+		},
+		Reorder(func(s string) string {
+			return s + " reordered1"
+		}),
+		Reorder(func(s string) string {
+			return s + " reordered2"
+		}),
+		func(r r, _ string, d *Debugging) {
+			final = string(r)
+			dd = d
+		},
+	))
+	assert.Equal(t, "start reordered1 reordered2", final)
 	if t.Failed() {
 		t.Log(dd.Trace)
 	}

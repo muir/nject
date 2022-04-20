@@ -218,21 +218,29 @@ func reorder(funcs []*provider, initF *provider) []*provider {
 		nodes[pair[1]].weakBefore[pair[0]] = struct{}{}
 		nodes[pair[0]].weakAfter[pair[1]] = struct{}{}
 	}
+	for _, pair := range weakPairs {
+		if _, ok := nodes[pair[0]].weakBefore[pair[1]]; ok {
+			debugln("\tremove mutual weak", pair)
+			delete(nodes[pair[1]].weakBefore, pair[0])
+			delete(nodes[pair[0]].weakBefore, pair[0])
+			delete(nodes[pair[0]].weakAfter, pair[1])
+			delete(nodes[pair[1]].weakAfter, pair[1])
+		}
+	}
 
-	unblocked := &IntHeap{}
+	unblocked := &IntsHeap{}
 	heap.Init(unblocked)
-	weakBlocked := &IntHeap{}
+	weakBlocked := &IntsHeap{}
 	heap.Init(weakBlocked)
 
 	if initF != nil {
 		for _, t := range noNoType(initF.flows[outputParams]) {
 			if num, ok := downTypes[t]; ok {
 				debugln("\trelease down for InitF", t)
-				heap.Push(unblocked, num)
+				push(unblocked, funcs, num)
 			}
 		}
 	}
-
 	x := topo{
 		funcs:          funcs,
 		nodes:          nodes,
@@ -265,9 +273,9 @@ type topo struct {
 	funcs          []*provider
 	nodes          []node
 	cannotReorder  []int
-	unblocked      *IntHeap // no weak or strong blocks
-	weakBlocked    *IntHeap // only weak blocks
-	done           []bool   // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
+	unblocked      *IntsHeap // no weak or strong blocks
+	weakBlocked    *IntsHeap // only weak blocks
+	done           []bool    // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
 	reorderedFuncs []*provider
 	upTypes        map[typeCode]int
 	downTypes      map[typeCode]int
@@ -277,16 +285,17 @@ func (x *topo) release(n, i int) {
 	if n >= len(x.funcs) {
 		// types only have strong relationships
 		debugln("\treleased", n)
-		heap.Push(x.unblocked, n)
+		push(x.unblocked, x.funcs, n)
 	} else {
 		delete(x.nodes[n].after, i)
 		delete(x.nodes[n].weakAfter, i)
 		if len(x.nodes[n].after) == 0 {
-			debugln("\treleased", n)
 			if len(x.nodes[n].weakAfter) == 0 {
-				heap.Push(x.unblocked, n)
+				debugln("\treleased", n)
+				push(x.unblocked, x.funcs, n)
 			} else {
-				heap.Push(x.weakBlocked, n)
+				debugln("\treleased (weak)", n, x.nodes[n].weakAfter)
+				push(x.weakBlocked, x.funcs, n)
 			}
 		} else {
 			debugln("\tcannot release", n, x.nodes[n].after)
@@ -294,15 +303,24 @@ func (x *topo) release(n, i int) {
 	}
 }
 
+func (x *topo) releaseNode(i int) {
+	for n := range x.nodes[i].weakBefore {
+		delete(x.nodes[n].weakAfter, i)
+	}
+	for n := range x.nodes[i].before {
+		x.release(n, i)
+	}
+}
+
 func (x *topo) run() {
 	for {
 		if x.unblocked.Len() > 0 {
 			//nolint:errcheck // cast is safe
-			i := heap.Pop(x.unblocked).(int)
+			i := pop(x.unblocked)
 			x.processOne(i, true)
 		} else if x.weakBlocked.Len() > 0 {
 			//nolint:errcheck // cast is safe
-			i := heap.Pop(x.weakBlocked).(int)
+			i := pop(x.weakBlocked)
 			x.processOne(i, true)
 		} else if len(x.cannotReorder) > 0 {
 			i := x.cannotReorder[0]
@@ -320,12 +338,6 @@ func (x *topo) run() {
 			fm.cannotInclude = fm.errorf("dependencies not met, excluded")
 			x.reorderedFuncs = append(x.reorderedFuncs, fm)
 		}
-	}
-}
-
-func (x *topo) releaseNode(i int) {
-	for n := range x.nodes[i].before {
-		x.release(n, i)
 	}
 }
 
