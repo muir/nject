@@ -228,9 +228,9 @@ func reorder(funcs []*provider, initF *provider) []*provider {
 		}
 	}
 
-	unblocked := &IntsHeap{}
+	unblocked := &intsHeap{}
 	heap.Init(unblocked)
-	weakBlocked := &IntsHeap{}
+	weakBlocked := &intsHeap{}
 	heap.Init(weakBlocked)
 
 	if initF != nil {
@@ -273,8 +273,8 @@ type topo struct {
 	funcs          []*provider
 	nodes          []node
 	cannotReorder  []int
-	unblocked      *IntsHeap // no weak or strong blocks
-	weakBlocked    *IntsHeap // only weak blocks
+	unblocked      *intsHeap // no weak or strong blocks
+	weakBlocked    *intsHeap // only weak blocks
 	done           []bool    // TODO: use https://pkg.go.dev/github.com/boljen/go-bitmap#Bitmap instead
 	reorderedFuncs []*provider
 	upTypes        map[typeCode]int
