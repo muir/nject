@@ -10,6 +10,10 @@ import (
 // are functions or data elements to be injected.  If the provider is a Reflective
 // then the methods of Reflective will be called to simulate the Reflective
 // being a function.
+//
+// If In(0) returns reflect.TypeOf((*Reflective)(nil)).Elem() then the
+// overall function defined by Reflective is a wrap function and the inner
+// Reflective type will be used for calling down the injection chain.
 type Reflective interface {
 	In(i int) reflect.Type
 	NumIn() int

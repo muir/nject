@@ -123,6 +123,8 @@ var reservedTags = map[string]struct{}{
 // will not be filled from the provider chain.  "fill" overrides that
 // behavior.  "fill" overrides other behaviors including defaults set with
 // post-actions.
+//
+// If you just want to provide a value variable, use FillVars() instead.
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	// Options handling
 	options := fillerOptions{

@@ -38,14 +38,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 		// Add debugging provider
 		{
-			d := newProvider(func() *Debugging { return nil }, -1, "Debugging")
-			d.cacheable = true
-			d.mustCache = true
-			d, err = characterizeFunc(d, charContext{inputsAreStatic: true})
-			if err != nil {
-				return fmt.Errorf("internal error #29: problem with debugging injectors: %w", err)
-			}
-			d.isSynthetic = true
+			d := makeDebuggingProvider()
 			debuggingProvider = &d
 			funcs = append(funcs, d)
 		}
@@ -395,4 +388,16 @@ func addToVmap(fm *provider, param flowType, vMap map[typeCode]int, rMap map[typ
 			*counter++
 		}
 	}
+}
+
+func makeDebuggingProvider() *provider {
+	d := newProvider(func() *Debugging { return nil }, -1, "Debugging")
+	d.cacheable = true
+	d.mustCache = true
+	d, err = characterizeFunc(d, charContext{inputsAreStatic: true})
+	if err != nil {
+		return fmt.Errorf("internal error #29: problem with debugging injectors: %w", err)
+	}
+	d.isSynthetic = true
+	return d
 }

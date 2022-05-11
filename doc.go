@@ -178,7 +178,7 @@ Some examples:
 		return nil
 	}
 
-Wrap functions
+Wrap functions (middleware)
 
 A wrap function interrupts the linear sequence of providers.  It may or may
 invoke the remainder of the sequence that comes after it.  The remainder of
