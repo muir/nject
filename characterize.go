@@ -172,6 +172,11 @@ var noAnonymousExceptFirstInput = predicate("has extra untyped functional argume
 
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
 	t := a.t
+	if r, ok := t.(reflectiveWrapper); ok {
+		if _, ok := r.ReflectiveArgs.(ReflectiveWrapper); ok {
+			return true
+		}
+	}
 	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
 })
 

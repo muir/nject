@@ -105,18 +105,7 @@ func (fm *provider) copy() *provider {
 type thing interface {
 	modify(func(*provider)) thing
 	flatten() []*provider
-
-	// For single providers, DownFlows includes all inputs and
-	// all outputs.  For collections, Downflows only includes
-	// the net inputs and net outputs.
 	DownFlows() (inputs []reflect.Type, outputs []reflect.Type)
-
-	// For single providers, Upflows includes all consumes and
-	// all returns.  For collections, Upflows only includes
-	// the net consumes and returns.
-	//
-	// Providers that return TerminalError are a special case and count as
-	// producting error.
 	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
@@ -355,7 +344,7 @@ func (c Collection) modify(f func(*provider)) thing {
 
 func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 	if r, ok := fm.fn.(Reflective); ok {
-		return effectiveOutputs(reflectiveWrapper{r})
+		return reflectiveEffectiveOutputs(r)
 	}
 	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
 		return nil, nil
@@ -377,6 +366,14 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 		return nil, typesIn(t.Elem())
 	}
 	return nil, []reflect.Type{t}
+}
+
+func reflectiveEffectiveOutputs(r Reflective) ([]reflect.Type, []reflect.Type) {
+	fn := reflectiveWrapper{r}
+	if w, ok := r.(ReflectiveWrapper); ok {
+		return typesIn(fn), typesIn(reflectiveWrapper{w.Inner()})
+	}
+	return effectiveOutputs(fn)
 }
 
 // The inputs to inner() are additional types that are provided
@@ -440,7 +437,7 @@ func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
 
 func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	if r, ok := fm.fn.(Reflective); ok {
-		return effectiveReturns(reflectiveWrapper{r})
+		return reflectiveEffectiveReturns(r)
 	}
 	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
 		return nil, nil
@@ -462,6 +459,14 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 		return typesOut(t.Elem()), nil
 	}
 	return nil, []reflect.Type{t}
+}
+
+func reflectiveEffectiveReturns(r Reflective) ([]reflect.Type, []reflect.Type) {
+	fn := reflectiveWrapper{r}
+	if w, ok := r.(ReflectiveWrapper); ok {
+		return typesOut(reflectiveWrapper{w.Inner()}), typesOut(fn)
+	}
+	return effectiveReturns(fn)
 }
 
 // Only wrapper functions consume return values and only

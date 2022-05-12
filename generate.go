@@ -194,8 +194,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		in0Type := getInZero(fv)
-		in0Reflective, isInnerReflective := in0Type.(Reflective)
+		in0Type, _ := getInZero(fv)
 		fm.wrapWrapper = func(v valueCollection, next func(valueCollection)) {
 			vCopy := v.Copy()
 			callCount := 0
@@ -222,18 +221,18 @@ func generateWrappers(
 				return r
 			}
 			in := inMap(v)
-			if in0Reflective {
-				XXXX
-			} else {
+			if in0Type != nil {
 				in[0] = reflect.MakeFunc(in0Type, inner)
-				defer func() {
-					if r := recover(); r != nil {
-						zero(v)
-						panic(r)
-					}
-				}()
-				out := fv.Call(in)
+			} else {
+				in[0] = reflect.ValueOf(inner)
 			}
+			defer func() {
+				if r := recover(); r != nil {
+					zero(v)
+					panic(r)
+				}
+			}()
+			out := fv.Call(in)
 			if callCount == 0 {
 				zero(v)
 			}

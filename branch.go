@@ -28,7 +28,7 @@ func Branch(name string, funcs ...interface{}) Provider {
 		last := c.contents[len(c.contents)-1]
 		last.required = true
 		lastType := reflect.TypeOf(last.fn)
-		var lastWrap bool 
+		var lastWrap bool
 		if lastType.Kind() == reflect.Func && lastType.NumIn() > 0 && lastType.In(0).Kind() == reflect.Func {
 			lastWrap = true
 			standinForMainChain := newProvider(MakeReflective(
@@ -45,7 +45,9 @@ func Branch(name string, funcs ...interface{}) Provider {
 			nonStaticTypes[getTypeCode(input)] = true
 		}
 		p1, p2, err := c.characterizeAndFlatten(nonStaticTypes)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 
 		funcs := make([]*provider, 0, len(c.contents)+5)
 
@@ -55,13 +57,15 @@ func Branch(name string, funcs ...interface{}) Provider {
 		funcs = append(funcs, p2...)
 
 		funcs, err = computeDependenciesAndInclusion(funcs, nil)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 
 		includedFuncs := make([]interface{}, 0, len(funcs))
-		wraps  := lastWrap
+		wraps := lastWrap
 		for _, fm := range funcs {
 			// XXX does d get copied?
-			if fm.include  && fm != d {
+			if fm.include && fm != d {
 				includedFuncs = append(includedFuncs, fm.fn)
 				if fm.class == wrapperFunc {
 					wraps = true
@@ -76,10 +80,10 @@ func Branch(name string, funcs ...interface{}) Provider {
 			inputs = append(inputs, debuggingType.PtrTo())
 		}
 
-		invoke := MakeReflective(inputs, 
+		invoke := MakeReflective(inputs, nil, nil)
 		err := c.Bind(invoke, nil)
 
-		})
+	})
 }
 
 // FillVars generates a required provider.  The input parameters to FillVars

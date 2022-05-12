@@ -2,7 +2,7 @@
 
 /*
 
-Package nject is a general purpose lightweight dependency injection framework.
+Package nject is a general purpose dependency injection framework.
 It provides wrapping, pruning, and indirect variable passing.  It is type safe
 and using it requires no type assertions.  There are two main injection APIs:
 Run and Bind.  Bind is designed to be used at program initialization and

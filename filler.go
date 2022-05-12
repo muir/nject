@@ -48,6 +48,10 @@ type canFakeType interface {
 	In(int) reflect.Type
 }
 
+type canInner interface {
+	Inner() Reflective
+}
+
 func getReflectType(i interface{}) reflectType {
 	if r, ok := i.(Reflective); ok {
 		w := reflectiveWrapper{r}
@@ -58,15 +62,18 @@ func getReflectType(i interface{}) reflectType {
 
 // getInZero is used to get the first input type for a function
 // that is in a canCall.  This depends upon knowing that canCall
-// is either a reflect.Type or a Reflective
-func getInZero(cc canCall) reflect.Type {
+// is either a reflect.Type, a Reflective, or a ReflectiveWrapper
+func getInZero(cc canCall) (reflect.Type, Reflective) {
 	if t, ok := cc.(canRealType); ok {
-		return t.Type().In(0)
+		return t.Type().In(0), nil
+	}
+	if t, ok := cc.(canInner); ok {
+		return nil, t.Inner()
 	}
 	if t, ok := cc.(canFakeType); ok {
-		return t.In(0)
+		return t.In(0), nil
 	}
-	return nil
+	return nil, nil
 }
 
 type fillerOptions struct {
@@ -402,7 +409,7 @@ func (f *filler) Call(inputs []reflect.Value) []reflect.Value {
 
 // reflectiveWrapper allows Refelective to kinda pretend to be a reflect.Type
 type reflectiveWrapper struct {
-	Reflective
+	ReflectiveArgs
 }
 
 // reflecType is a subset of reflect.Type good enough for use in characterize

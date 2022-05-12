@@ -10,16 +10,28 @@ import (
 // are functions or data elements to be injected.  If the provider is a Reflective
 // then the methods of Reflective will be called to simulate the Reflective
 // being a function.
-//
-// If In(0) returns reflect.TypeOf((*Reflective)(nil)).Elem() then the
-// overall function defined by Reflective is a wrap function and the inner
-// Reflective type will be used for calling down the injection chain.
 type Reflective interface {
+	ReflectiveArgs
+	Call(in []reflect.Value) []reflect.Value
+}
+
+// ReflectiveArgs is the part of a Reflective that defines the inputs
+// and outputs.
+type ReflectiveArgs interface {
 	In(i int) reflect.Type
 	NumIn() int
 	Out(i int) reflect.Type
 	NumOut() int
-	Call(in []reflect.Value) []reflect.Value
+}
+
+// ReflectiveWrapper is a special variant of Reflective where the type of
+// the first input is described by Inner().  In(0) will never be called.
+// When Call() is invoked, the first argument will be a function that
+// takes and returns a slice of reflect.Value -- with the contents of the
+// slices determined by Inner()
+type ReflectiveWrapper interface {
+	Reflective
+	Inner() ReflectiveArgs
 }
 
 // PostActionFuncArg are functional arguments to PostActionByTag,
