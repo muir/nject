@@ -5,10 +5,10 @@ import (
 )
 
 func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
-	if r, ok := fm.fn.(Reflective); ok {
+	switch r := fm.fn.(type) {
+	case Reflective:
 		return reflectiveEffectiveOutputs(r)
-	}
-	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
+	case generatedFromInjectionChain:
 		return nil, nil
 	}
 	v := reflect.ValueOf(fm.fn)
@@ -33,7 +33,9 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 func reflectiveEffectiveOutputs(r Reflective) ([]reflect.Type, []reflect.Type) {
 	fn := wrappedReflective{r}
 	if w, ok := r.(ReflectiveWrapper); ok {
-		return typesIn(fn), typesIn(wrappedReflective{w.Inner()})
+		in := typesIn(fn)
+		// discard the first type because it's the inner()
+		return in[1:], typesIn(wrappedReflective{w.Inner()})
 	}
 	return effectiveOutputs(fn)
 }

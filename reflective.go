@@ -35,7 +35,7 @@ type ReflectiveWrapper interface {
 	Inner() ReflectiveArgs
 }
 
-// MakeReflective is a simple wrapper to create a Reflective
+// MakeReflective is a simple utility to create a Reflective
 func MakeReflective(
 	inputs []reflect.Type,
 	outputs []reflect.Type,
@@ -71,10 +71,12 @@ var _ Reflective = thinReflective{}
 
 func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
 
-// MakeReflectiveWrapper is a simple wrapper to create a ReflectiveWrapper
+// MakeReflectiveWrapper is a utility to create a ReflectiveWrapper
 //
 // The first argument, downIn, is the types that must be recevied in the down
-// chain and provided to function.
+// chain and provided to function.  This does not include the
+// func([]reflec.Value) []reflect.Value that is actually used for the first
+// argument.
 //
 // The second argument, upOut, is the types that are returned on the up chain.
 //
@@ -94,10 +96,15 @@ func MakeReflectiveWrapper(
 	upIn []reflect.Type,
 	function func([]reflect.Value) []reflect.Value,
 ) ReflectiveWrapper {
+	modifiedDownIn := make([]reflect.Type, len(downIn)+1)
+	modifiedDownIn[0] = reflectiveFuncType
+	for i, t := range downIn {
+		modifiedDownIn[i+1] = t
+	}
 	return thinReflectiveWrapper{
 		thinReflective: thinReflective{
 			thinReflectiveArgs: thinReflectiveArgs{
-				inputs:  downIn,
+				inputs:  modifiedDownIn,
 				outputs: upOut,
 			},
 			fun: function,

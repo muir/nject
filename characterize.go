@@ -161,6 +161,9 @@ var (
 )
 
 var noAnonymousFuncs = predicate("has an untyped functional argument", func(a testArgs) bool {
+	if _, ok := a.fm.fn.(ReflectiveWrapper); ok {
+		return false
+	}
 	return !hasAnonymousFuncs(typesIn(a.t), false) &&
 		!hasAnonymousFuncs(typesOut(a.t), false)
 })
@@ -171,12 +174,10 @@ var noAnonymousExceptFirstInput = predicate("has extra untyped functional argume
 })
 
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
-	t := a.t
-	if r, ok := t.(wrappedReflective); ok {
-		if _, ok := r.ReflectiveArgs.(ReflectiveWrapper); ok {
-			return true
-		}
+	if _, ok := a.fm.fn.(ReflectiveWrapper); ok {
+		return true
 	}
+	t := a.t
 	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
 })
 
@@ -473,9 +474,15 @@ var handlerRegistry = typeRegistry{
 			a.fm.group = runGroup
 			a.fm.class = wrapperFunc
 			a.fm.flows[inputParams] = toTypeCodes(in)
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.In(0)))
 			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
-			a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.In(0)))
+			var inner reflectType
+			if w, ok := a.fm.fn.(ReflectiveWrapper); ok {
+				inner = wrappedReflective{w.Inner()}
+			} else {
+				inner = a.t.In(0)
+			}
+			a.fm.flows[outputParams] = toTypeCodes(typesIn(inner))
+			a.fm.flows[receviedParams] = toTypeCodes(typesOut(inner))
 		},
 	},
 

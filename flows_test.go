@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type flows interface {
@@ -16,13 +17,25 @@ type flows interface {
 func toTypes(real ...interface{}) []reflect.Type {
 	types := make([]reflect.Type, len(real))
 	for i, r := range real {
-		if t, ok := r.(reflect.Type); ok {
+		switch t := r.(type) {
+		case reflect.Type:
 			types[i] = t
-		} else {
+		case typeCode:
+			types[i] = t.Type()
+		default:
 			types[i] = reflect.TypeOf(r)
 		}
 	}
 	return types
+}
+
+func flowToStrings(types []typeCode) []string {
+	types = noNoType(types)
+	s := make([]string, len(types))
+	for i, t := range types {
+		s[i] = t.Type().String()
+	}
+	return s
 }
 
 func toStrings(types []reflect.Type) []string {
@@ -42,6 +55,7 @@ func TestFlows(t *testing.T) {
 		upOut    []interface{}
 		downIn   []interface{}
 		downOut  []interface{}
+		class    classType
 	}{
 		{
 			name:     "fallable injector",
@@ -94,7 +108,7 @@ func TestFlows(t *testing.T) {
 			downOut: []interface{}{float32(8)},
 		},
 		{
-			name: "reflective wrapper",
+			name: "Reflective wrapper",
 			provider: MakeReflective(
 				toTypes(func(string) bool { return true }, 9, ""),
 				toTypes(float32(8)),
@@ -105,19 +119,23 @@ func TestFlows(t *testing.T) {
 			upOut:   []interface{}{float32(8)},
 			upIn:    []interface{}{true},
 			downOut: []interface{}{""},
+			class:   wrapperFunc,
 		},
 		{
 			name: "ReflectiveWrapper",
-			provider: MakeReflective(
-				toTypes(func(string) bool { return true }, 9, ""),
-				toTypes(float32(8)),
+			provider: MakeReflectiveWrapper(
+				toTypes(5, 8, ""),
+				toTypes(float32(7)),
+				toTypes(""),
+				toTypes(false),
 				func([]reflect.Value) []reflect.Value {
 					return nil
 				}),
-			downIn:  []interface{}{9, ""},
+			downIn:  []interface{}{7, 9, ""},
 			upOut:   []interface{}{float32(8)},
-			upIn:    []interface{}{true},
 			downOut: []interface{}{""},
+			upIn:    []interface{}{true},
+			class:   wrapperFunc,
 		},
 	}
 
@@ -144,6 +162,21 @@ func TestFlows(t *testing.T) {
 			wantUpIn, wantUpOut := toTypes(tc.upIn...), toTypes(tc.upOut...)
 			assert.ElementsMatch(t, toStrings(wantUpIn), toStrings(upIn), "up in")
 			assert.ElementsMatch(t, toStrings(wantUpOut), toStrings(upOut), "up out")
+			if p, ok := f.(*provider); ok {
+				fm, err := handlerRegistry.characterizeFuncDetails(p, charContext{})
+				if err != nil {
+					var e2 error
+					fm, e2 = handlerRegistry.characterizeFuncDetails(p, charContext{inputsAreStatic: true})
+					require.NoErrorf(t, e2, "static characterize, and non-static: %s", err)
+				}
+				if tc.class != unsetClassType {
+					require.Equalf(t, tc.class, fm.class, "class type %s vs %s", tc.class, fm.class)
+				}
+				assert.Equal(t, toStrings(wantUpOut), flowToStrings(fm.flows[returnParams]), "char up out")
+				assert.Equal(t, toStrings(wantDownOut), flowToStrings(fm.flows[outputParams]), "char down out")
+				assert.Equal(t, toStrings(wantDownIn), flowToStrings(fm.flows[inputParams]), "char down in")
+				assert.Equal(t, toStrings(wantUpIn), flowToStrings(fm.flows[receviedParams]), "char up in")
+			}
 		})
 	}
 }
