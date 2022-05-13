@@ -4,36 +4,6 @@ import (
 	"reflect"
 )
 
-// TODO add ExampleReflective
-
-// Reflective is an alternative provider interface.  Normally, providers are
-// are functions or data elements to be injected.  If the provider is a Reflective
-// then the methods of Reflective will be called to simulate the Reflective
-// being a function.
-type Reflective interface {
-	ReflectiveArgs
-	Call(in []reflect.Value) []reflect.Value
-}
-
-// ReflectiveArgs is the part of a Reflective that defines the inputs
-// and outputs.
-type ReflectiveArgs interface {
-	In(i int) reflect.Type
-	NumIn() int
-	Out(i int) reflect.Type
-	NumOut() int
-}
-
-// ReflectiveWrapper is a special variant of Reflective where the type of
-// the first input is described by Inner().  In(0) will never be called.
-// When Call() is invoked, the first argument will be a function that
-// takes and returns a slice of reflect.Value -- with the contents of the
-// slices determined by Inner()
-type ReflectiveWrapper interface {
-	Reflective
-	Inner() ReflectiveArgs
-}
-
 // PostActionFuncArg are functional arguments to PostActionByTag,
 // PostActionByName, and PostActionByType.
 type PostActionFuncArg func(*postActionOption)

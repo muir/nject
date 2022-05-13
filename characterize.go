@@ -172,7 +172,7 @@ var noAnonymousExceptFirstInput = predicate("has extra untyped functional argume
 
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
 	t := a.t
-	if r, ok := t.(reflectiveWrapper); ok {
+	if r, ok := t.(wrappedReflective); ok {
 		if _, ok := r.ReflectiveArgs.(ReflectiveWrapper); ok {
 			return true
 		}
@@ -506,7 +506,7 @@ func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*
 	if r, ok := fm.fn.(Reflective); ok {
 		a = testArgs{
 			fm:    fm.copy(),
-			t:     reflectiveWrapper{r},
+			t:     wrappedReflective{r},
 			isNil: false,
 			cc:    cc,
 		}

@@ -22,6 +22,7 @@ type Collection struct {
 // methods can be attached.
 type Provider interface {
 	thing
+	String() string
 
 	// For single providers, DownFlows includes all inputs and
 	// all outputs.  For collections, Downflows only includes

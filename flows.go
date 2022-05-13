@@ -31,9 +31,9 @@ func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 }
 
 func reflectiveEffectiveOutputs(r Reflective) ([]reflect.Type, []reflect.Type) {
-	fn := reflectiveWrapper{r}
+	fn := wrappedReflective{r}
 	if w, ok := r.(ReflectiveWrapper); ok {
-		return typesIn(fn), typesIn(reflectiveWrapper{w.Inner()})
+		return typesIn(fn), typesIn(wrappedReflective{w.Inner()})
 	}
 	return effectiveOutputs(fn)
 }
@@ -44,10 +44,10 @@ func effectiveOutputs(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	inputs := typesIn(fn)
 	outputs := typesOut(fn)
 	if len(inputs) == 0 || inputs[0].Kind() != reflect.Func {
-		for i := len(outputs); i >= 0; i-- {
+		for i := len(outputs) - 1; i >= 0; i-- {
 			out := outputs[i]
 			if out == terminalErrorType {
-				outputs = append(ouptuts[:i], outputs[i+1:]...)
+				outputs = append(outputs[:i], outputs[i+1:]...)
 			}
 		}
 		return inputs, outputs
@@ -126,13 +126,13 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	if fm.group == invokeGroup && t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func {
 		return typesOut(t.Elem()), nil
 	}
-	return nil, []reflect.Type{t}
+	return nil, nil
 }
 
 func reflectiveEffectiveReturns(r Reflective) ([]reflect.Type, []reflect.Type) {
-	fn := reflectiveWrapper{r}
+	fn := wrappedReflective{r}
 	if w, ok := r.(ReflectiveWrapper); ok {
-		return typesOut(reflectiveWrapper{w.Inner()}), typesOut(fn)
+		return typesOut(wrappedReflective{w.Inner()}), typesOut(fn)
 	}
 	return effectiveReturns(fn)
 }
