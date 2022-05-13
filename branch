@@ -29,6 +29,7 @@ func Branch(name string, funcs ...interface{}) Provider {
 		last.required = true
 		lastType := reflect.TypeOf(last.fn)
 		var lastWrap bool
+		// Don't use In(0)
 		if lastType.Kind() == reflect.Func && lastType.NumIn() > 0 && lastType.In(0).Kind() == reflect.Func {
 			lastWrap = true
 			standinForMainChain := newProvider(MakeReflective(

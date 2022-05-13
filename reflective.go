@@ -26,10 +26,10 @@ type ReflectiveArgs interface {
 }
 
 // ReflectiveWrapper is a special variant of Reflective where the type of
-// the first input is described by Inner().  In(0) will never be called.
-// When Call() is invoked, the first argument will be a function that
-// takes and returns a slice of reflect.Value -- with the contents of the
-// slices determined by Inner()
+// the first input is described by Inner().  In(0) must return the
+// type of func([]reflect.Type) []reflect.Type.
+//
+// When Call() is invoked, In(0) must be as described by Inner().
 type ReflectiveWrapper interface {
 	Reflective
 	Inner() ReflectiveArgs
