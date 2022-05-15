@@ -163,6 +163,7 @@ func TestFlows(t *testing.T) {
 			assert.ElementsMatch(t, toStrings(wantUpIn), toStrings(upIn), "up in")
 			assert.ElementsMatch(t, toStrings(wantUpOut), toStrings(upOut), "up out")
 			if p, ok := f.(*provider); ok {
+				t.Log("checking against characterize flows too")
 				fm, err := handlerRegistry.characterizeFuncDetails(p, charContext{})
 				if err != nil {
 					var e2 error

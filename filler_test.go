@@ -1,7 +1,6 @@
 package nject
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,35 +74,4 @@ func TestFiller(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.True(t, called)
-}
-
-type funcWrapper struct {
-	v reflect.Value
-}
-
-func (f funcWrapper) NumIn() int                              { return f.v.Type().NumIn() }
-func (f funcWrapper) In(i int) reflect.Type                   { return f.v.Type().In(i) }
-func (f funcWrapper) NumOut() int                             { return f.v.Type().NumOut() }
-func (f funcWrapper) Out(i int) reflect.Type                  { return f.v.Type().Out(i) }
-func (f funcWrapper) Call(in []reflect.Value) []reflect.Value { return f.v.Call(in) }
-
-func TestReflective(t *testing.T) {
-	t.Parallel()
-	var called bool
-	var fCalled bool
-	f := func(inner func(), _ s1) {
-		fCalled = true
-		assert.False(t, called, "before inner")
-		inner()
-		assert.True(t, called, "after inner")
-	}
-	w := funcWrapper{v: reflect.ValueOf(f)}
-	_ = Run("TestReflective",
-		s1("s1"),
-		w,
-		func() {
-			called = true
-		},
-	)
-	assert.True(t, fCalled, "f called")
 }
