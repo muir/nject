@@ -83,7 +83,7 @@ func TestReflective(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			collection: Sequence("simple",
+			collection: Sequence("terminal error",
 				int64(8),
 				func(i func() error) {
 					print("error is", i())
@@ -102,6 +102,24 @@ func TestReflective(t *testing.T) {
 				var x func(string) int
 				c.MustBind(&x, nil)
 				assert.Equal(t, 1, x("true"))
+			},
+		}, {
+			name: "wrapper",
+			collection: Sequence("wrapper",
+				func(inner func(string, int) bool, i int) string {
+					s := strconv.Itoa(i)
+					b := inner(s, i)
+					s2 := strconv.FormatBool(b)
+					return s2
+				},
+				func(s string, i int) bool {
+					s2 := strconv.Itoa(i)
+					return s == s2
+				}),
+			call: func(c *Collection) {
+				var x func(int) string
+				c.MustBind(&x, nil)
+				assert.Equal(t, "true", x(32))
 			},
 		},
 	}
