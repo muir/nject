@@ -38,6 +38,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 		// Add debugging provider
 		{
+			//nolint:govet // err is shadowing, who cares?
 			d, err := makeDebuggingProvider()
 			if err != nil {
 				return err
@@ -310,24 +311,29 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 		debugln("SET INIT FUNC")
 		if real {
-			reflect.ValueOf(initF.fn).Elem().Set(
-				reflect.MakeFunc(reflect.ValueOf(initF.fn).Type().Elem(),
-					func(inputs []reflect.Value) []reflect.Value {
-						debugln("INSIDE INIT")
-						// if initDone panic, return error, or ignore?
-						initOnce.Do(func() {
-							outMap(baseValues, inputs)
-							debugln("RUN STATIC CHAIN")
-							_ = runStaticChain()
-						})
-						dumpValueArray(baseValues, "base values before init return", downVmap)
-						out := inMap(baseValues)
-						debugln("DONE INIT")
-						dumpValueArray(out, "init return", nil)
-						dumpF("init", initF)
+			initImp := func(inputs []reflect.Value) []reflect.Value {
+				debugln("INSIDE INIT")
+				// if initDone panic, return error, or ignore?
+				initOnce.Do(func() {
+					outMap(baseValues, inputs)
+					debugln("RUN STATIC CHAIN")
+					_ = runStaticChain()
+				})
+				dumpValueArray(baseValues, "base values before init return", downVmap)
+				out := inMap(baseValues)
+				debugln("DONE INIT")
+				dumpValueArray(out, "init return", nil)
+				dumpF("init", initF)
 
-						return out
-					}))
+				return out
+			}
+			if ri, ok := initF.fn.(ReflectiveInvoker); ok {
+				ri.Set(initImp)
+			} else {
+				reflect.ValueOf(initF.fn).Elem().Set(
+					reflect.MakeFunc(reflect.ValueOf(initF.fn).Type().Elem(),
+						initImp))
+			}
 		}
 		debugln("SET INIT FUNC - DONE")
 
@@ -353,17 +359,22 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 
 		debugln("SET INVOKE FUNC")
 		if real {
-			reflect.ValueOf(invokeF.fn).Elem().Set(
-				reflect.MakeFunc(reflect.ValueOf(invokeF.fn).Type().Elem(),
-					func(inputs []reflect.Value) []reflect.Value {
-						initFunc()
-						values := baseValues.Copy()
-						dumpValueArray(values, "invoke - before input copy", downVmap)
-						outMap(values, inputs)
-						dumpValueArray(values, "invoke - after input copy", downVmap)
-						f(values)
-						return inMap(values)
-					}))
+			invokeImpl := func(inputs []reflect.Value) []reflect.Value {
+				initFunc()
+				values := baseValues.Copy()
+				dumpValueArray(values, "invoke - before input copy", downVmap)
+				outMap(values, inputs)
+				dumpValueArray(values, "invoke - after input copy", downVmap)
+				f(values)
+				return inMap(values)
+			}
+			if ri, ok := invokeF.fn.(ReflectiveInvoker); ok {
+				ri.Set(invokeImpl)
+			} else {
+				reflect.ValueOf(invokeF.fn).Elem().Set(
+					reflect.MakeFunc(reflect.ValueOf(invokeF.fn).Type().Elem(),
+						invokeImpl))
+			}
 		}
 		debugln("SET INVOKE FUNC - DONE")
 	}

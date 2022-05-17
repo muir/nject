@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type argsWrapper struct {
@@ -47,6 +48,17 @@ func (f funcWrapper) NumOut() int                             { return f.v.Type(
 func (f funcWrapper) Out(i int) reflect.Type                  { return f.v.Type().Out(i) }
 func (f funcWrapper) Call(in []reflect.Value) []reflect.Value { return f.v.Call(in) }
 
+type invokeWrapper struct {
+	argsWrapper
+	v reflect.Value
+}
+
+var _ ReflectiveInvoker = invokeWrapper{}
+
+func (f invokeWrapper) Set(imp func([]reflect.Value) []reflect.Value) {
+	f.v.Elem().Set(reflect.MakeFunc(f.v.Type().Elem(), imp))
+}
+
 func TestManualReflective(t *testing.T) {
 	t.Parallel()
 	var called bool
@@ -71,15 +83,16 @@ func TestManualReflective(t *testing.T) {
 func TestReflective(t *testing.T) {
 	t.Parallel()
 	var buf string
+	type binder func(*Collection, interface{}, interface{})
 	print := func(v ...interface{}) {
 		buf += fmt.Sprint(v...)
 	}
 	cases := []struct {
 		name       string
 		collection *Collection
-		call       func(*Collection)
-		call2      func(*Collection)
-		call3      func(*Collection)
+		call       func(*Collection, binder)
+		call2      func(*Collection, binder)
+		call3      func(*Collection, binder)
 	}{
 		{
 			name: "simple",
@@ -98,12 +111,13 @@ func TestReflective(t *testing.T) {
 					}
 					return 0
 				}),
-			call: func(c *Collection) {
+			call: func(c *Collection, doBind binder) {
 				var x func(string) int
-				c.MustBind(&x, nil)
+				doBind(c, &x, nil)
 				assert.Equal(t, 1, x("true"))
 			},
-		}, {
+		},
+		{
 			name: "wrapper",
 			collection: Sequence("wrapper",
 				func(inner func(string, int) bool, i int) string {
@@ -116,30 +130,80 @@ func TestReflective(t *testing.T) {
 					s2 := strconv.Itoa(i)
 					return s == s2
 				}),
-			call: func(c *Collection) {
+			call: func(c *Collection, doBind binder) {
 				var x func(int) string
-				c.MustBind(&x, nil)
+				doBind(c, &x, nil)
 				assert.Equal(t, "true", x(32))
+			},
+		},
+		{
+			name: "with-init",
+			collection: Sequence("with-init",
+				func(s string, i int) string {
+					is := strconv.Itoa(i)
+					return s + " " + is
+				}),
+			call: func(c *Collection, doBind binder) {
+				var x func(string) string
+				var y func(int)
+				doBind(c, &x, &y)
+				y(10)
+				y(11)
+				assert.Equal(t, "ten 10", x("ten"))
 			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			for callNum, call := range []func(*Collection){tc.call, tc.call2, tc.call3} {
-				if call == nil {
-					continue
-				}
-				t.Run(fmt.Sprintf("call%d", callNum+1), func(t *testing.T) {
-					call(tc.collection)
-				})
-				rc := rewriteReflective(tc.collection, false)
-				t.Run(fmt.Sprintf("call-reflective%d", callNum+1), func(t *testing.T) {
-					call(rc)
-				})
-				rwc := rewriteReflective(tc.collection, true)
-				t.Run(fmt.Sprintf("call-reflective-wrapper%d", callNum+1), func(t *testing.T) {
-					call(rwc)
+			names := []string{"regular-bind", "reflective-bind"}
+			for i, doBind := range []binder{
+				func(c *Collection, invokeF interface{}, initF interface{}) {
+					err := c.Bind(invokeF, initF)
+					require.NoError(t, err, "bind")
+				},
+				func(c *Collection, invokeF interface{}, initF interface{}) {
+					v := reflect.ValueOf(invokeF)
+					t.Log("reflective bind to", v.Type().Elem())
+					invokeV := invokeWrapper{
+						argsWrapper: argsWrapper{
+							t: v.Type().Elem(),
+						},
+						v: v,
+					}
+					if initF != nil {
+						iv := reflect.ValueOf(initF)
+						initV := invokeWrapper{
+							argsWrapper: argsWrapper{
+								t: iv.Type().Elem(),
+							},
+							v: iv,
+						}
+						err := c.Bind(invokeV, initV)
+						require.NoError(t, err, "reflective bind")
+					} else {
+						err := c.Bind(invokeV, nil)
+						require.NoError(t, err, "reflective bind")
+					}
+				},
+			} {
+				t.Run(names[i], func(t *testing.T) {
+					for callNum, call := range []func(*Collection, binder){tc.call, tc.call2, tc.call3} {
+						if call == nil {
+							continue
+						}
+						t.Run(fmt.Sprintf("call%d", callNum+1), func(t *testing.T) {
+							call(tc.collection, doBind)
+						})
+						rc := rewriteReflective(tc.collection, false)
+						t.Run(fmt.Sprintf("call-reflective%d", callNum+1), func(t *testing.T) {
+							call(rc, doBind)
+						})
+						rwc := rewriteReflective(tc.collection, true)
+						t.Run(fmt.Sprintf("call-reflective-wrapper%d", callNum+1), func(t *testing.T) {
+							call(rwc, doBind)
+						})
+					}
 				})
 			}
 		})
@@ -149,6 +213,7 @@ func TestReflective(t *testing.T) {
 func rewriteReflective(c *Collection, inner bool) *Collection {
 	n := Sequence("redone")
 	for _, fm := range c.contents {
+		//nolint:govet // fm shadows, yah, duh
 		fm := fm.copy()
 		switch fm.fn.(type) {
 		case ReflectiveWrapper, Reflective:

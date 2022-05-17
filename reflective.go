@@ -7,6 +7,14 @@ import (
 
 // TODO add ExampleReflective
 
+// ReflectiveInvoker is an alternative provider interface that can be used
+// for invoke and initialize functions.  The key for those functions is that
+// their implmentation is provided by Collection.Bind.
+type ReflectiveInvoker interface {
+	ReflectiveArgs
+	Set(func([]reflect.Value) []reflect.Value)
+}
+
 // Reflective is an alternative provider interface.  Normally, providers are
 // are functions or data elements to be injected.  If the provider is a Reflective
 // then the methods of Reflective will be called to simulate the Reflective
@@ -113,6 +121,7 @@ func MakeReflectiveWrapper(
 			inputs:  downOut,
 			outputs: upIn,
 		},
+		fun: function,
 	}
 }
 
