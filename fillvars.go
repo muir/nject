@@ -1,52 +1,9 @@
 package nject
 
 import (
+	"fmt"
 	"reflect"
 )
-
-// Condense transforms a collection into a single provider.
-// The inputs to the provider are what's
-// required for the last function in the Collection to be invoked
-// given the rest of the Collection.
-//
-// At this time, the last function in the collection may not
-// be a wrap function.
-func (c *Collection) Condense() (Provider, error {
-	c := newCollection(name, funcs...)
-
-	if len(c.contents) == 0 {
-		return c, nil
-	}
-	last := c.contents[len(c.contents)-1]
-	last.required = true
-	lastType := reflect.TypeOf(last.fn)
-	var lastWrap bool
-	if isWrapper(lastType, last.fn) {
-		return nil, fmt.Errorf("Condense cannot operate on collections whose last element is a wrap function")
-	}
-
-	downIn, _ := c.DownFlows()
-	_, upOut := c.UpFlows()
-
-	// UpFlows won't capture the return values of the final 
-	// func so we'll do so here.
-	allOut := make(map[reflect.Type]struct{})
-	for _, t := range upOut {
-		allOut[t] = struct{}{}
-	}
-	for _, t := range typesOut(lastType) {
-		if _, ok := allOut[t]; !ok {
-			allOut[t] = struct{}{}
-			upOut = append(upOut, t)
-		}
-	}
-
-	c.BindReflective(
-
-	return MakeReflective(downIn, upOut, 
-		func(in []reflect.Type) []reflect.Type {
-		}
-
 
 // FillVars generates a required provider.  The input parameters to FillVars
 // must be pointers.  The generated provider takes as inputs the types needed
@@ -82,6 +39,7 @@ func FillVars(varPointers ...interface{}) (Provider, error) {
 		for i, v := range in {
 			pointers[i].Set(v)
 		}
+		return nil
 	})), nil
 }
 

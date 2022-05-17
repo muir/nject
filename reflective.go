@@ -77,6 +77,17 @@ type thinReflective struct {
 
 var _ Reflective = thinReflective{}
 
+type reflectiveBinder struct {
+	thinReflective
+}
+
+var _ ReflectiveInvoker = &reflectiveBinder{}
+var _ Reflective = reflectiveBinder{}
+
+func (b *reflectiveBinder) Set(fun func([]reflect.Value) []reflect.Value) {
+	b.fun = fun
+}
+
 func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
 
 // MakeReflectiveWrapper is a utility to create a ReflectiveWrapper
@@ -97,6 +108,10 @@ func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(
 // When function is called, the first argument will be a reflect.Value, of
 // course, that is the value of a function that takes []reflect.Value and
 // returns []reflect.Value.
+//
+// EXPERIMENTAL: this is currently considered experimental and could be removed
+// in a future release.  If you're using this, please open a pull request to
+// remove this comment.
 func MakeReflectiveWrapper(
 	downIn []reflect.Type,
 	upOut []reflect.Type,
