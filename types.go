@@ -56,10 +56,6 @@ type Debugging struct {
 	// a provider chain as a unit test.  This output is nearly runnable
 	// code.  It may need a bit of customization to fully capture a situation.
 	Reproduce string
-
-	// Outer is only present within chains generated with Branch().  It is a reference
-	// to the Debugging from the main (or outer) injection chain
-	Outer *Debugging
 }
 
 type classType int
