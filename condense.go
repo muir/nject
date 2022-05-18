@@ -18,6 +18,11 @@ import (
 // All types returned by the last function in the collection or
 // or returned by wrap functions are returned by the condensed
 // provider.
+//
+// Experimental: the return type of Condense could change in a
+// future version to be a *Collection instead so as to support
+// better filling of *Debugging.  Since *Collection supports a
+// superset of the Provider interface, this should not matter.
 func (c *Collection) Condense() (Provider, error) {
 	if len(c.contents) == 0 {
 		return c, nil
