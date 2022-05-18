@@ -16,6 +16,8 @@ type Collection struct {
 	contents []*provider
 }
 
+var _ Provider = &Collection{}
+
 // Provider is an individual injector (function, constant, or
 // wrapper).  Functions that take injectors, take interface{}.
 // Functions that return invjectors return Provider so that
