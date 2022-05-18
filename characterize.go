@@ -185,11 +185,15 @@ func isWrapper(t reflectType, fn interface{}) bool {
 }
 
 var isFuncPointer = predicate("is not a pointer to a function", func(a testArgs) bool {
-	if _, ok := a.fm.fn.(ReflectiveInvoker); ok {
+	switch a.fm.fn.(type) {
+	case ReflectiveInvoker:
 		return true
+	case Reflective, ReflectiveArgs:
+		return false
+	default:
+		t := a.t
+		return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func
 	}
-	t := a.t
-	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func
 })
 
 var isNotFuncPointer = predicate("is a pointer to a function", func(a testArgs) bool {

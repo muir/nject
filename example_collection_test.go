@@ -66,3 +66,30 @@ func ExampleCollection_String() {
 	//  func() string
 	//  func(string) error
 }
+
+func ExampleCollection_Condense() {
+	var counter int
+	one := nject.Required(nject.Sequence("one",
+		func() int { counter++; return counter },
+		func(b bool) string {
+			return map[bool]string{
+				true:  "t",
+				false: "f",
+			}[b]
+		},
+		func(s string, i int) string {
+			return fmt.Sprintf("%s-%d", s, i)
+		}).MustCondense())
+	fmt.Println(nject.Run("t",
+		func() bool { return true },
+		one,
+		func(s string) { fmt.Println(s) },
+		func() bool { return false },
+		one,
+		func(s string) { fmt.Println(s) },
+	))
+
+	// Output: t-1
+	// f-2
+	// <nil>
+}

@@ -58,7 +58,7 @@ func (c *Collection) Condense() (Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newThing(invokeF), nil
+	return newThing(invokeF.thinReflective), nil
 }
 
 // MustCondense panics if Condense fails

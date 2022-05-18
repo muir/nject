@@ -90,7 +90,7 @@ func ExampleProvide_wrapper_and_fallible_injectors() {
 	// <nil>
 }
 
-// This demonstrate the use of NonFinal.  NonFinal is useful when
+// This demonstrates the use of NonFinal.  NonFinal is useful when
 // manipulating lists of providers.
 func ExampleNonFinal() {
 	seq := nject.Sequence("example",
@@ -109,6 +109,16 @@ func ExampleNonFinal() {
 	))
 	// Output: final 20 some string
 	// <nil>
+}
+
+func ExampleSaveTo() {
+	var s string
+	var i int
+	fmt.Println(nject.Run("example",
+		func() string { return "one" },
+		func() int { return 3 },
+		nject.MustSaveTo(&s, &i)), s, i)
+	// Output: <nil> one 3
 }
 
 // This demonstrates how it to have a default that gets overridden by
