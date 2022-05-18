@@ -56,6 +56,10 @@ type Debugging struct {
 	// a provider chain as a unit test.  This output is nearly runnable
 	// code.  It may need a bit of customization to fully capture a situation.
 	Reproduce string
+
+	// Outer is only present within chains generated with Branch().  It is a reference
+	// to the Debugging from the main (or outer) injection chain
+	Outer *Debugging
 }
 
 type classType int
@@ -100,12 +104,17 @@ const (
 	lastFlowType // UNUSED
 )
 
-var terminalErrorType = reflect.TypeOf((*TerminalError)(nil)).Elem()
+var (
+	terminalErrorType = reflect.TypeOf((*TerminalError)(nil)).Elem()
 
-var errorType = reflect.TypeOf((*error)(nil)).Elem()
+	errorType = reflect.TypeOf((*error)(nil)).Elem()
 
-var ignoreType = reflect.TypeOf((*ignore)(nil)).Elem()
+	ignoreType = reflect.TypeOf((*ignore)(nil)).Elem()
 
-var emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
+	emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 
-var reflectiveFuncType = reflect.TypeOf((*func([]reflect.Type) []reflect.Type)(nil)).Elem()
+	debuggingType   = reflect.TypeOf((*Debugging)(nil)).Elem()
+	bypassDebugType = reflect.TypeOf((*bypassDebug)(nil)).Elem()
+
+	reflectiveFuncType = reflect.TypeOf((*func([]reflect.Type) []reflect.Type)(nil)).Elem()
+)

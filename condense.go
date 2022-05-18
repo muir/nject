@@ -5,6 +5,8 @@ import (
 	"reflect"
 )
 
+type bypassDebug Debugging
+
 // Condense transforms a collection into a single provider.
 // The inputs to the provider are what's
 // required for the last function in the Collection to be invoked
@@ -19,9 +21,14 @@ import (
 // or returned by wrap functions are returned by the condensed
 // provider.
 //
+// If error is returned, it is tranformed into TerminalError.
+// If you want to capture an actual error without aborting the
+// parent chan, then embed it in something else.
+//
 // The condensed provider is bound with Collection.Bind() at
 // the time that Condense() is called.
 func (c *Collection) Condense() (Provider, error) {
+	name := c.name
 	if len(c.contents) == 0 {
 		return c, nil
 	}
@@ -48,6 +55,30 @@ func (c *Collection) Condense() (Provider, error) {
 		}
 	}
 
+	// If we've got debugging going on inside the condensed collection, let's
+	// pipe in the debugging from the outer collection too.  To do that, we
+	// use a second type as an extra thing that we want to receive.  In any
+	// case, we don't want to directly expose that we want to receive a
+	// *Debugging since it is always filled magically by Bind()
+	var debugFound bool
+	for i, t := range downIn {
+		if t != debuggingType {
+			continue
+		}
+		downIn[i] = bypassDebugType
+		if debugFound {
+			continue
+		}
+		debugFound = true
+		// collections don't have a convienent method for
+		// prepending something to their contents so we'll
+		// build a replacement instead.
+		c = Sequence(name+"-debug",
+			func(d *Debugging, b *bypassDebug) {
+				d.Outer = (*Debugging)(b)
+			}).Append(name+"-condensed", c)
+	}
+
 	invokeF := &reflectiveBinder{
 		thinReflective: thinReflective{
 			thinReflectiveArgs: thinReflectiveArgs{
@@ -61,7 +92,26 @@ func (c *Collection) Condense() (Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newThing(invokeF.thinReflective), nil
+
+	for i, t := range upOut {
+		if t == errorType {
+			// we're being a bit naughty here: we modify
+			// a slice that's already part of another
+			// structure and has been passed to functions
+			upOut[i] = terminalErrorType
+		}
+	}
+
+	bound := newThing(invokeF.thinReflective)
+
+	if !debugFound {
+		return bound, nil
+	}
+
+	return Sequence(name+"-dbundle",
+		func(d *Debugging) *bypassDebug {
+			return (*bypassDebug)(d)
+		}).Append(name+"-bound", bound), nil
 }
 
 // MustCondense panics if Condense fails
