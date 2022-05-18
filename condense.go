@@ -19,10 +19,8 @@ import (
 // or returned by wrap functions are returned by the condensed
 // provider.
 //
-// Experimental: the return type of Condense could change in a
-// future version to be a *Collection instead so as to support
-// better filling of *Debugging.  Since *Collection supports a
-// superset of the Provider interface, this should not matter.
+// The condensed provider is bound with Collection.Bind() at
+// the time that Condense() is called.
 func (c *Collection) Condense() (Provider, error) {
 	if len(c.contents) == 0 {
 		return c, nil
