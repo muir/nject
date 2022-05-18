@@ -112,6 +112,4 @@ var ignoreType = reflect.TypeOf((*ignore)(nil)).Elem()
 
 var emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 
-var debuggingType = reflect.TypeOf((*Debugging)(nil)).Elem()
-
 var reflectiveFuncType = reflect.TypeOf((*func([]reflect.Type) []reflect.Type)(nil)).Elem()

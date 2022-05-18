@@ -20,11 +20,11 @@ func SaveTo(varPointers ...interface{}) (Provider, error) {
 		if !v.IsValid() {
 			return nil, fmt.Errorf("argument %d of FillVars, is not a valid pointer", i)
 		}
-		if v.IsNil() {
-			return nil, fmt.Errorf("argument %d of FillVars, a %s, is nil and thus invalid", i, v.Type())
-		}
 		if v.Type().Kind() != reflect.Ptr {
 			return nil, fmt.Errorf("argument %d of FillVars, a %s, is not a pointer and thus invalid", i, v.Type())
+		}
+		if v.IsNil() {
+			return nil, fmt.Errorf("argument %d of FillVars, a %s, is nil and thus invalid", i, v.Type())
 		}
 		if !v.Elem().CanSet() {
 			return nil, fmt.Errorf("argument %d of FillVars, a %s, is not settable and thus invalid", i, v.Type())
