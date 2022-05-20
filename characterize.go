@@ -13,7 +13,7 @@ type charContext struct {
 	inputsAreStatic bool
 }
 
-type flowMapType [lastFlowType][]typeCode
+type flowMapType [lastFlowType]typeCodes
 
 type characterization struct {
 	name   string
@@ -581,7 +581,7 @@ Match:
 		}
 		a.fm.upRmap = make(map[typeCode]typeCode)
 		a.fm.downRmap = make(map[typeCode]typeCode)
-		a.fm.flows = [lastFlowType][]typeCode{}
+		a.fm.flows = [lastFlowType]typeCodes{}
 		match.mutate(a)
 		return a.fm, nil
 	}

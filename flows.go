@@ -5,6 +5,12 @@ import (
 )
 
 func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
+	switch fm.class {
+	case unsetClassType:
+		// continue
+	default:
+		return fm.flows[inputParams].Types(), fm.flows[outputParams].Types()
+	}
 	switch r := fm.fn.(type) {
 	case Reflective:
 		return reflectiveEffectiveOutputs(r)
@@ -106,10 +112,16 @@ func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
 }
 
 func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
-	if r, ok := fm.fn.(Reflective); ok {
-		return reflectiveEffectiveReturns(r)
+	switch fm.class {
+	case unsetClassType:
+		// continue
+	default:
+		return fm.flows[receviedParams].Types(), fm.flows[returnParams].Types()
 	}
-	if _, ok := fm.fn.(generatedFromInjectionChain); ok {
+	switch r := fm.fn.(type) {
+	case Reflective:
+		return reflectiveEffectiveReturns(r)
+	case generatedFromInjectionChain:
 		return nil, nil
 	}
 	v := reflect.ValueOf(fm.fn)

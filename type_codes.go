@@ -8,6 +8,7 @@ import (
 )
 
 type typeCode int
+type typeCodes []typeCode
 
 var (
 	typeCounter = 0
@@ -75,4 +76,20 @@ func (tc typeCode) Type() reflect.Type {
 // Type returns the reflect.Type for this typeCode
 func (tc typeCode) String() string {
 	return tc.Type().String()
+}
+
+func (tcs typeCodes) Types() []reflect.Type {
+	if tcs == nil {
+		return nil
+	}
+	if len(tcs) == 0 {
+		return []reflect.Type{}
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	t := make([]reflect.Type, len(tcs))
+	for i, tc := range tcs {
+		t[i] = reverseMap[tc]
+	}
+	return t
 }

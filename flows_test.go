@@ -150,19 +150,27 @@ func TestFlows(t *testing.T) {
 				t.Log("->", reflect.TypeOf(tc.provider))
 				f = Provide(tc.name, tc.provider)
 			}
-			downIn, downOut := f.DownFlows()
-			upIn, upOut := f.UpFlows()
-			t.Log("down/in", downIn)
-			t.Log("down/out", downOut)
-			t.Log("up/in", upIn)
-			t.Log("up/out", upOut)
+
 			wantDownIn, wantDownOut := toTypes(tc.downIn...), toTypes(tc.downOut...)
-			assert.ElementsMatch(t, toStrings(wantDownIn), toStrings(downIn), "down in")
-			assert.ElementsMatch(t, toStrings(wantDownOut), toStrings(downOut), "down out")
 			wantUpIn, wantUpOut := toTypes(tc.upIn...), toTypes(tc.upOut...)
-			assert.ElementsMatch(t, toStrings(wantUpIn), toStrings(upIn), "up in")
-			assert.ElementsMatch(t, toStrings(wantUpOut), toStrings(upOut), "up out")
-			if p, ok := f.(*provider); ok {
+
+			fCheck := func(f flows, context string) {
+				t.Log(context)
+				downIn, downOut := f.DownFlows()
+				upIn, upOut := f.UpFlows()
+				t.Log("down/in", downIn)
+				t.Log("down/out", downOut)
+				t.Log("up/in", upIn)
+				t.Log("up/out", upOut)
+				assert.ElementsMatchf(t, toStrings(wantDownIn), toStrings(downIn), "down in %s", context)
+				assert.ElementsMatchf(t, toStrings(wantDownOut), toStrings(downOut), "down out %s", context)
+				assert.ElementsMatchf(t, toStrings(wantUpIn), toStrings(upIn), "up in %s", context)
+				assert.ElementsMatchf(t, toStrings(wantUpOut), toStrings(upOut), "up out %s", context)
+			}
+
+			fCheck(f, "direct")
+
+			charCheck := func(p *provider) {
 				t.Log("checking against characterize flows too")
 				fm, err := handlerRegistry.characterizeFuncDetails(p, charContext{})
 				if err != nil {
@@ -177,6 +185,17 @@ func TestFlows(t *testing.T) {
 				assert.Equal(t, toStrings(wantDownOut), flowToStrings(fm.flows[outputParams]), "char down out")
 				assert.Equal(t, toStrings(wantDownIn), flowToStrings(fm.flows[inputParams]), "char down in")
 				assert.Equal(t, toStrings(wantUpIn), flowToStrings(fm.flows[receviedParams]), "char up in")
+
+				fCheck(p, "characterized")
+			}
+
+			switch p := f.(type) {
+			case *provider:
+				charCheck(p)
+			case *Collection:
+				// skip
+			default:
+				assert.Failf(t, "unexpected type", "unexpected type %T", f)
 			}
 		})
 	}
