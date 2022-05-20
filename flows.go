@@ -65,16 +65,20 @@ func effectiveOutputs(fn reflectType) ([]reflect.Type, []reflect.Type) {
 	return inputs, typesIn(i0)
 }
 
-// XXX change to use best matches
 func (c Collection) netFlows(f func(fm *provider) ([]reflect.Type, []reflect.Type)) ([]reflect.Type, []reflect.Type) {
+	available := make(interfaceMap)
 	seenIn := make(map[reflect.Type]struct{})
 	uniqueIn := make([]reflect.Type, 0, len(c.contents)*4)
 	seenOut := make(map[reflect.Type]struct{})
 	uniqueOut := make([]reflect.Type, 0, len(c.contents)*4)
-	for _, fm := range c.contents {
+	for i, fm := range c.contents {
 		inputs, outputs := f(fm)
 		inputsByType := make(map[reflect.Type]struct{})
 		for _, input := range inputs {
+			t, _, err := available.bestMatch(getTypeCode(input), "input")
+			if err == nil {
+				input = t.Type()
+			}
 			inputsByType[input] = struct{}{}
 			if _, ok := seenOut[input]; ok {
 				continue
@@ -86,6 +90,7 @@ func (c Collection) netFlows(f func(fm *provider) ([]reflect.Type, []reflect.Typ
 			uniqueIn = append(uniqueIn, input)
 		}
 		for _, output := range outputs {
+			available.Add(getTypeCode(output), i, fm)
 			if _, ok := inputsByType[output]; ok {
 				continue
 			}
