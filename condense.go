@@ -21,14 +21,14 @@ type bypassDebug Debugging
 // or returned by wrap functions are returned by the condensed
 // provider.
 //
-// If error is returned, it is tranformed into TerminalError.
-// If you want to capture an actual error without aborting the
-// parent chan, then embed it in something else.
-//
 // The condensed provider is bound with Collection.Bind() at
 // the time that Condense() is called.
-func (c *Collection) Condense() (Provider, error) {
-	name := c.name
+//
+// If treatErrorAsTerminal is true then a returned error will be
+// treated as a TerminalError. Otherwise it is treated as a
+// a regular error being provided into the downward chain.
+func (c *Collection) Condense(treatErrorAsTerminal bool) (Provider, error) {
+	name := c.name + "-condensed"
 	if len(c.contents) == 0 {
 		return c, nil
 	}
@@ -39,21 +39,27 @@ func (c *Collection) Condense() (Provider, error) {
 		return nil, fmt.Errorf("Condense cannot operate on collections whose last element is a wrap function")
 	}
 
+	// Annotate providers so that the last provider in the collection will
+	// be treated as a final function and it's return values will be
+	// upOut upflows.
+	{
+		nonStaticTypes := make(map[typeCode]bool)
+		beforeInvoke, afterInvoke, err := c.characterizeAndFlatten(nonStaticTypes)
+		if err != nil {
+			return nil, err
+		}
+		ia := make([]interface{}, 0, len(beforeInvoke)+len(afterInvoke))
+		for _, fm := range beforeInvoke {
+			ia = append(ia, fm)
+		}
+		for _, fm := range afterInvoke {
+			ia = append(ia, fm)
+		}
+		c = Sequence(name, ia...)
+	}
+
 	downIn, _ := c.DownFlows()
 	_, upOut := c.UpFlows()
-
-	// UpFlows won't capture the return values of the final
-	// func so we'll do so here.
-	allOut := make(map[reflect.Type]struct{})
-	for _, t := range upOut {
-		allOut[t] = struct{}{}
-	}
-	for _, t := range typesOut(lastType) {
-		if _, ok := allOut[t]; !ok {
-			allOut[t] = struct{}{}
-			upOut = append(upOut, t)
-		}
-	}
 
 	// If we've got debugging going on inside the condensed collection, let's
 	// pipe in the debugging from the outer collection too.  To do that, we
@@ -70,13 +76,15 @@ func (c *Collection) Condense() (Provider, error) {
 			continue
 		}
 		debugFound = true
+
 		// collections don't have a convienent method for
 		// prepending something to their contents so we'll
 		// build a replacement instead.
-		c = Sequence(name+"-debug",
+		c = Sequence(name,
 			func(d *Debugging, b *bypassDebug) {
 				d.Outer = (*Debugging)(b)
-			}).Append(name+"-condensed", c)
+			}, c)
+
 	}
 
 	invokeF := &reflectiveBinder{
@@ -93,12 +101,14 @@ func (c *Collection) Condense() (Provider, error) {
 		return nil, err
 	}
 
-	for i, t := range upOut {
-		if t == errorType {
-			// we're being a bit naughty here: we modify
-			// a slice that's already part of another
-			// structure and has been passed to functions
-			upOut[i] = terminalErrorType
+	if treatErrorAsTerminal {
+		for i, t := range upOut {
+			if t == errorType {
+				// we're being a bit naughty here: we modify
+				// a slice that's already part of another
+				// structure and has been passed to functions
+				upOut[i] = terminalErrorType
+			}
 		}
 	}
 
@@ -108,15 +118,17 @@ func (c *Collection) Condense() (Provider, error) {
 		return bound, nil
 	}
 
-	return Sequence(name+"-dbundle",
+	return Sequence(name,
 		func(d *Debugging) *bypassDebug {
 			return (*bypassDebug)(d)
-		}).Append(name+"-bound", bound), nil
+		},
+		bound,
+	), nil
 }
 
 // MustCondense panics if Condense fails
-func (c *Collection) MustCondense() Provider {
-	p, err := c.Condense()
+func (c *Collection) MustCondense(treatErrorAsTerminal bool) Provider {
+	p, err := c.Condense(treatErrorAsTerminal)
 	if err != nil {
 		panic(err)
 	}

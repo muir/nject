@@ -26,7 +26,7 @@ func TestCondense(t *testing.T) {
 					return fmt.Errorf("2")
 				}
 				return nil
-			}).MustCondense(),
+			}).MustCondense(true),
 		func(i int) nject.TerminalError {
 			if i == 3 {
 				return fmt.Errorf("3")

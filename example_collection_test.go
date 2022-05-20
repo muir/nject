@@ -79,7 +79,7 @@ func ExampleCollection_Condense() {
 		},
 		func(s string, i int) string {
 			return fmt.Sprintf("%s-%d", s, i)
-		}).MustCondense())
+		}).MustCondense(false))
 	fmt.Println(nject.Run("t",
 		func() bool { return true },
 		one,
