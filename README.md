@@ -106,7 +106,14 @@ Injectors can use data produced by earlier injectors simply by having
 a function parameter that matches the type of a return value of an
 earlier injector.
 
-#### Wrappers
+Injector chains can be collapsed to become a single injector -- this
+allows the chain to branch out in a tree structure so that it can 
+generate multiple copies of the same type.
+
+Injectors can be automatically reordered so that outputs are generated
+before they're required as inputs.
+
+#### Wrappers (aka Middleware)
 
 Wrappers are special functions that are responsible for invoking
 the part of the injection chain that comes after themselves.  They
@@ -157,6 +164,8 @@ This repo represents continued development of Blue Owl's
 has been in production use for years and has been unchanged for years.
 The core of nject is mostly unchanged since taking over development from Blue Owl.
 
-With the version 0.2.0 release, nject is anticipated to be stable.
-
+Nject will follow strict semver behavior except (1) things noted as experimental;
+and (2) releases that are less than 10 days old may have corrections applied that
+are not strictly backwards compatible with the recent release (for example, 1.0.0
+accidently exported a type that should have remained private).
 
