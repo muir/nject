@@ -9,9 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCondense(t *testing.T) {
+func TestCondenseTerminalError(t *testing.T) {
 	t.Parallel()
-
 	var x func(int) error
 	nject.Sequence("s1",
 		nject.Sequence("s",
@@ -51,4 +50,42 @@ func TestCondense(t *testing.T) {
 	assert.Equal(t, "3", c(3))
 	assert.Equal(t, "4", c(4))
 	assert.Equal(t, "", c(0))
+}
+
+func TestCondenseErrorTreatment(t *testing.T) {
+	t.Parallel()
+	run := func(behavior bool) string {
+		var x func() error
+		nject.Sequence("s1",
+			nject.Sequence("s",
+				func() error {
+					return fmt.Errorf("1")
+				}).MustCondense(behavior),
+			nject.Shun(func() error {
+				return fmt.Errorf("3")
+			}),
+			func(err error) error {
+				return fmt.Errorf("2: %w", err)
+			}).Bind(&x, nil)
+		return x().Error()
+	}
+	assert.Equal(t, "1", run(true), "treat errors as terminal")
+	assert.Equal(t, "2: 1", run(false), "treat errors as regular")
+}
+
+func TestCondenseDebugging(t *testing.T) {
+	var called bool
+	var x func()
+	nject.Sequence("s1",
+		nject.Sequence("s",
+			func(d *nject.Debugging) {
+				assert.NotNil(t, d.Outer, "outer debug")
+				called = true
+			},
+			func() {},
+		).MustCondense(true),
+		func() {},
+	).Bind(&x, nil)
+	x()
+	assert.True(t, called, "called")
 }

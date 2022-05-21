@@ -113,8 +113,8 @@ var (
 
 	emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 
-	debuggingType   = reflect.TypeOf((*Debugging)(nil)).Elem()
-	bypassDebugType = reflect.TypeOf((*bypassDebug)(nil)).Elem()
+	debuggingType   = reflect.TypeOf((**Debugging)(nil)).Elem()
+	bypassDebugType = reflect.TypeOf((**bypassDebug)(nil)).Elem()
 
 	reflectiveFuncType = reflect.TypeOf((*func([]reflect.Type) []reflect.Type)(nil)).Elem()
 )
