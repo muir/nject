@@ -48,9 +48,13 @@ type canFakeType interface {
 	In(int) reflect.Type
 }
 
+type canInner interface {
+	Inner() ReflectiveArgs
+}
+
 func getReflectType(i interface{}) reflectType {
 	if r, ok := i.(Reflective); ok {
-		w := reflectiveWrapper{r}
+		w := wrappedReflective{r}
 		return w
 	}
 	return reflect.TypeOf(i)
@@ -58,15 +62,21 @@ func getReflectType(i interface{}) reflectType {
 
 // getInZero is used to get the first input type for a function
 // that is in a canCall.  This depends upon knowing that canCall
-// is either a reflect.Type or a Reflective
-func getInZero(cc canCall) reflect.Type {
+// is either a reflect.Type, a Reflective, or a ReflectiveWrapper
+//
+// If it's reflective, the bool will be true and the type will
+// be nil
+func getInZero(cc canCall) (reflect.Type, bool) {
 	if t, ok := cc.(canRealType); ok {
-		return t.Type().In(0)
+		return t.Type().In(0), false
+	}
+	if _, ok := cc.(canInner); ok {
+		return nil, true
 	}
 	if t, ok := cc.(canFakeType); ok {
-		return t.In(0)
+		return t.In(0), false
 	}
-	return nil
+	return nil, false
 }
 
 type fillerOptions struct {
@@ -123,6 +133,8 @@ var reservedTags = map[string]struct{}{
 // will not be filled from the provider chain.  "fill" overrides that
 // behavior.  "fill" overrides other behaviors including defaults set with
 // post-actions.
+//
+// If you just want to provide a value variable, use FillVars() instead.
 func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
 	// Options handling
 	options := fillerOptions{
@@ -398,78 +410,11 @@ func (f *filler) Call(inputs []reflect.Value) []reflect.Value {
 	return []reflect.Value{r}
 }
 
-// reflectiveWrapper allows Refelective to kinda pretend to be a reflect.Type
-type reflectiveWrapper struct {
-	Reflective
-}
-
-// reflecType is a subset of reflect.Type good enough for use in characterize
-type reflectType interface {
-	Kind() reflect.Kind
-	NumOut() int
-	NumIn() int
-	In(i int) reflect.Type
-	Elem() reflect.Type
-	Out(i int) reflect.Type
-	String() string
-}
-
-var _ reflectType = reflectiveWrapper{}
-
-func (w reflectiveWrapper) Kind() reflect.Kind { return reflect.Func }
-func (w reflectiveWrapper) Elem() reflect.Type { panic("call not expected") }
-
-func (w reflectiveWrapper) String() string {
-	in := make([]string, w.NumIn())
-	for i := 0; i < w.NumIn(); i++ {
-		in[i] = w.In(i).String()
-	}
-	out := make([]string, w.NumOut())
-	for i := 0; i < w.NumOut(); i++ {
-		out[i] = w.Out(i).String()
-	}
-	switch len(out) {
-	case 0:
-		return "Reflective(" + strings.Join(in, ", ") + ")"
-	case 1:
-		return "Reflective(" + strings.Join(in, ", ") + ") " + out[0]
-	default:
-		return "Reflective(" + strings.Join(in, ", ") + ") (" + strings.Join(out, ", ") + ")"
-	}
-}
-
 func copyIntSlice(in []int) []int {
 	c := make([]int, len(in), len(in)+1)
 	copy(c, in)
 	return c
 }
-
-// MakeReflective is a simple wrapper to create a Reflective
-func MakeReflective(
-	inputs []reflect.Type,
-	outputs []reflect.Type,
-	function func([]reflect.Value) []reflect.Value,
-) Reflective {
-	return thinReflective{
-		inputs:  inputs,
-		outputs: outputs,
-		fun:     function,
-	}
-}
-
-type thinReflective struct {
-	inputs  []reflect.Type
-	outputs []reflect.Type
-	fun     func([]reflect.Value) []reflect.Value
-}
-
-var _ Reflective = thinReflective{}
-
-func (r thinReflective) In(i int) reflect.Type                   { return r.inputs[i] }
-func (r thinReflective) NumIn() int                              { return len(r.inputs) }
-func (r thinReflective) Out(i int) reflect.Type                  { return r.outputs[i] }
-func (r thinReflective) NumOut() int                             { return len(r.outputs) }
-func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
 
 // addFieldFiller creates a Reflective that wraps a closure that
 // unpacks the recently filled struct and extracts the relevant field
@@ -556,8 +501,10 @@ func addFieldFiller(
 
 	return Provide(fmt.Sprintf("fill-%s-of-%s", field.Name, outerStruct),
 		thinReflective{
-			inputs:  inputs,
-			outputs: typesOut(t),
+			thinReflectiveArgs: thinReflectiveArgs{
+				inputs:  inputs,
+				outputs: typesOut(t),
+			},
 			fun: func(in []reflect.Value) []reflect.Value {
 				strct := in[inputIndex]
 				if structIsPtr {
@@ -586,8 +533,10 @@ func generatePostMethod(modelType reflect.Type, methodName string) (Provider, er
 	switch {
 	case mt.In(0) == modelType:
 		return Provide(desc, thinReflective{
-			inputs:  typesIn(mt),
-			outputs: typesOut(mt),
+			thinReflectiveArgs: thinReflectiveArgs{
+				inputs:  typesIn(mt),
+				outputs: typesOut(mt),
+			},
 			fun: func(in []reflect.Value) []reflect.Value {
 				return method.Func.Call(in)
 			},
@@ -596,8 +545,10 @@ func generatePostMethod(modelType reflect.Type, methodName string) (Provider, er
 		inputs := typesIn(mt)
 		inputs[0] = modelType
 		return Provide(desc, thinReflective{
-			inputs:  inputs,
-			outputs: typesOut(mt),
+			thinReflectiveArgs: thinReflectiveArgs{
+				inputs:  inputs,
+				outputs: typesOut(mt),
+			},
 			fun: func(in []reflect.Value) []reflect.Value {
 				in[0] = in[0].Elem()
 				return method.Func.Call(in)

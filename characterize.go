@@ -13,7 +13,7 @@ type charContext struct {
 	inputsAreStatic bool
 }
 
-type flowMapType [lastFlowType][]typeCode
+type flowMapType [lastFlowType]typeCodes
 
 type characterization struct {
 	name   string
@@ -161,6 +161,9 @@ var (
 )
 
 var noAnonymousFuncs = predicate("has an untyped functional argument", func(a testArgs) bool {
+	if _, ok := a.fm.fn.(ReflectiveWrapper); ok {
+		return false
+	}
 	return !hasAnonymousFuncs(typesIn(a.t), false) &&
 		!hasAnonymousFuncs(typesOut(a.t), false)
 })
@@ -171,13 +174,30 @@ var noAnonymousExceptFirstInput = predicate("has extra untyped functional argume
 })
 
 var hasInner = predicate("does not have an Inner function (untyped functional argument in the 1st position)", func(a testArgs) bool {
-	t := a.t
-	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
+	return isWrapper(a.t, a.fm.fn)
 })
 
+func isWrapper(t reflectType, fn interface{}) bool {
+	if _, ok := fn.(ReflectiveWrapper); ok {
+		return true
+	}
+	return t.Kind() == reflect.Func && t.NumIn() > 0 && t.In(0).Kind() == reflect.Func
+}
+
 var isFuncPointer = predicate("is not a pointer to a function", func(a testArgs) bool {
-	t := a.t
-	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func
+	switch a.fm.fn.(type) {
+	case ReflectiveInvoker:
+		return true
+	case Reflective, ReflectiveArgs:
+		return false
+	default:
+		t := a.t
+		return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Func
+	}
+})
+
+var isNotFuncPointer = predicate("is a pointer to a function", func(a testArgs) bool {
+	return !isFuncPointer.test(a)
 })
 
 var invokeRegistry = typeRegistry{
@@ -191,8 +211,13 @@ var invokeRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = initFunc
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
-			a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.t.Elem()))
+			if _, ok := a.fm.fn.(ReflectiveInvoker); ok {
+				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t))
+				a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.t))
+			} else {
+				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
+				a.fm.flows[bypassParams] = toTypeCodes(typesOut(a.t.Elem()))
+			}
 			a.fm.required = true
 			a.fm.isSynthetic = true
 		},
@@ -207,8 +232,13 @@ var invokeRegistry = typeRegistry{
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = invokeFunc
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
-			a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.Elem()))
+			if _, ok := a.fm.fn.(ReflectiveInvoker); ok {
+				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t))
+				a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t))
+			} else {
+				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
+				a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.Elem()))
+			}
 			a.fm.required = true
 			a.fm.isSynthetic = true
 		},
@@ -246,6 +276,7 @@ var handlerRegistry = typeRegistry{
 			notMarkedNoCache,
 			mustNotMemoize,
 			notMarkedReorder,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -268,6 +299,7 @@ var handlerRegistry = typeRegistry{
 			notMarkedNoCache,
 			mustNotMemoize,
 			notMarkedReorder,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -292,6 +324,7 @@ var handlerRegistry = typeRegistry{
 			possibleMapKey,
 			notMarkedSingleton,
 			notMarkedReorder,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -318,6 +351,7 @@ var handlerRegistry = typeRegistry{
 			possibleMapKey,
 			notMarkedSingleton,
 			notMarkedReorder,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -342,6 +376,7 @@ var handlerRegistry = typeRegistry{
 			notMarkedNoCache,
 			notMarkedSingleton,
 			notMarkedReorder,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -362,6 +397,7 @@ var handlerRegistry = typeRegistry{
 			markedMemoized,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -383,6 +419,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -405,6 +442,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			notMarkedNoCache,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = staticGroup
@@ -423,6 +461,7 @@ var handlerRegistry = typeRegistry{
 			markedMemoized,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -442,6 +481,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = runGroup
@@ -461,6 +501,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			in := typesIn(a.t)
@@ -468,9 +509,15 @@ var handlerRegistry = typeRegistry{
 			a.fm.group = runGroup
 			a.fm.class = wrapperFunc
 			a.fm.flows[inputParams] = toTypeCodes(in)
-			a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.In(0)))
 			a.fm.flows[returnParams] = toTypeCodes(typesOut(a.t))
-			a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.In(0)))
+			var inner reflectType
+			if w, ok := a.fm.fn.(ReflectiveWrapper); ok {
+				inner = wrappedReflective{w.Inner()}
+			} else {
+				inner = a.t.In(0)
+			}
+			a.fm.flows[outputParams] = toTypeCodes(typesIn(inner))
+			a.fm.flows[receviedParams] = toTypeCodes(typesOut(inner))
 		},
 	},
 
@@ -483,6 +530,7 @@ var handlerRegistry = typeRegistry{
 			mustNotMemoize,
 			unstaticOkay,
 			notMarkedSingleton,
+			isNotFuncPointer,
 		},
 		mutate: func(a testArgs) {
 			a.fm.group = finalGroup
@@ -498,10 +546,10 @@ var handlerRegistry = typeRegistry{
 func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*provider, error) {
 	var rejectReasons []string
 	var a testArgs
-	if r, ok := fm.fn.(Reflective); ok {
+	if r, ok := fm.fn.(ReflectiveArgs); ok {
 		a = testArgs{
 			fm:    fm.copy(),
-			t:     reflectiveWrapper{r},
+			t:     wrappedReflective{r},
 			isNil: false,
 			cc:    cc,
 		}
@@ -533,7 +581,7 @@ Match:
 		}
 		a.fm.upRmap = make(map[typeCode]typeCode)
 		a.fm.downRmap = make(map[typeCode]typeCode)
-		a.fm.flows = [lastFlowType][]typeCode{}
+		a.fm.flows = [lastFlowType]typeCodes{}
 		match.mutate(a)
 		return a.fm, nil
 	}

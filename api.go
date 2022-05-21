@@ -16,12 +16,28 @@ type Collection struct {
 	contents []*provider
 }
 
+var _ Provider = &Collection{}
+
 // Provider is an individual injector (function, constant, or
 // wrapper).  Functions that take injectors, take interface{}.
 // Functions that return invjectors return Provider so that
 // methods can be attached.
 type Provider interface {
 	thing
+	String() string
+
+	// For single providers, DownFlows includes all inputs and
+	// all outputs.  For collections, Downflows only includes
+	// the net inputs and net outputs.
+	DownFlows() (inputs []reflect.Type, outputs []reflect.Type)
+
+	// For single providers, Upflows includes all consumes and
+	// all returns.  For collections, Upflows only includes
+	// the net consumes and returns.
+	//
+	// Providers that return TerminalError are a special case and count as
+	// producting error.
+	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
 // Sequence creates a Collection of providers.  Each collection must
