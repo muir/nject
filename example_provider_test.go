@@ -121,6 +121,25 @@ func ExampleSaveTo() {
 	// Output: <nil> one 3
 }
 
+func ExampleCurry() {
+	lotsOfUnchangingArgs := func(s string, i int, u uint) string {
+		return fmt.Sprintf("%s-%d-%d", s, i, u)
+	}
+	var shorthand func(i int) string
+	fmt.Println(nject.Run("example",
+		func() string { return "foo" },
+		func() uint { return 33 },
+		nject.MustCurry(lotsOfUnchangingArgs, &shorthand),
+		func() {
+			fmt.Println("actual injection goal")
+		},
+	))
+	fmt.Println(shorthand(10))
+	// Output: actual injection goal
+	// <nil>
+	// foo-10-33
+}
+
 // This demonstrates how it to have a default that gets overridden by
 // by later inputs.
 func ExampleReorder() {
