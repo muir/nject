@@ -160,7 +160,7 @@ The following use nject to provide nicer APIs:
 ### Development status
 
 This repo represents continued development of Blue Owl's 
-[nject](https://github.com/BlueOwlOpenSource/nject/nject) base.  Blue Owl's code
+[nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
 has been in production use for years and has been unchanged for years.
 The core of nject is mostly unchanged since taking over development from Blue Owl.
 
