@@ -89,3 +89,34 @@ func TestCondenseDebugging(t *testing.T) {
 	x()
 	assert.True(t, called, "called")
 }
+
+func TestCondenseSelfSatisfied(t *testing.T) {
+	var called bool
+	var alsoCalled bool
+	var x func()
+	condensed := nject.Required(nject.Sequence("c",
+		func(_ int) string {
+			return "foo"
+		},
+		func(_ string) {
+			called = true
+		},
+	).MustCondense(true))
+
+	nject.Sequence("s1",
+		func() int {
+			return 7
+		},
+		condensed,
+		func() {
+			alsoCalled = true
+		},
+	).Bind(&x, nil)
+	x()
+	assert.True(t, called, "condensed called")
+	assert.True(t, alsoCalled, "main called")
+	assert.Equal(t,
+		" [<reflectiveFunc>(int)]",
+		condensed.String(),
+		"presentation of condensed")
+}
