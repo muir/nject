@@ -120,3 +120,15 @@ func TestCondenseSelfSatisfied(t *testing.T) {
 		condensed.String(),
 		"presentation of condensed")
 }
+
+func TestCondenseStringified(t *testing.T) {
+	c1 := nject.Sequence("x",
+		func() (int, string) { return 7, "foo" },
+	).MustCondense(true)
+	assert.Equal(t, " [<reflectiveFunc>() (int, string)]", c1.String(), "c1")
+
+	c2 := nject.Sequence("x",
+		func() float32 { return 7 },
+	).MustCondense(true)
+	assert.Equal(t, " [<reflectiveFunc>() float32]", c2.String(), "c2")
+}
