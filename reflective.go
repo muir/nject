@@ -1,6 +1,7 @@
 package nject
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -81,14 +82,34 @@ type reflectiveBinder struct {
 	thinReflective
 }
 
-var _ ReflectiveInvoker = &reflectiveBinder{}
-var _ Reflective = reflectiveBinder{}
+var (
+	_ ReflectiveInvoker = &reflectiveBinder{}
+	_ Reflective        = reflectiveBinder{}
+)
 
 func (b *reflectiveBinder) Set(fun func([]reflect.Value) []reflect.Value) {
 	b.fun = fun
 }
 
 func (r thinReflective) Call(in []reflect.Value) []reflect.Value { return r.fun(in) }
+func (r thinReflective) String() string {
+	in := make([]string, len(r.inputs))
+	for i, input := range r.inputs {
+		in[i] = input.String()
+	}
+	switch len(r.outputs) {
+	case 0:
+		return fmt.Sprintf("<reflectiveFunc>(%s)", strings.Join(in, ", "))
+	case 1:
+		return fmt.Sprintf("<reflectiveFunc>(%s) %s", strings.Join(in, ", "), r.outputs[0].String())
+	default:
+		out := make([]string, len(r.outputs))
+		for i, output := range r.outputs {
+			out[i] = output.String()
+		}
+		return fmt.Sprintf("<reflectiveFunc>(%s) (%s)", strings.Join(in, ", "), strings.Join(out, ", "))
+	}
+}
 
 // MakeReflectiveWrapper is a utility to create a ReflectiveWrapper
 //

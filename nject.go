@@ -147,12 +147,17 @@ func newProvider(fn interface{}, index int, origin string) *provider {
 }
 
 func (fm provider) String() string {
-	var t string
-	if fm.fn == nil {
-		t = "nil"
-	} else {
-		t = reflect.TypeOf(fm.fn).String()
-	}
+	t := func() string {
+		if fm.fn == nil {
+			return "nil"
+		}
+		if _, ok := fm.fn.(Reflective); ok {
+			if s, ok := fm.fn.(fmt.Stringer); ok {
+				return s.String()
+			}
+		}
+		return reflect.TypeOf(fm.fn).String()
+	}()
 	class := ""
 	if fm.class != unsetClassType {
 		class = fm.class.String() + ": "

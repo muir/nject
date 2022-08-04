@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSaveTo(t *testing.T) {
+func TestSaveToInvalid(t *testing.T) {
 	f := func() {}
 	cases := []struct {
 		want  string
@@ -34,6 +34,43 @@ func TestSaveTo(t *testing.T) {
 		_, err := SaveTo(tc.thing)
 		if assert.Error(t, err, tc.want) {
 			assert.Contains(t, err.Error(), tc.want)
+		}
+	}
+}
+
+func TestSaveToValid(t *testing.T) {
+	type foo struct {
+		i int
+	}
+	var fooDst foo
+	var fooPtrDst *foo
+	cases := []struct {
+		inject interface{}
+		ptr    interface{}
+		check  func()
+	}{
+		{
+			inject: foo{i: 7},
+			ptr:    &fooDst,
+			check: func() {
+				assert.Equal(t, foo{i: 7}, fooDst)
+			},
+		},
+		{
+			inject: &foo{i: 7},
+			ptr:    &fooPtrDst,
+			check: func() {
+				assert.Equal(t, foo{i: 7}, *fooPtrDst)
+			},
+		},
+	}
+	for i, tc := range cases {
+		err := Run("x",
+			tc.inject,
+			MustSaveTo(tc.ptr),
+		)
+		if assert.NoErrorf(t, err, "%d", i) {
+			assert.NotPanics(t, tc.check, "check")
 		}
 	}
 }
