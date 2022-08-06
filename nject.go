@@ -17,7 +17,7 @@ type provider struct {
 	fn     interface{}
 	id     int32
 
-	// user annotations
+	// user annotations (match these in debug.go)
 	nonFinal            bool
 	cacheable           bool
 	mustCache           bool
@@ -86,6 +86,7 @@ func (fm *provider) copy() *provider {
 		memoize:             fm.memoize,
 		loose:               fm.loose,
 		reorder:             fm.reorder,
+		overridesError:      fm.overridesError,
 		desired:             fm.desired,
 		shun:                fm.shun,
 		notCacheable:        fm.notCacheable,
