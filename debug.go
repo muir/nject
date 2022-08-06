@@ -208,6 +208,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 	f += "\t\trequire.NoError(t,\n"
 	f += "\t\t\tSequence(\"regression\",\n"
 
+	var inCluster int32
 	for _, fm := range funcs {
 		if fm == nil {
 			continue
@@ -218,18 +219,42 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 		if fm.fn == nil {
 			continue
 		}
-		// f += fmt.Sprintf("\t\t\t\t// %s\n", fm)
-		f += "\t\t\t\t"
+		if fm.cluster != 0 {
+			switch inCluster {
+			case 0:
+				f += fmt.Sprintf("\t\t\t\tCluster(\"c%d\",\n", fm.cluster-1)
+			case fm.cluster:
+				// do nothing
+			default:
+				f += fmt.Sprintf("\t\t\t\t),\n\t\t\t\tCluster(\"c%d\",\n", fm.cluster-1)
+			}
+			inCluster = fm.cluster
+		} else if inCluster != 0 {
+			f += "\t\t\t\t),\n"
+			inCluster = 0
+		}
+		var extraIndent string
+		if inCluster != 0 {
+			extraIndent = "\t"
+		}
+		f += "\t\t\t\t" + extraIndent
 		close := ""
 		for annotation, active := range map[string]bool{
+			"NonFinal":            fm.nonFinal,
 			"Cacheable":           fm.cacheable,
+			"MustCache":           fm.mustCache,
 			"Required":            fm.required,
-			"Desired":             fm.desired,
+			"CallsInner":          fm.callsInner,
 			"Memoize":             fm.memoize,
 			"Loose":               fm.loose,
+			"Reorder":             fm.reorder,
+			"OverridesError":      fm.overridesError,
+			"Desired":             fm.desired,
+			"Shun":                fm.shun,
 			"NotCacheable":        fm.notCacheable,
 			"MustConsume":         fm.mustConsume,
 			"ConsumptionOptional": fm.consumptionOptional,
+			"Singleton":           fm.singleton,
 		} {
 			if active {
 				f += annotation + "("
@@ -247,7 +272,10 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			f += "func("
 			skip := 0
 			if fm.class == wrapperFunc {
-				f += "inner " + funcSig(subs, &t, typ.In(0)) + ", "
+				f += "inner " + funcSig(subs, &t, typ.In(0))
+				if len(typesIn(typ)) > 1 {
+					f += ", "
+				}
 				skip = 1
 			}
 			f += strings.Join(addVarnames(substituteTypes(subs, &t, typesIn(typ)[skip:])), ", ") + ") "
@@ -262,10 +290,10 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			}
 			if fm.class == wrapperFunc {
 				f += " {\n"
-				f += fmt.Sprintf("\t\t\t\t\tcalled[%q]++\n", n)
-				f += "\t\t\t\t\tinner(" + strings.Join(substituteDefaults(subs, typesIn(typ.In(0))), ", ") + ")\n"
-				f += "\t\t\t\t\treturn " + strings.Join(substituteDefaults(subs, out), ", ") + "\n"
-				f += "\t\t\t\t}"
+				f += fmt.Sprintf("%s\t\t\t\t\tcalled[%q]++\n", extraIndent, n)
+				f += extraIndent + "\t\t\t\t\tinner(" + strings.Join(substituteDefaults(subs, typesIn(typ.In(0))), ", ") + ")\n"
+				f += extraIndent + "\t\t\t\t\treturn " + strings.Join(substituteDefaults(subs, out), ", ") + "\n"
+				f += extraIndent + "\t\t\t\t}"
 			} else {
 				f += fmt.Sprintf(" { called[%q]++; return %s }", n, strings.Join(substituteDefaults(subs, out), ", "))
 			}
@@ -279,6 +307,9 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			def := substituteDefaults(subs, []reflect.Type{typ})
 			f += fmt.Sprintf("%s(%s)%s,\n", tca[0], def[0], close)
 		}
+	}
+	if inCluster != 0 {
+		f += "\t\t\t),\n"
 	}
 	f += "\t\t\t).Bind(&invoker, " + initName + "))\n"
 	if initF != nil {

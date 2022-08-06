@@ -145,6 +145,10 @@ Injection chain errors attempt to be self-explanatory, but sometimes that's not 
 If you're building your injection sequence dynamically, it may be useful to print
 the injection chain.  It has a `String()` method.
 
+If you think that the issue is with nject, then open an issue with the reproduce information
+that is available as part of the debugging (`Debugging.Reproduce`) or avilable by calling
+`nject.DetailedError(err)` on the error returned from `Bind()` or `Run()`.
+
 # Related packages
 
 The following use nject to provide nicer APIs:
