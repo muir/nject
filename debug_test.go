@@ -70,6 +70,7 @@ func TestDetailedError(t *testing.T) {
 			Reorder(func() time.Time { return time.Now() }),
 			NotCacheable(func(i int) int32 { return int32(i) }),
 		),
+		func(_ MyType1, _ MyType3) {},
 		// CallsInner(func(i func()) { i() }),
 		Memoize(func(i int32) int32 { return i }),
 		OverridesError(func(i func()) error { return nil }),
