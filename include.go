@@ -67,7 +67,10 @@ type includeWorkingData struct {
 
 func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*provider, error) {
 	var err error
-	funcs = reorder(funcs, initF)
+	funcs, err = reorder(funcs, initF)
+	if err != nil {
+		return nil, err
+	}
 	for i, fm := range funcs {
 		fm.chainPosition = i
 	}
@@ -115,6 +118,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		return nil, err
 	}
 
+	debugln("eliminating providers that cannot be included")
 	for _, fm := range funcs {
 		if fm.cannotInclude != nil {
 			debugf("Excluding %s: %s", fm, fm.cannotInclude)
@@ -123,6 +127,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		}
 	}
 
+	debugln("eliminate unused providers")
 	eliminateUnused(funcs)
 
 	tryWithout := func(without ...*provider) bool {
@@ -164,7 +169,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		return err == nil
 	}
 
-	// Attempt to eliminate providers
+	debugln("attempt to eliminate additional providers")
 	for _, fm := range proposeEliminations(funcs) {
 		if fm.d.excluded != nil {
 			continue
@@ -193,12 +198,12 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 	debugln("final calculate flows")
 	err = providesReturns(funcs, initF)
 	if err != nil {
-		return nil, fmt.Errorf("internal error: uh oh")
+		return nil, fmt.Errorf("internal error: uh oh: %w", err)
 	}
 	debugf("final check chain validity")
 	err = validateChainMarkIncludeExclude(funcs, true)
 	if err != nil {
-		return nil, fmt.Errorf("internal error: uh oh #2")
+		return nil, fmt.Errorf("internal error: uh oh #2: %w", err)
 	}
 
 	return funcs, nil

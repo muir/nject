@@ -195,8 +195,8 @@ func elem(i interface{}) reflect.Type {
 
 func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) string {
 	subs := make(map[typeCode]string)
-	t := ""
-	f := "func TestRegression(t *testing.T) {\n"
+	var t string
+	var f string
 	f += "\twrapTest(t, func(t *testing.T) {\n"
 	f += "\t\tcalled := make(map[string]int)\n"
 	f += "\t\tvar invoker " + funcSig(subs, &t, elem(invokeF.fn)) + "\n"
@@ -292,10 +292,16 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 				f += " {\n"
 				f += fmt.Sprintf("%s\t\t\t\t\tcalled[%q]++\n", extraIndent, n)
 				f += extraIndent + "\t\t\t\t\tinner(" + strings.Join(substituteDefaults(subs, typesIn(typ.In(0))), ", ") + ")\n"
-				f += extraIndent + "\t\t\t\t\treturn " + strings.Join(substituteDefaults(subs, out), ", ") + "\n"
+				if len(out) > 0 {
+					f += extraIndent + "\t\t\t\t\treturn " + strings.Join(substituteDefaults(subs, out), ", ") + "\n"
+				}
 				f += extraIndent + "\t\t\t\t}"
 			} else {
-				f += fmt.Sprintf(" { called[%q]++; return %s }", n, strings.Join(substituteDefaults(subs, out), ", "))
+				if len(out) > 0 {
+					f += fmt.Sprintf(" { called[%q]++; return %s }", n, strings.Join(substituteDefaults(subs, out), ", "))
+				} else {
+					f += fmt.Sprintf(" { called[%q]++ }", n)
+				}
 			}
 			f += close + ","
 			if fm.include {
@@ -318,7 +324,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 	f += "\t\tinvoker(" + strings.Join(substituteDefaults(subs, typesIn(elem(invokeF.fn))), ", ") + ")\n"
 	f += "\t})\n"
 	f += "}\n"
-	return t + "\n" + f
+	return "func TestRegression(t *testing.T) {\n" + t + "\n" + f
 }
 
 // TODO: take note of which interfaces implement each other and new interfaces that
@@ -348,7 +354,7 @@ func substituteTypes(subs map[typeCode]string, defineTypes *string, types []refl
 				}
 			} else {
 				subs[tc] = fmt.Sprintf("s%03d", tc)
-				*defineTypes += fmt.Sprintf("// %s\ntype s%03d int\n", tc, tc)
+				*defineTypes += fmt.Sprintf("\t// %s\n\ttype s%03d int\n", tc, tc)
 			}
 		}
 		replacements = append(replacements, subs[tc])

@@ -87,6 +87,7 @@ linters:
     - exportloopref
     - errcheck
     - exhaustive
+    - typecheck
   enable-all: false
   disable:
     - maligned
