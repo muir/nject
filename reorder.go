@@ -2,6 +2,7 @@ package nject
 
 import (
 	"container/heap"
+	"fmt"
 )
 
 // Reorder annotates a provider to say that its position in the injection
@@ -54,7 +55,7 @@ func Reorder(fn interface{}) Provider {
 //
 
 // generateCheckers must be called before reorder()
-func reorder(funcs []*provider, initF *provider) []*provider {
+func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 	debugln("begin reorder ----------------------------------------------------------")
 	var someReorder bool
 	for i, fm := range funcs {
@@ -64,7 +65,7 @@ func reorder(funcs []*provider, initF *provider) []*provider {
 		}
 	}
 	if !someReorder {
-		return funcs
+		return funcs, nil
 	}
 
 	availableDown := make(interfaceMap)
@@ -258,14 +259,17 @@ func reorder(funcs []*provider, initF *provider) []*provider {
 		debugln("\t\t", i, fm)
 	}
 	debugln("------------------")
-	return x.reorderedFuncs
+	if len(funcs) != len(x.reorderedFuncs) {
+		return nil, fmt.Errorf("internal error: count of funcs changed during reorder")
+	}
+	return x.reorderedFuncs, nil
 }
 
 type node struct {
-	before     map[int]struct{}
-	after      map[int]struct{}
-	weakBefore map[int]struct{}
-	weakAfter  map[int]struct{}
+	before     map[int]struct{} // set of nodes that must be released before this node (dependent node is required)
+	after      map[int]struct{} // set of nodes that must be released after this node
+	weakBefore map[int]struct{} // set of nodes that must be released before this node (dependent node is desired)
+	weakAfter  map[int]struct{} // set of nodes that must be released after this node
 }
 
 // topo is the working data for a toplogical sort
@@ -315,11 +319,9 @@ func (x *topo) releaseNode(i int) {
 func (x *topo) run() {
 	for {
 		if x.unblocked.Len() > 0 {
-			//nolint:errcheck // cast is safe
 			i := pop(x.unblocked)
 			x.processOne(i, true)
 		} else if x.weakBlocked.Len() > 0 {
-			//nolint:errcheck // cast is safe
 			i := pop(x.weakBlocked)
 			x.processOne(i, true)
 		} else if len(x.cannotReorder) > 0 {
@@ -343,12 +345,10 @@ func (x *topo) run() {
 
 func (x *topo) processOne(i int, release bool) {
 	debugln("\tpopped", i, release)
-	if release {
-		if x.done[i] {
-			return
-		}
-		x.done[i] = true
+	if x.done[i] {
+		return
 	}
+	x.done[i] = true
 	if i > len(x.funcs) {
 		if release {
 			x.releaseNode(i)
