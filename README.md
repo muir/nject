@@ -11,16 +11,6 @@ Install:
 
 ---
 
-Prior to release 0.20, nject was bundled with other packages.  Those
-other packages are now in their own repos: 
-[npoint](https://github.com/muir/npoint),
-[nserve](https://github.com/muir/nserve), and
-[nvelope](https://github.com/muir/nvelope).  Additionally, npoint
-was split apart so that the gorilla dependency is separate and is in
-[nape](https://github.com/muir/nape).
-
----
-
 This package provides type-safe dependency injection without requiring
 users to do type assertions.
 
@@ -36,7 +26,7 @@ Type safety is checked before any functions are called.
 
 Functions whose outputs are not used are not called.  Functions may
 "wrap" the rest of the list so that they can choose to invoke the
-remaing list zero or more times.
+remaining list zero or more times.
 
 Chains may be pre-compiled into closures so that they have very little
 runtime penealty.
@@ -76,7 +66,7 @@ is called.  Bind() does not run the chain.
 
 Run() is used when ad-hoc injection is desired and performance is not
 critical.  Run is appropriate when starting servers and running tests.
-It is not reccomended for http endpoint handlers.  Run exectes the
+It is not recommended for http endpoint handlers.  Run exectes the
 chain immediately.
 
 ### Identified by type
@@ -122,7 +112,7 @@ defines for them.
 
 Any arguments to the inner() function are injected as values available
 further down the chain.  Any return values from inner() must be returned
-by the final function in the chain or from another wrapper futher down
+by the final function in the chain or from another wrapper further down
 the chain.
 
 ### Composition
@@ -132,7 +122,7 @@ other collections.
 
 ## Debugging injector chains
 
-If you chain sucessfully binds but does not do what you expect, add
+If you chain successfully binds but does not do what you expect, add
 something into your chain that recevies the `nject.Debugging` type:
 
 	func(d *nject.Debugging) {
@@ -146,8 +136,18 @@ If you're building your injection sequence dynamically, it may be useful to prin
 the injection chain.  It has a `String()` method.
 
 If you think that the issue is with nject, then open an issue with the reproduce information
-that is available as part of the debugging (`Debugging.Reproduce`) or avilable by calling
+that is available as part of the debugging (`Debugging.Reproduce`) or available by calling
 `nject.DetailedError(err)` on the error returned from `Bind()` or `Run()`.
+
+# Uses
+
+Nject has been successfully used for:
+
+- Test frameworks so that test authors specify the test dependencies with the types
+  injected into a function that runs a test.  Using wrappers or `t.Clanup()` in the
+  injection chain allows test writers to skip all or most test cleanup.
+- Endpoint handlers.  Nject makes middleware easier to write.
+- Server startup.
 
 # Related packages
 
@@ -159,17 +159,28 @@ The following use nject to provide nicer APIs:
 - [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
 - [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
 - [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
-- [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorillia/mux
+- [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorilla/mux
 
 ### Development status
 
+The core of nject is stable and reliable.  New features have tests, but may not have
+enough production use to be reliable.
+
 This repo represents continued development of Blue Owl's 
-[nject](https://github.com/BlueOwlOpenSource/nject) base.  Blue Owl's code
-has been in production use for years and has been unchanged for years.
-The core of nject is mostly unchanged since taking over development from Blue Owl.
+[nject](https://github.com/BlueOwlOpenSource/nject) base.
 
 Nject will follow strict semver behavior except (1) things noted as experimental;
 and (2) releases that are less than 10 days old may have corrections applied that
 are not strictly backwards compatible with the recent release (for example, 1.0.0
-accidently exported a type that should have remained private).
+accidentally exported a type that should have remained private).
+
+Prior to release 0.2.0, nject was bundled with other packages.  Those
+other packages are now in their own repos: 
+[npoint](https://github.com/muir/npoint),
+[nserve](https://github.com/muir/nserve), and
+[nvelope](https://github.com/muir/nvelope).  Additionally, npoint
+was split apart so that the gorilla dependency is separate and is in
+[nape](https://github.com/muir/nape).
+
+Please create issues for any suggested features, improvements, or problems you run into.
 
