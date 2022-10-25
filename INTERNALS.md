@@ -50,7 +50,7 @@ not.  Reglardless, type_codes is where it happens.
 
 ## types.go
 
-Constants for the different kinds of types and type classes.  Definiton of
+Constants for the different kinds of types and type classes.  Definition of
 the `Debugging` type.
 
 ## match.go
