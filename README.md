@@ -1,5 +1,6 @@
 # nject - dependency injection 
 
+[![Stability: Active](https://masterminds.github.io/stability/active.svg)](https://masterminds.github.io/stability/active.html)
 [![GoDoc](https://godoc.org/github.com/muir/nject?status.png)](https://pkg.go.dev/github.com/muir/nject)
 ![unit tests](https://github.com/muir/nject/actions/workflows/go.yml/badge.svg)
 [![report card](https://goreportcard.com/badge/github.com/muir/nject)](https://goreportcard.com/report/github.com/muir/nject)
@@ -17,9 +18,11 @@ users to do type assertions.
 Dependencies are injected via a call chain: list functions to be called
 that take and return various parameters.  The functions will be called
 in order using the return values from earlier functions as parameters
-for later functions.
+for later functions.  Only the functions that are needed to be called in
+order to be able to call the last function in the chain are invoked.  Then
+the last function in the chain is called.
 
-Parameters are identified by their types.  To have two different int
+Parameters are identified by their types.  To have two different `int`
 parameters, define custom types.
 
 Type safety is checked before any functions are called.
@@ -66,7 +69,7 @@ is called.  Bind() does not run the chain.
 
 Run() is used when ad-hoc injection is desired and performance is not
 critical.  Run is appropriate when starting servers and running tests.
-It is not recommended for http endpoint handlers.  Run exectes the
+It is not recommended for HTTP endpoint handlers.  Run exectes the
 chain immediately.
 
 ### Identified by type
