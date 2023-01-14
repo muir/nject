@@ -8,16 +8,42 @@ and using it requires no type assertions.  There are two main injection APIs:
 Run and Bind.  Bind is designed to be used at program initialization and
 does as much work as possible then rather than during main execution.
 
-The basic idea is to assemble a Collection of providers and then use
+List of providers
+
+The API for nject is a list of providers (injectors) that are run in order.
+The final function in the list must be called.  The other functions are called
+if their value is consumed by a later function that must be called.  Here
+is a simple example:
+
+	func main() {
+		nject.Run("example",
+			context.Background, // provides context.Context
+			log.Default,        // provides *log.Logger
+			":80",              // a constant string
+			http.NewServeMux,   // provides *http.ServeMux
+			func(mux *http.ServeMux) http.Handler {
+				mux.HandleFunc("/missing", http.NotFound)
+				return mux
+			},
+			http.ListenAndServe, // uses a string and http.Handler
+		)
+	}
+
+In this example, context.Background and log.Default are not invoked because
+their outputs are not used by the final function (http.ListenAndServe).
+
+How to use
+
+The basic idea of nject is to assemble a Collection of providers and then use
 that collection to supply inputs for functions that may use some or all of
 the provided types.
 
-The biggest win from dependency injection with nject is the ability to
+One big win from dependency injection with nject is the ability to
 reshape various different functions into a single signature.  For example,
 having a bunch of functions with different APIs all bound as http.HandlerFunc
 is easy.
 
-Every provider produces or consumes data.  The data is distinguished by its
+Providers produce or consume data. The data is distinguished by its
 type.  If you want to three different strings, then define three different
 types:
 
@@ -364,19 +390,16 @@ The full debugging output can be obtained with the DetailedError function.
 Reorder
 
 The Reorder() decorator allows injection chains to be fully or partially reordered.
-The recommended usage is to use Reorder() sparingly, but use it.
+Reorder is currently limited to a single pass and does not know which injectors are
+ultimately going to be included in the final chain.  It is likely that if you mark
+your entire chain with Reorder, you'll have unexpected results.  On the other hand,
+Reorder provides safe and easy way to solve some common problems.
 
-Reorder solves a common problem: providing optional options to an injected dependency.
+For example: providing optional options to an injected dependency.
 
 	var ThingChain = nject.Sequence("thingChain",
 		nject.Shun(DefaultThingOptions),
 		ThingProvider,
-	}
-
-	func OverrideThingOptions(options ...ThingOption) nject.Provider {
-		return nject.Reorder(func() []ThingOption) {
-			return options
-		}
 	}
 
 	func DefaultThingOptions() []ThingOption {
@@ -391,7 +414,15 @@ Reorder solves a common problem: providing optional options to an injected depen
 
 Because the default options are marked as Shun, they'll only be included
 if they have to be included.  If a user of thingChain wants to override
-the options, they simply need to include mark their override as Reorder.
+the options, they simply need to mark their override as Reorder.  To make
+this extra friendly, a helper function to do the override can be provided
+and used.
+
+	func OverrideThingOptions(options ...ThingOption) nject.Provider {
+		return nject.Reorder(func() []ThingOption) {
+			return options
+		}
+	}
 
 	nject.Run("run",
 		ThingChain,
