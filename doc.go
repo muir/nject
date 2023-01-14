@@ -402,7 +402,7 @@ Self-cleaning
 Recommened best practice is to have injectors shutdown the things they themselves start. They
 should do their own cleanup.
 
-Inside tests, that's easy because an injector in a test can use t.Cleanup().
+Inside tests, an injector can use t.Cleanup() for this.
 
 For services, something like t.Cleanup can easily be built:
 
