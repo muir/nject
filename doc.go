@@ -339,7 +339,8 @@ to write tests.
 		t.RunTest(t, Extra, Things, func(
 			ctx context.Context,
 			log *log.Logger,
-			etc Etcetera ) {
+			etc Etcetera,
+		) {
 			assert.NotNil(t, ctx)
 		})
 	}
