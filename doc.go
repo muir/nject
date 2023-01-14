@@ -399,7 +399,7 @@ the options, they simply need to include mark their override as Reorder.
 
 Self-cleaning
 
-Recommened best practices to have injectors shutdown the things they themselves start. They
+Recommened best practice is to have injectors shutdown the things they themselves start. They
 should do their own cleanup.
 
 Inside tests, that's easy because an injector in a test can use t.Cleanup().
