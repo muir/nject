@@ -8,16 +8,42 @@ and using it requires no type assertions.  There are two main injection APIs:
 Run and Bind.  Bind is designed to be used at program initialization and
 does as much work as possible then rather than during main execution.
 
-The basic idea is to assemble a Collection of providers and then use
+List of providers
+
+The API for nject is a list of providers (injectors) that are run in order.
+The final function in the list must be called.  The other functions are called
+if their value is consumed by a later function that must be called.  Here
+is a simple example:
+
+	func main() {
+		nject.Run("example",
+			context.Background, // provides context.Context
+			log.Default,        // provides *log.Logger
+			":80",              // a constant string
+			http.NewServeMux,   // provides *http.ServeMux
+			func(mux *http.ServeMux) http.Handler {
+				mux.HandleFunc("/missing", http.NotFound)
+				return mux
+			},
+			http.ListenAndServe, // uses a string and http.Handler
+		)
+	}
+
+In this example, context.Background and log.Default are not invoked because
+their outputs are not used by the final function (http.ListenAndServe).
+
+How to use
+
+The basic idea of nject is to assemble a Collection of providers and then use
 that collection to supply inputs for functions that may use some or all of
 the provided types.
 
-The biggest win from dependency injection with nject is the ability to
+One big win from dependency injection with nject is the ability to
 reshape various different functions into a single signature.  For example,
 having a bunch of functions with different APIs all bound as http.HandlerFunc
 is easy.
 
-Every provider produces or consumes data.  The data is distinguished by its
+Providers produce or consume data. The data is distinguished by its
 type.  If you want to three different strings, then define three different
 types:
 
@@ -178,7 +204,7 @@ Some examples:
 		return nil
 	}
 
-Wrap functions (middleware)
+Wrap functions and middleware
 
 A wrap function interrupts the linear sequence of providers.  It may or may
 invoke the remainder of the sequence that comes after it.  The remainder of
@@ -215,6 +241,9 @@ upstream wrap function or by the init function (if using Bind()).
 Wrap functions have a small amount of runtime overhead compared to
 other kinds of functions: one call to reflect.MakeFunc().
 
+Wrap functions serve the same role as middleware, but are usually
+easier to write.
+
 Final functions
 
 Final functions are simply the last provider in the chain.
@@ -243,6 +272,29 @@ Bind() and Run() will return error rather than panic.  After Bind()ing
 an init and invoke function, calling them will not panic unless a provider
 panic()s
 
+A wrapper function can be used to catch panics and turn them into errors.
+When doing that, it is important to propagate any errors that are coming up
+the chain.  If there is no guaranteed function that will return error, one
+can be added with Shun().
+
+	func CatchPanic(inner func() error) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				if e, ok := r.(error); ok {
+					err = errors.Wrapf(e, "panic error from %s",
+						string(debug.Stack()))
+				} else {
+					err = errors.Errorf("panic caught!\n%s\n%s",
+						fmt.Sprint(r),
+						string(debug.Stack()))
+				}
+			}
+		}()
+		return inner()
+	}
+
+	var ErrorOfLastResort = nject.Shun(func() error { return nil })
+
 Chain evaluation
 
 Bind() uses a complex and somewhat expensive O(n^2) set of rules to evaluate
@@ -270,6 +322,148 @@ from the closest provider.
 
 Providers that have unmet dependencies will be eliminated from the chain
 unless they're Required.
+
+Best practices
+
+The remainder of this document consists of suggestions for how to use nject.
+
+Contributions to this section would be welcome.  Also links to blogs or other
+discussions of using nject in practice.
+
+For tests
+
+The best practice for using nject inside a large project is to have a few
+common chains that everyone imports.
+
+Most of the time, these common chains will be early in the sequence of
+providers.  Customization of the import chains happens in many places.
+
+This is true for services, libraries, and tests.
+
+For tests, a wrapper that includes the stanard chain makes it eaiser
+to write tests.
+
+	var CommonChain = nject.Sequence("common",
+		context.Background,
+		log.Default,
+		things,
+		used,
+		in,
+		this,
+		project,
+	)
+
+	func RunTest(t *testing.T, testInjectors ...any) {
+		err := nject.Run("RunTest",
+			t,
+			CommonChain,
+			nject.Sequence(t.Name(), testInjectors...))
+		assert.NoError(t, err, nject.DetailedError(err))
+	}
+
+	func TestSomething(t *testing.T) {
+		t.RunTest(t, Extra, Things, func(
+			ctx context.Context,
+			log *log.Logger,
+			etc Etcetera,
+		) {
+			assert.NotNil(t, ctx)
+		})
+	}
+
+Displaying errors
+
+If nject cannot bind or run a chain, it will return error.  The returned
+error is generally very good, but it does not contain the full debugging
+output.
+
+The full debugging output can be obtained with the DetailedError function.
+
+	err := nject.Run("some chain", some, injectors)
+	if err != nil {
+		if details := nject.DetailedError(err); details != err.Error() {
+			log.Println("Detailed error", details)
+		}
+		log.Fatal(err)
+	}
+
+Reorder
+
+The Reorder() decorator allows injection chains to be fully or partially reordered.
+Reorder is currently limited to a single pass and does not know which injectors are
+ultimately going to be included in the final chain.  It is likely that if you mark
+your entire chain with Reorder, you'll have unexpected results.  On the other hand,
+Reorder provides safe and easy way to solve some common problems.
+
+For example: providing optional options to an injected dependency.
+
+	var ThingChain = nject.Sequence("thingChain",
+		nject.Shun(DefaultThingOptions),
+		ThingProvider,
+	}
+
+	func DefaultThingOptions() []ThingOption {
+		return []ThingOption{
+			StanardThingOption
+		}
+	}
+
+	func ThingProvider(options []ThingOption) *Thing {
+		return thing.Make(options...)
+	}
+
+Because the default options are marked as Shun, they'll only be included
+if they have to be included.  If a user of thingChain wants to override
+the options, they simply need to mark their override as Reorder.  To make
+this extra friendly, a helper function to do the override can be provided
+and used.
+
+	func OverrideThingOptions(options ...ThingOption) nject.Provider {
+		return nject.Reorder(func() []ThingOption) {
+			return options
+		}
+	}
+
+	nject.Run("run",
+		ThingChain,
+		OverrideThingOptions(thing.Option1, thing.Option2),
+	)
+
+Self-cleaning
+
+Recommened best practice is to have injectors shutdown the things they themselves start. They
+should do their own cleanup.
+
+Inside tests, an injector can use t.Cleanup() for this.
+
+For services, something like t.Cleanup can easily be built:
+
+	type CleanupList struct {
+		list *[]func() error
+
+	func (l CleanupList) Cleanup(f func() error) {
+		*l.list = append(*l.list, f)
+	}
+
+	func CleaningService(inner func(CleanupList) error) (finalErr error) {
+		list := make([]func() error, 0, 64)
+		defer func() {
+			for i := len(list); i >= 0; i-- {
+				err := list[i]()
+				if err != nil && finalErr == nil {
+					finalErr = err
+				}
+			}
+		}()
+		return inner(CleanupList{list: &list})
+	}
+
+	func ThingProvider(cleaningService CleanupList) *Thing {
+		thing := things.New()
+		thing.Start()
+		cleaningService.Cleanup(thing.Stop)
+		return thing
+	}
 
 */
 package nject
