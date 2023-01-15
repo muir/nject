@@ -157,7 +157,11 @@ that has a slice in it is not okay.
 
 Fallible injectors
 
-Fallible injectors are injectors that return a value of type TerminalError.
+Fallible injectors are special injectors that change the behavior of the injection
+chain if they return error.  Fallible injectors in the RUN set, that return error
+will terminate execution of the injection chain.
+
+A non-wrapper function that returns nject.TerminalError is a fallible injector.
 
 	func(input value(s)) (output values(s), TerminalError)
 
