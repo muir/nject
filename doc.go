@@ -175,8 +175,8 @@ provider chain returns from that point with the TerminalError as a return
 value.  Since all return values must be consumed by a middleware provider or
 the bound invoke function,
 fallible injectors must come downstream from a middleware handler that
-takes TerminalError as a returned value if the invoke function does not
-return error.  If a fallible injector returns
+takes error as a returned value if the invoke function (function that runs
+a bound injection chain) does not return error.  If a fallible injector returns
 nil for the TerminalError, the other output values are made available
 for downstream handlers to consume.  The other output values are not
 considered return values and are not available to be consumed by upstream
@@ -252,6 +252,29 @@ from other providers.  Their return values (if any) must be consumed by
 an upstream wrapper function or by the init function (if using Bind()).
 
 	func(input value(s)) return values(s)
+
+Wrap functions that return error should take error as a returned value so that
+they do not mask a downstream error.  Wrap functions should not return TerminalError
+because they internally control if the downstream chain is called.
+
+	func GoodExample(inner func() error) error {
+		if err := DoSomething(); err != nil {
+			// skip remainder of injection chain
+			return err
+		}
+		err := inner()
+		return err
+	}
+
+	func BadExampleMasksDownstreamError(inner func()) error {
+		if err := DoSomething(); err != nil {
+			// skip remainder of injection chain
+			return err
+		}
+		inner()
+		// nil is returned even if a downsteam injector returns error
+		return nil
+	}
 
 Literal values
 
@@ -378,6 +401,9 @@ error is generally very good, but it does not contain the full debugging
 output.
 
 The full debugging output can be obtained with the DetailedError function.
+If the detailed error shows that nject has a bug, note that part of the debug
+output includes a regression test that can be turned into an nject issue.
+Remove the comments to hide the original type names.
 
 	err := nject.Run("some chain", some, injectors)
 	if err != nil {
@@ -391,7 +417,7 @@ Reorder
 
 The Reorder() decorator allows injection chains to be fully or partially reordered.
 Reorder is currently limited to a single pass and does not know which injectors are
-ultimately going to be included in the final chain.  It is likely that if you mark
+ultimately going to be included in the final chain. It is likely that if you mark
 your entire chain with Reorder, you'll have unexpected results.  On the other hand,
 Reorder provides safe and easy way to solve some common problems.
 
@@ -404,7 +430,7 @@ For example: providing optional options to an injected dependency.
 
 	func DefaultThingOptions() []ThingOption {
 		return []ThingOption{
-			StanardThingOption
+			StanardThingOption,
 		}
 	}
 
@@ -464,6 +490,11 @@ For services, something like t.Cleanup can easily be built:
 		cleaningService.Cleanup(thing.Stop)
 		return thing
 	}
+
+Alternatively, any wrapper function can do it's own cleanup in a defer that it
+defines.  Wrapper functions have a small runtime performance penalty, so if you
+have more than a couple of providers that need cleanup, it makes sense to include
+something like CleaningService.
 
 */
 package nject
