@@ -19,6 +19,12 @@ import (
 // and (like other return values) it must be consumed by an upstream handler
 // or the invoke function.
 //
+// Functions that return TerminalError do not count as having no outputs and
+// thus they are not treated as specially required.  The when TerminalError is
+// returned, if it is nil, then it provides a nil error to the rest of the
+// downard chain. If it returns non-nil, then it provides a non-nil error as a
+// returned value to the upwards chain.
+//
 // Note: wrapper functions should not return TerminalError because such
 // a return value would not be automatically converted into a regular error.
 type TerminalError interface {

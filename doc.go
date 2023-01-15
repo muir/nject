@@ -401,6 +401,9 @@ error is generally very good, but it does not contain the full debugging
 output.
 
 The full debugging output can be obtained with the DetailedError function.
+If the detailed error shows that nject has a bug, note that part of the debug
+output includes a regression test that can be turned into an nject issue.
+Remove the comments to hide the original type names.
 
 	err := nject.Run("some chain", some, injectors)
 	if err != nil {
@@ -414,7 +417,7 @@ Reorder
 
 The Reorder() decorator allows injection chains to be fully or partially reordered.
 Reorder is currently limited to a single pass and does not know which injectors are
-ultimately going to be included in the final chain.  It is likely that if you mark
+ultimately going to be included in the final chain. It is likely that if you mark
 your entire chain with Reorder, you'll have unexpected results.  On the other hand,
 Reorder provides safe and easy way to solve some common problems.
 
@@ -427,7 +430,7 @@ For example: providing optional options to an injected dependency.
 
 	func DefaultThingOptions() []ThingOption {
 		return []ThingOption{
-			StanardThingOption
+			StanardThingOption,
 		}
 	}
 
@@ -487,6 +490,11 @@ For services, something like t.Cleanup can easily be built:
 		cleaningService.Cleanup(thing.Stop)
 		return thing
 	}
+
+Alternatively, any wrapper function can do it's own cleanup in a defer that it
+defines.  Wrapper functions have a small runtime performance penalty, so if you
+have more than a couple of providers that need cleanup, it makes sense to include
+something like CleaningService.
 
 */
 package nject
