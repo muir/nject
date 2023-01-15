@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-// Curry generates a Requird Provider that prefills arguments to a function to create a
+// Curry generates a Required Provider that prefills arguments to a function to create a
 // new function that needs fewer args.
 //
 // Only arguments with a unique (to the function) type can be curried.
