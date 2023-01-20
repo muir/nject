@@ -500,5 +500,20 @@ defines.  Wrapper functions have a small runtime performance penalty, so if you
 have more than a couple of providers that need cleanup, it makes sense to include
 something like CleaningService.
 
+Forcing inclusion
+
+The normal direction of forced inclusion is that an upstream provider is required
+because a downstream provider uses a type produced by the upstream provider.
+
+There are times when the relationship needs to be reversed.  For example, a type
+gets modified by a downstream injector.  The simplest option is to combine the providers
+into one function.
+
+Another possibility is to mark the upstream provider with MustConsume and have it
+produce a type that is only consumed by the downstream provider.
+
+Lastly, the providers can be grouped with Cluster so that they'll be included or
+excluded as a group.
+
 */
 package nject
