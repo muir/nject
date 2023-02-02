@@ -49,7 +49,7 @@ func duplicateTypes() string {
 		return duplicates
 	}
 	names := make(map[string]struct{})
-	for i := 1; i <= typeCounter; i++ {
+	for i := 1; i <= max; i++ {
 		n := typeCode(i).String()
 		if _, ok := names[n]; ok {
 			if _, ok := duplicatesFound[n]; !ok {
