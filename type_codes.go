@@ -3,11 +3,10 @@ package nject
 // TODO: switch from typeCode to reflect.Type -- duplicate detection would be lost
 
 import (
-	"path"
 	"reflect"
-	"regexp"
-	"strings"
 	"sync"
+
+	"github.com/muir/reflectutils"
 )
 
 type typeCode int
@@ -76,22 +75,9 @@ func (tc typeCode) Type() reflect.Type {
 	return reverseMap[tc]
 }
 
-var versionRE = regexp.MustCompile(`/v(\d+)$`)
-
 // Type returns the reflect.Type for this typeCode
 func (tc typeCode) String() string {
-	ts := tc.Type().String()
-	if versionRE.MatchString(tc.Type().PkgPath()) {
-		pp := tc.Type().PkgPath()
-		version := path.Base(pp)
-		pn := path.Base(path.Dir(pp))
-		revised := strings.Replace(ts, pn, pn+"/"+version, 1)
-		if revised != ts {
-			return revised
-		}
-		return "(" + version + ")" + ts
-	}
-	return ts
+	return reflectutils.TypeName(tc.Type())
 }
 
 func (tcs typeCodes) Types() []reflect.Type {
