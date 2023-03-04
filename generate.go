@@ -174,7 +174,7 @@ func generateWrappers(
 		}
 
 	case wrapperFunc:
-		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in(w)") // parmeters to the middleware handler
+		inMap, err := generateInputMapper(fm, 1, inputParams, fm.downRmap, downVmap, "in(w)") // parameters to the middleware handler
 		if err != nil {
 			return err
 		}
@@ -186,7 +186,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		retMap, err := generateInputMapper(fm, 0, receviedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
+		retMap, err := generateInputMapper(fm, 0, receivedParams, fm.upRmap, upVmap, "ret(w)") // return values from inner()
 		if err != nil {
 			return err
 		}
@@ -199,12 +199,12 @@ func generateWrappers(
 			vCopy := v.Copy()
 			callCount := 0
 
-			rTypes := make([]reflect.Type, len(fm.flows[receviedParams]))
-			for i, tc := range fm.flows[receviedParams] {
+			rTypes := make([]reflect.Type, len(fm.flows[receivedParams]))
+			for i, tc := range fm.flows[receivedParams] {
 				rTypes[i] = tc.Type()
 			}
 
-			// for thread safty, this is not built outside WrapWrapper
+			// for thread safety, this is not built outside WrapWrapper
 			inner := func(i []reflect.Value) []reflect.Value {
 				if callCount > 0 {
 					copy(v, vCopy)
@@ -342,7 +342,7 @@ func generateWrappers(
 		if err != nil {
 			return err
 		}
-		zero, err := makeZero(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skippped functions")
+		zero, err := makeZero(fm, downVmap, fm.mustZeroIfRemainderSkipped, "need to fill in values set in skipped functions")
 		if err != nil {
 			return err
 		}

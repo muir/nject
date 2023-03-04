@@ -77,7 +77,7 @@ func (c *Collection) Condense(treatErrorAsTerminal bool) (Provider, error) {
 		}
 		debugFound = true
 
-		// collections don't have a convienent method for
+		// collections don't have a convenient method for
 		// prepending something to their contents so we'll
 		// build a replacement instead.
 		c = Sequence(name,

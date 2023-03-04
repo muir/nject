@@ -71,7 +71,7 @@ func (flows flowMapType) output(f ...typeCode) flowMapType {
 }
 
 func (flows flowMapType) returned(f ...typeCode) flowMapType {
-	flows[receviedParams] = f
+	flows[receivedParams] = f
 	return flows
 }
 

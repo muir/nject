@@ -58,7 +58,7 @@ func _() {
 	_ = x[returnParams-0]
 	_ = x[outputParams-1]
 	_ = x[inputParams-2]
-	_ = x[receviedParams-3]
+	_ = x[receivedParams-3]
 	_ = x[bypassParams-4]
 	_ = x[lastFlowType-5]
 }

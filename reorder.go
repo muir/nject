@@ -50,7 +50,7 @@ func Reorder(fn interface{}) Provider {
 //	a pseudo node that represents that T has been provided.
 //
 //	A provider that returns a type T on the up-chain, is after
-//	a pseudo node that represents that T has been recevied as
+//	a pseudo node that represents that T has been received as
 //	as a return value in the up-chain.
 //
 
@@ -106,7 +106,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 				provideByNotRequire[t] = append(provideByNotRequire[t], i)
 			}
 		}
-		for _, t := range noNoType(fm.flows[receviedParams]) {
+		for _, t := range noNoType(fm.flows[receivedParams]) {
 			if !fm.d.hasFlow[returnParams](t) {
 				receviedNotReturned[t] = append(receviedNotReturned[t], i)
 			}
@@ -176,7 +176,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 				continue
 			}
 			// if you return a T, you're not marked consumptionOptional, then you
-			// MUST be be after a provider that recevies a T as a returned value
+			// MUST be after a provider that receives a T as a returned value
 			if num, ok := upTypes[t]; ok {
 				aAfterB(!fm.consumptionOptional, i, num)
 			} else {
@@ -186,7 +186,7 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 				counter++
 			}
 			// if you return a T, then you SHOULD be be after all providers that
-			// recevie a T as a returned value
+			// receive a T as a returned value
 			for _, j := range receviedNotReturned[t] {
 				aAfterB(false, i, j)
 			}
@@ -374,7 +374,7 @@ func (x *topo) releaseProvider(i int, fm *provider) {
 			x.release(num, i)
 		}
 	}
-	for _, t := range noNoType(fm.flows[receviedParams]) {
+	for _, t := range noNoType(fm.flows[receivedParams]) {
 		if num, ok := x.upTypes[t]; ok {
 			debugln("\trelease up", t)
 			x.release(num, i)

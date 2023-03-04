@@ -10,7 +10,7 @@ import (
 // does not expect to receive an error will cause the injection chain
 // compilation to fail.
 //
-// A common mistake is to have an wrapper that accidently returns error.  It
+// A common mistake is to have an wrapper that accidentally returns error.  It
 // looks like this:
 //
 //	func AutoCloseThing(inner func(someType), param anotherType) error {

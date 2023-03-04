@@ -112,7 +112,7 @@ func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFu
 	// thin wrapper around a function.  We'll select the closest
 	// match between the function input and the field and replace
 	// that type in the list of inputs with the struct being filled.
-	// The actuall Call() we will grab the field from the struct
+	// The actual Call() we will grab the field from the struct
 	// using it's index and use that to call the function.
 	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
@@ -181,7 +181,7 @@ func makePostActionOption(function interface{}, userOpts []PostActionFuncArg, ty
 
 // WithFill overrides the default behaviors of PostActionByType, PostActionByName,
 // and PostActionByTag with respect to the field being automatically filled.
-// By default, if there is a post-action that that recevies a pointer to the
+// By default, if there is a post-action that that receives a pointer to the
 // field, then the field will not be filled from the injection chain.
 //
 // EXPERIMENTAL: this is currently considered experimental

@@ -121,7 +121,7 @@ func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	case unsetClassType:
 		// continue
 	default:
-		return fm.flows[receviedParams].Types(), fm.flows[returnParams].Types()
+		return fm.flows[receivedParams].Types(), fm.flows[returnParams].Types()
 	}
 	switch r := fm.fn.(type) {
 	case Reflective:
@@ -178,7 +178,7 @@ func effectiveReturns(fn reflectType) ([]reflect.Type, []reflect.Type) {
 // be counted only by what it consumes.
 //
 // Providers that return TerminalError are a special case and count as
-// producting error.
+// producing error.
 func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
 	return c.netFlows(func(fm *provider) ([]reflect.Type, []reflect.Type) {
 		return fm.UpFlows()

@@ -184,7 +184,7 @@ func TestFlows(t *testing.T) {
 				assert.Equal(t, toStrings(wantUpOut), flowToStrings(fm.flows[returnParams]), "char up out")
 				assert.Equal(t, toStrings(wantDownOut), flowToStrings(fm.flows[outputParams]), "char down out")
 				assert.Equal(t, toStrings(wantDownIn), flowToStrings(fm.flows[inputParams]), "char down in")
-				assert.Equal(t, toStrings(wantUpIn), flowToStrings(fm.flows[receviedParams]), "char up in")
+				assert.Equal(t, toStrings(wantUpIn), flowToStrings(fm.flows[receivedParams]), "char up in")
 
 				fCheck(p, "characterized")
 			}

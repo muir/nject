@@ -10,7 +10,7 @@ import (
 
 // ReflectiveInvoker is an alternative provider interface that can be used
 // for invoke and initialize functions.  The key for those functions is that
-// their implmentation is provided by Collection.Bind.
+// their implementation is provided by Collection.Bind.
 type ReflectiveInvoker interface {
 	ReflectiveArgs
 	Set(func([]reflect.Value) []reflect.Value)
@@ -113,7 +113,7 @@ func (r thinReflective) String() string {
 
 // MakeReflectiveWrapper is a utility to create a ReflectiveWrapper
 //
-// The first argument, downIn, is the types that must be recevied in the down
+// The first argument, downIn, is the types that must be received in the down
 // chain and provided to function.  This does not include the
 // func([]reflec.Value) []reflect.Value that is actually used for the first
 // argument.
@@ -123,7 +123,7 @@ func (r thinReflective) String() string {
 // The third argument, downOut, is the types provided in the call to the inner
 // function and thus are passed down the down chain.
 //
-// The forth agument, upIn, is the types returned by the call to the inner
+// The forth argument, upIn, is the types returned by the call to the inner
 // function and thus are received from the up chain.
 //
 // When function is called, the first argument will be a reflect.Value, of

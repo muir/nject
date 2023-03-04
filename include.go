@@ -149,10 +149,10 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 				}
 			}
 		}
-		debugf("lenth of without before: %d", len(without))
+		debugf("length of without before: %d", len(without))
 		// nolint:govet
 		err := validateChainMarkIncludeExclude(funcs, false)
-		debugf("lenth of without after: %d", len(without))
+		debugf("length of without after: %d", len(without))
 		for _, fm := range without {
 			if err == nil {
 				fm.d.excluded = fmt.Errorf("not required, not desired, not necessary")
@@ -359,11 +359,11 @@ func providesReturns(funcs []*provider, initF *provider) error {
 			debugf("\tskipping on upward path %s: %s", fm, fm.cannotInclude)
 			continue
 		}
-		err := requireParameters(fm, returns, receviedParams, returnParams, fm.upRmap, "expected return")
+		err := requireParameters(fm, returns, receivedParams, returnParams, fm.upRmap, "expected return")
 		if err != nil {
 			return err
 		}
-		provideParameters(fm, returns, returnParams, receviedParams, len(funcs)-i+2)
+		provideParameters(fm, returns, returnParams, receivedParams, len(funcs)-i+2)
 	}
 	return nil
 }
@@ -465,7 +465,7 @@ func proposeEliminations(funcs []*provider) []*provider {
 		useLast    bool
 	}{
 		{"down", []flowType{inputParams, bypassParams}, true},
-		{"up", []flowType{receviedParams}, false},
+		{"up", []flowType{receivedParams}, false},
 	} {
 		keep := make([]bool, len(funcs))
 		toKeep := make([]*provider, 0, len(funcs))
