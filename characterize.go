@@ -234,10 +234,10 @@ var invokeRegistry = typeRegistry{
 			a.fm.class = invokeFunc
 			if _, ok := a.fm.fn.(ReflectiveInvoker); ok {
 				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t))
-				a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t))
+				a.fm.flows[receivedParams] = toTypeCodes(typesOut(a.t))
 			} else {
 				a.fm.flows[outputParams] = toTypeCodes(typesIn(a.t.Elem()))
-				a.fm.flows[receviedParams] = toTypeCodes(typesOut(a.t.Elem()))
+				a.fm.flows[receivedParams] = toTypeCodes(typesOut(a.t.Elem()))
 			}
 			a.fm.required = true
 			a.fm.isSynthetic = true
@@ -517,7 +517,7 @@ var handlerRegistry = typeRegistry{
 				inner = a.t.In(0)
 			}
 			a.fm.flows[outputParams] = toTypeCodes(typesIn(inner))
-			a.fm.flows[receviedParams] = toTypeCodes(typesOut(inner))
+			a.fm.flows[receivedParams] = toTypeCodes(typesOut(inner))
 		},
 	},
 

@@ -10,7 +10,7 @@ import (
 // as desired, also mark functions with MustCache.
 // With the same inputs, cached answers
 // are always used.  The cache lookup examines the values passed, but does not
-// do a deep insepection.
+// do a deep inspection.
 func ExampleMemoize() {
 	type aStruct struct {
 		ValueInStruct int

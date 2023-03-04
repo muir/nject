@@ -68,7 +68,7 @@ func Curry(originalFunction interface{}, pointerToCurriedFunction interface{}) (
 	}
 	curried := make([]reflect.Type, 0, curryCount)    // injected inputs
 	alreadyCurried := make(map[reflect.Type]struct{}) // to prevent double-dipping
-	curryMap := make([]int, 0, curryCount)            // maps postion from injected inputs to to original
+	curryMap := make([]int, 0, curryCount)            // maps position from injected inputs to to original
 	passMap := make([]int, n.Type().Elem().NumIn())   // maps position from curried to original
 	for i := 0; i < o.Type().NumIn(); i++ {
 		t := o.Type().In(i)

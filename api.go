@@ -36,7 +36,7 @@ type Provider interface {
 	// the net consumes and returns.
 	//
 	// Providers that return TerminalError are a special case and count as
-	// producting error.
+	// producing error.
 	UpFlows() (consume []reflect.Type, produce []reflect.Type)
 }
 
@@ -58,7 +58,7 @@ type Provider interface {
 // with Required.  Providers that produce no output are always run.
 //
 // Previsously created *Collection objects are considered providers along
-// with *Provider, named functions, anoymous functions, and literal values.
+// with *Provider, named functions, anonymous functions, and literal values.
 func Sequence(name string, providers ...interface{}) *Collection {
 	return newCollection(name, providers...)
 }
@@ -172,7 +172,7 @@ func NotCacheable(fn interface{}) Provider {
 // Memoized providers will remember every combination of imputs they
 // have ever seen.  This can exhaust all memory.
 //
-// By default, Memozied providers are Cachable, but that doesn't force
+// By default, Memozied providers are Cacheable, but that doesn't force
 // the provider into the STATIC set where it runs infrequently.
 // Combine Memoize with MustCache to make sure that Memoize is actually
 // in the STATIC set where it probably won't exhaust all memory.

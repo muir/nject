@@ -118,7 +118,7 @@ Cached injectors
 
 In injector that is annotated as Cacheable() may promoted to the STATIC set.
 An injector that is annotated as MustCache() must be promoted to
-the STATIC set: if it cannot be promoted then the colection is deemed invalid.
+the STATIC set: if it cannot be promoted then the collection is deemed invalid.
 
 An injector may not be promoted to the STATIC set if it takes as
 input data that comes from a provider that is not in the STATIC or
@@ -190,7 +190,7 @@ downstream.
 If a non-nil value is returned as the TerminalError from a fallible
 injector in the STATIC set, the rest of the STATIC set will be skipped.
 If there is an init function and it returns error, then the value returned
-by the fallible injector will be returned via init fuction.  Unlike
+by the fallible injector will be returned via init function.  Unlike
 fallible injectors in the RUN set, the error output by a fallible injector
 in the STATIC set is available downstream (but only in the RUN set -- nothing
 else in the STATIC set will execute).
@@ -367,7 +367,7 @@ providers.  Customization of the import chains happens in many places.
 
 This is true for services, libraries, and tests.
 
-For tests, a wrapper that includes the stanard chain makes it eaiser
+For tests, a wrapper that includes the standard chain makes it easier
 to write tests.
 
 	var CommonChain = nject.Sequence("common",
@@ -461,7 +461,7 @@ and used.
 
 Self-cleaning
 
-Recommened best practice is to have injectors shutdown the things they themselves start. They
+Recommended best practice is to have injectors shutdown the things they themselves start. They
 should do their own cleanup.
 
 Inside tests, an injector can use t.Cleanup() for this.

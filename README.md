@@ -126,7 +126,7 @@ other collections.
 ## Debugging injector chains
 
 If you chain successfully binds but does not do what you expect, add
-something into your chain that recevies the `nject.Debugging` type:
+something into your chain that receives the `nject.Debugging` type:
 
 	func(d *nject.Debugging) {
 		fmt.Println("Injectors included\n", d.Included)

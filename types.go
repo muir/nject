@@ -45,7 +45,7 @@ type Debugging struct {
 	NamesIncluded []string
 
 	// IncludeExclude is a list of all of the providers supplied to
-	// ceate the chain.  Why each was included or not explained.
+	// create the chain.  Why each was included or not explained.
 	// "INCLUDED ${groupName} ${className} ${providerNameShape} BECAUSE ${whyProviderWasInclude}"
 	// "EXCLUDED ${groupName} ${className} ${providerNameShape} BECAUSE ${whyProviderWasExcluded}"
 	IncludeExclude []string
@@ -97,10 +97,10 @@ const (
 	returnParams flowType = iota // returns
 	// going down
 	outputParams // outputs
-	// recevied from above
+	// received from above
 	inputParams // inputs
 	// received from below (callee returned)
-	receviedParams // recevied
+	receivedParams // received
 	// gathered from the end of the static chain and returned from init
 	bypassParams // bypass
 	//

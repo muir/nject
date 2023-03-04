@@ -116,7 +116,7 @@ var reservedTags = map[string]struct{}{
 // (created with PostActionByTag) may not uses these names:
 //
 // "whole" & "blob": indicate that an embedded struct should be filled as
-// a blob rather thatn field-by-field.
+// a blob rather than field-by-field.
 //
 // "field" & "fields": indicates that an embedded struct should be filled
 // field-by-field.  This is the default and the tag exists for clarity.

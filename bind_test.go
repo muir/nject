@@ -557,7 +557,7 @@ func TestTerminalErrorMultiBinding(t *testing.T) {
 }
 
 var ternbbte = Sequence("ternbbte",
-	// this func is required because it recevies from the final func
+	// this func is required because it receives from the final func
 	Provide("WRAPPER", func(func() (s2, error), s1) {}),
 	Provide("TERMINAL", func() TerminalError { return nil }),
 	Provide("FINAL", func() (s2, error) { return "", nil }),
