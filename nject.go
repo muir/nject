@@ -34,6 +34,7 @@ type provider struct {
 	consumptionOptional bool
 	singleton           bool
 	cluster             int32
+	parallel            bool
 
 	// added by characterize
 	memoized    bool
@@ -94,6 +95,7 @@ func (fm *provider) copy() *provider {
 		consumptionOptional: fm.consumptionOptional,
 		singleton:           fm.singleton,
 		cluster:             fm.cluster,
+		parallel:            fm.parallel,
 		memoized:            fm.memoized,
 		class:               fm.class,
 		group:               fm.group,

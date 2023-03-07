@@ -3,6 +3,7 @@ package nject
 import (
 	"fmt"
 	"reflect"
+	"sync/atomic"
 )
 
 type valueCollection []reflect.Value
@@ -197,7 +198,7 @@ func generateWrappers(
 		in0Type, reflective := getInZero(fv)
 		fm.wrapWrapper = func(v valueCollection, next func(valueCollection)) {
 			vCopy := v.Copy()
-			callCount := 0
+			var callCount int32
 
 			rTypes := make([]reflect.Type, len(fm.flows[receivedParams]))
 			for i, tc := range fm.flows[receivedParams] {
@@ -206,12 +207,19 @@ func generateWrappers(
 
 			// for thread safety, this is not built outside WrapWrapper
 			inner := func(i []reflect.Value) []reflect.Value {
-				if callCount > 0 {
-					copy(v, vCopy)
+				if !fm.parallel {
+					callCount++
+					if callCount > 1 {
+						v = vCopy.Copy()
+					}
+					outMap(v, i)
+					next(v)
+				} else {
+					atomic.AddInt32(&callCount, 1)
+					vc := vCopy.Copy()
+					outMap(vc, i)
+					next(vc)
 				}
-				callCount++
-				outMap(v, i)
-				next(v)
 				r := retMap(v)
 				for i, retV := range r {
 					if rTypes[i].Kind() == reflect.Interface {

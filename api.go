@@ -300,6 +300,19 @@ func callsInner(fn interface{}) Provider {
 	})
 }
 
+// Parallel annotates a wrap function to indicate that
+// the inner function may be invoked in parallel.
+//
+// At the current time, support for this is very
+// limited.  Returned values cannot be propagated
+// across such a call and the resulting lack of
+// initialization can cause a panic.
+func Parallel(fn interface{}) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		fm.parallel = true
+	})
+}
+
 // TODO: add ExampleLoose
 
 // Loose annotates a wrap function to indicate that when trying
