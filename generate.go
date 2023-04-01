@@ -207,26 +207,26 @@ func generateWrappers(
 
 			// for thread safety, this is not built outside WrapWrapper
 			inner := func(i []reflect.Value) []reflect.Value {
+				common := func(v valueCollection) []reflect.Value {
+					outMap(v, i)
+					next(v)
+					r := retMap(v)
+					for i, retV := range r {
+						if rTypes[i].Kind() == reflect.Interface {
+							r[i] = retV.Convert(rTypes[i])
+						}
+					}
+					return r
+				}
 				if !fm.parallel {
 					callCount++
 					if callCount > 1 {
 						v = vCopy.Copy()
 					}
-					outMap(v, i)
-					next(v)
-				} else {
-					atomic.AddInt32(&callCount, 1)
-					vc := vCopy.Copy()
-					outMap(vc, i)
-					next(vc)
+					return common(v)
 				}
-				r := retMap(v)
-				for i, retV := range r {
-					if rTypes[i].Kind() == reflect.Interface {
-						r[i] = retV.Convert(rTypes[i])
-					}
-				}
-				return r
+				atomic.AddInt32(&callCount, 1)
+				return common(vCopy.Copy())
 			}
 			in := inMap(v)
 			if reflective {
