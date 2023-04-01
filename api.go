@@ -12,8 +12,8 @@ import (
 // implements the Provider interface and can be used anywhere a Provider is
 // required.
 type Collection struct {
-	// The above comment is wrong.  A collection holds a list of *provider,
-	// not Provider.  That list is already flattened.
+	// The above comment is wrong but helps understanding as-is.
+	// A collection holds a list of *provider not Provider. That list is already flattened.
 	name     string
 	contents []*provider
 }
