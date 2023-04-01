@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReplaceSingles(t *testing.T) {
+func TestReplace(t *testing.T) {
 	t.Parallel()
 	type action struct {
 		at     int
@@ -22,6 +22,8 @@ func TestReplaceSingles(t *testing.T) {
 		n       int
 		actions []action
 		want    string
+		error   string
+		addDup  int
 	}{
 		{
 			name: "no replacments",
@@ -221,8 +223,41 @@ func TestReplaceSingles(t *testing.T) {
 				{at: 10, target: 4, op: nject.InsertBeforeNamed},
 			},
 		},
+		{
+			name:    "replace target doesn't exist",
+			n:       10,
+			error:   "not in chain",
+			actions: []action{{at: 4, target: 22, op: nject.ReplaceNamed}},
+		},
+		{
+			name:  "multiple actions",
+			n:     10,
+			error: "can have only one of",
+			actions: []action{
+				{at: 4, target: 5, op: nject.ReplaceNamed},
+				{at: 4, target: 7, op: nject.InsertBeforeNamed},
+			},
+		},
+		{
+			name:   "add dup, not referenced",
+			n:      10,
+			addDup: 6,
+			want:   "> 1 2 3 4 4 6 6 6 7 8 8 9 9 9 10 10 10 10 10 6",
+			actions: []action{
+				{at: 4, target: 5, op: nject.ReplaceNamed},
+			},
+		},
+		{
+			name:   "add dup, referenced",
+			n:      10,
+			addDup: 5,
+			error:  "duplicated in chain",
+			actions: []action{
+				{at: 4, target: 5, op: nject.ReplaceNamed},
+			},
+		},
 	}
-	// want: "> 1 2 3 4 4 5 6 6 6 7 8 8 9 9 9 10 10 10 10 10",
+
 	mkInjector := func(prefix string, i int) nject.Provider {
 		return nject.Provide(prefix+strconv.Itoa(i), func(s string) string {
 			return s + " " + strconv.Itoa(i)
@@ -260,6 +295,10 @@ func TestReplaceSingles(t *testing.T) {
 				}
 				injectors = append(injectors, injector)
 			}
+			if tc.addDup != 0 {
+				injectors = append(injectors, nject.Provide("X"+strconv.Itoa(tc.addDup), mkInjector(strconv.Itoa(tc.addDup), tc.addDup)))
+			}
+
 			var ran bool
 			err := nject.Run(t.Name(),
 				nject.Sequence("test", injectors...),
@@ -268,8 +307,12 @@ func TestReplaceSingles(t *testing.T) {
 					assert.Equal(t, tc.want, s)
 				},
 			)
-			require.NoError(t, err, "run")
-			assert.True(t, ran)
+			if tc.error != "" {
+				assert.Contains(t, err.Error(), tc.error, "error")
+			} else {
+				require.NoError(t, err, "run")
+				assert.True(t, ran)
+			}
 		})
 	}
 }
