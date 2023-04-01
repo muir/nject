@@ -78,8 +78,8 @@ func generateInputMapper(fm *provider, start int, param flowType, rmap map[typeC
 	return func(v valueCollection) []reflect.Value {
 		if debugEnabled() {
 			debugf("%s: %s [%s] numIn:%d, m:%v", fm, param, formatFlow(fm.flows[param]), pMap.len, pMap.vcIndex)
+			dumpValueArray(v, "", vmap)
 		}
-		dumpValueArray(v, "", vmap)
 		in := make([]reflect.Value, pMap.len)
 		for i := start; i < pMap.len; i++ {
 			if pMap.vcIndex[i] != -1 {
