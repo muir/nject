@@ -35,6 +35,9 @@ type provider struct {
 	singleton           bool
 	cluster             int32
 	parallel            bool
+	replaceByName       string
+	insertBeforeName    string
+	insertAfterName     string
 
 	// added by characterize
 	memoized    bool
@@ -102,6 +105,9 @@ func (fm *provider) copy() *provider {
 		flows:               fm.flows,
 		isSynthetic:         fm.isSynthetic,
 		mapKeyCheck:         fm.mapKeyCheck,
+		replaceByName:       fm.replaceByName,
+		insertBeforeName:    fm.insertBeforeName,
+		insertAfterName:     fm.insertAfterName,
 	}
 }
 
@@ -184,6 +190,11 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 
 	afterInit := make([]*provider, 0, len(c.contents))
 	afterInvoke := make([]*provider, 0, len(c.contents))
+
+	err := c.handleReplaceByName()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	c.reorderNonFinal()
 
