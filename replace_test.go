@@ -239,7 +239,7 @@ func TestReplaceSingles(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			injectors := []interface{}{
-				nject.Provide("X0", func() string { return ">" }),
+				func() string { return ">" },
 			}
 			for i := 1; i <= tc.n; i++ {
 				var injector interface{}

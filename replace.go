@@ -218,18 +218,7 @@ func (c *Collection) handleReplaceByName() (err error) {
 			}
 			afterLastMove := lastMove.next
 			insertBefore(lastSnip.next, firstMove, lastMove)
-			// Where to continue iteration is ticky. Generally, we want to continue
-			// at lastMove.next but not in some special cases
-			switch {
-			case afterLastMove == firstSnip:
-				// Adjacent forward move, continue with the end of what's moved
-				n = lastMove
-			case lastSnip.next == firstMove:
-				// Adjacent backwards move, continue with the end of what's moved
-				n = lastMove
-			default:
-				n = afterLastMove.prev
-			}
+			n = afterLastMove.prev
 		case n.fm.insertBeforeName != "":
 			name := n.fm.insertBeforeName
 			firstLast, err := getTarget(name, "insert before")
