@@ -6,8 +6,7 @@ import (
 
 // ReplaceNamed will edit the set of injectors, replacing target injector,
 // identified by the name it was given with Provide(), with the
-// injector provided here. If the replacement injector is nil, the
-// target injector will simply be removed.
+// injector provided here.
 // This replacement happens very early in the
 // injection chain processing, before Reorder or injector selection.
 // If target does not exist, the injection chain is deemed invalid.
@@ -51,24 +50,24 @@ func InsertBeforeNamed(target string, fn interface{}) Provider {
 // be tagging a colleciton, not an individual.
 func (c *Collection) handleReplaceByName() (err error) {
 	defer func() {
-		// if err != nil {
-		debugln("replacment directives --------------------------------------")
-		for _, fm := range c.contents {
-			var tag string
-			if fm.replaceByName != "" {
-				tag = "replace:" + fm.replaceByName
-			}
-			if fm.insertBeforeName != "" {
-				tag = "insertBefore:" + fm.insertBeforeName
-			}
-			if fm.insertAfterName != "" {
-				tag = "insertAfter:" + fm.insertAfterName
-			}
-			if tag != "" {
-				debugln("\t", tag, fm)
+		if debugEnabled() {
+			debugln("replacment directives --------------------------------------")
+			for _, fm := range c.contents {
+				var tag string
+				if fm.replaceByName != "" {
+					tag = "replace:" + fm.replaceByName
+				}
+				if fm.insertBeforeName != "" {
+					tag = "insertBefore:" + fm.insertBeforeName
+				}
+				if fm.insertAfterName != "" {
+					tag = "insertAfter:" + fm.insertAfterName
+				}
+				if tag != "" {
+					debugln("\t", tag, fm)
+				}
 			}
 		}
-		// }
 	}()
 
 	var hasReplacements bool
@@ -235,7 +234,7 @@ func (c *Collection) handleReplaceByName() (err error) {
 			if err != nil {
 				return err
 			}
-			firstMove, lastMove := snip(n, func(n *node) bool { return n.fm.insertBeforeName == name })
+			firstMove, lastMove := snip(n, func(n *node) bool { return n.fm.insertAfterName == name })
 			afterLastMove := lastMove.next
 			insertBefore(firstLast.last.next, firstMove, lastMove)
 			n = afterLastMove.prev
@@ -247,9 +246,7 @@ func (c *Collection) handleReplaceByName() (err error) {
 	// step 4, convert back to list
 	contents := make([]*provider, 0, len(c.contents))
 	for n := head.next; n != tail; n = n.next {
-		if n.fm != nil && n.fm.fn != nil {
-			contents = append(contents, n.fm)
-		}
+		contents = append(contents, n.fm)
 	}
 	c.contents = contents
 	return nil
