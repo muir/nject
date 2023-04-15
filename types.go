@@ -12,14 +12,15 @@ import (
 )
 
 // TerminalError is a standard error interface.  For fallible injectors,
-// TerminalError must one of the return values.
+// TerminalError must be one of the return values.
 //
 // A non-nil return value terminates the handler call chain.  The
-// TerminalError return value gets converted to a regular error value
+// TerminalError return value gets converted to a regular error value (type=error)
 // and (like other return values) it must be consumed by an upstream handler
-// or the invoke function.
+// or the invoke function. Essentially marking an error return as a TerminalError
+// causes special behavior but the effective type is just error.
 //
-// Functions that return TerminalError do count as having no outputs and
+// Functions that return just TerminalError count as having no outputs and
 // thus they are treated as specially required if they're in the RUN set.
 //
 // Note: wrapper functions should not return TerminalError because such
