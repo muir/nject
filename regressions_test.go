@@ -912,3 +912,44 @@ func TestRegression9(t *testing.T) {
 		// invoker()
 	})
 }
+
+func TestClusterRegression(t *testing.T) {
+	genTest := func(clustering bool) func(*testing.T) {
+		return func(t *testing.T) {
+			var nn, nd, ndd, tc bool
+			seq1 := []interface{}{
+				Provide("needed", func() string { return "foo" }),
+				Provide("not-needed", func() int64 {
+					nn = true
+					return 0
+				}),
+			}
+			seq2 := []interface{}{
+				Provide("normally-desired", func(string) {
+					nd = true
+				}),
+				Provide("normally-desired too", func(string) {}),
+			}
+			seq3 := []interface{}{
+				Provide("normally-desired in degenerate cluster", func(string) {
+					ndd = true
+				}),
+			}
+			test := func(s string) {
+				assert.Equal(t, "foo", s)
+				tc = true
+			}
+			if clustering {
+				require.NoError(t, Run(t.Name(), Cluster("s1", seq1...), Cluster("s2", seq2...), Cluster("s3", seq3...), test))
+			} else {
+				require.NoError(t, Run(t.Name(), Sequence("s1", seq1...), Sequence("s2", seq2...), Sequence("s3", seq3...), test))
+			}
+			require.True(t, tc, "tc")
+			assert.Equal(t, clustering, nn, "nn")
+			assert.Equal(t, !clustering, nd, "nd")
+			assert.True(t, ndd, "ndd")
+		}
+	}
+	namedWrapTest(t, " cluster", genTest(true))
+	namedWrapTest(t, " sequence", genTest(false))
+}
