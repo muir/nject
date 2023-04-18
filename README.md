@@ -156,13 +156,14 @@ Nject has been successfully used for:
 
 The following use nject to provide nicer APIs:
 
-- [nfigure](https://github.com/muir/nfigure): configuration and flag processing
-- [nvelope](https://github.com/muir/nvelope): injection chains for building endpoints
-- [nchi](https://github.com/muir/nchi): http router on top of [httprouter](https://pkg.go.dev/github.com/julienschmidt/httprouter) with a go-chi-like API
-- [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
-- [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
-- [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
 - [nape](https://github.com/muir/nape): dependency injection wrappers for binding http endpoint handlers using gorilla/mux
+- [nchi](https://github.com/muir/nchi): http router on top of [httprouter](https://pkg.go.dev/github.com/julienschmidt/httprouter) with a go-chi-like API
+- [nfigure](https://github.com/muir/nfigure): configuration and flag processing
+- [npoint](https://github.com/muir/npoint): dependency injection wrappers for binding http endpoint handlers
+- [nserve](https://github.com/muir/nserve): injection chains for for starting and stopping servers
+- [ntest](https://github.com/memsql/ntest): support functions and hints for using nject to write tests
+- [nvalid](https://github.com/muir/nvalid): enforce that http endpoints conform to Swagger definitions
+- [nvelope](https://github.com/muir/nvelope): injection chains for building endpoints
 
 ### Development status
 
