@@ -73,12 +73,18 @@ var clusterId int32 = 1
 // be included at all.  It also downgrades providers that are in the
 // cluster that would normally be considered desired because they don't
 // return anything and aren't wrappers: they're no longer automatically
-// considered desired.
+// considered desired because doing so would imply the entire Cluster is
+// is desired.
+//
+// A "Cluster" with only one member is not really a cluster and will
+// not be treated as a cluster.
 func Cluster(name string, providers ...interface{}) *Collection {
 	c := newCollection(name, providers...)
-	id := atomic.AddInt32(&clusterId, 1)
-	for _, fm := range c.contents {
-		fm.cluster = id
+	if len(providers) > 1 {
+		id := atomic.AddInt32(&clusterId, 1)
+		for _, fm := range c.contents {
+			fm.cluster = id
+		}
 	}
 	return c
 }

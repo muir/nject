@@ -32,8 +32,12 @@ func debugOff() {
 }
 
 func wrapTest(t *testing.T, inner func(*testing.T)) {
-	if !t.Run("1st attempt", func(t *testing.T) { inner(t) }) {
-		t.Run("2nd attempt", func(t *testing.T) {
+	namedWrapTest(t, "", inner)
+}
+
+func namedWrapTest(t *testing.T, name string, inner func(*testing.T)) {
+	if !t.Run("1st attempt"+name, func(t *testing.T) { inner(t) }) {
+		t.Run("2nd attempt"+name, func(t *testing.T) {
 			debugOn(t)
 			defer debugOff()
 			inner(t)

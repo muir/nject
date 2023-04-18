@@ -15,6 +15,10 @@ func ExampleCluster() {
 			func(s string) int32 {
 				return int32(len(s))
 			},
+			func() int64 {
+				fmt.Println("included even though no consumer")
+				return 0
+			},
 			func(i int32) {
 				fmt.Println("auto-desired in 1st cluster")
 			},
@@ -47,6 +51,7 @@ func ExampleCluster() {
 		},
 	)
 	// Output: no need for data from clusters
+	// included even though no consumer
 	// auto-desired in 1st cluster
 	// auto-desired in 2nd cluster
 	// got value that needed both chains - 28

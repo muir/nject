@@ -75,18 +75,8 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		fm.chainPosition = i
 	}
 	debugln("initial set of functions")
-	clusterLeaders := make(map[int32]*provider)
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
-		if fm.cluster != 0 {
-			if leader, ok := clusterLeaders[fm.cluster]; ok {
-				leader.d.clusterMembers = append(leader.d.clusterMembers, fm)
-				fm.d.clusterMembers = nil
-			} else {
-				clusterLeaders[fm.cluster] = fm
-				fm.d.clusterMembers = []*provider{fm}
-			}
-		}
 		fm.d.mustConsumeFlow = [lastFlowType]bool{}
 		if fm.mustConsume {
 			fm.d.mustConsumeFlow[outputParams] = true
@@ -127,15 +117,35 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		}
 	}
 
-	debugln("eliminate unused providers")
-	eliminateUnused(funcs)
+	// We process cluster membership after we've determined
+	// funcs that cannot be included so that we do not include
+	// in clusters anything that cannot be included at all.
+	clusterLeaders := make(map[int32]*provider) // leaders are chosen arbitrarily
+	for _, fm := range funcs {
+		if fm.cluster == 0 || fm.d.excluded != nil {
+			continue
+		}
+		if leader, ok := clusterLeaders[fm.cluster]; ok {
+			leader.d.clusterMembers = append(leader.d.clusterMembers, fm)
+			fm.d.clusterMembers = nil
+		} else {
+			clusterLeaders[fm.cluster] = fm
+			fm.d.clusterMembers = []*provider{fm}
+		}
+		if !fm.required && !fm.desired && fm.wanted {
+			fm.d.wantedInCluster = true
+		}
+	}
 
-	tryWithout := func(without ...*provider) bool {
+	debugln("eliminate unused providers")
+	eliminateUnused(funcs) // xxx
+
+	tryWithout := func(without ...*provider) {
 		if len(without) == 1 {
 			if without[0].wanted && without[0].d.wantedInCluster {
 				// working around a bug: don't try to eliminate single
 				// wanted functions from clusters
-				return false
+				return
 			}
 			debugf("check chain validity, excluding %s", without[0])
 		} else {
@@ -166,7 +176,6 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 				}
 			}
 		}
-		return err == nil
 	}
 
 	debugln("attempt to eliminate additional providers")
@@ -174,12 +183,13 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		if fm.d.excluded != nil {
 			continue
 		}
-		if fm.d.clusterMembers != nil {
-			if tryWithout(fm.d.clusterMembers...) {
-				continue
+		if fm.cluster != 0 {
+			if fm.d.clusterMembers != nil {
+				tryWithout(fm.d.clusterMembers...)
 			}
+		} else {
+			tryWithout(fm)
 		}
-		tryWithout(fm)
 	}
 
 	debugln("final set of functions")
@@ -266,7 +276,7 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 				for tc, err := range errors {
 					fm.cannotInclude = err
 					redo = append(redo, fm)
-					debugf("\t\trequire error on %s %s: %s", param, tc, err)
+					debugf("\t\trequire error on %d %s: %s", param, tc, err)
 					continue Todo
 				}
 			}
@@ -439,7 +449,7 @@ PostCheck:
 	for len(check) > 0 {
 		var fm *provider
 		fm, check = check[0], check[1:]
-		if fm.required || fm.desired || fm.wanted || !fm.include || fm.d.excluded != nil {
+		if fm.required || fm.desired || fm.wanted || !fm.include || fm.d.excluded != nil || fm.cluster != 0 {
 			continue
 		}
 		for _, dep := range fm.d.usedBy {
