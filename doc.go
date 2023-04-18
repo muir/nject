@@ -371,7 +371,8 @@ providers.  Customization of the import chains happens in many places.
 This is true for services, libraries, and tests.
 
 For tests, a wrapper that includes the standard chain makes it easier
-to write tests.
+to write tests. See [github.com/memsql/ntest] for helper functions and
+more examples.
 
 	var CommonChain = nject.Sequence("common",
 		context.Background,
