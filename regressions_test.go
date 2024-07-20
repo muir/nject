@@ -180,7 +180,7 @@ func TestMissingAutoDesiredRegression(t *testing.T) {
 		twoCalled := false
 		var initFunc func()
 		var invoke http.HandlerFunc
-		assert.NoError(t, Sequence("test",
+		require.NoError(t, Sequence("test",
 			Cacheable(func(*Debugging) string {
 				oneCalled = true
 				return ""
@@ -906,6 +906,7 @@ func TestRegression9(t *testing.T) {
 			}))),
 			Provide("user-chain-3", func(_ i005, _ s054, _ s014, _ s019, _ s012) { called["user-chain-3"]++ }),
 		).Bind(&invoker, nil)
+		//nolint:testifylint
 		if !assert.NoError(t, err, "bind error") {
 			t.Log(DetailedError(err))
 		}

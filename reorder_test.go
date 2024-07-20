@@ -161,7 +161,7 @@ func TestReorderInOut(t *testing.T) {
 	type r string
 	var final string
 	var dd *Debugging
-	assert.NoError(t, Run(t.Name(),
+	require.NoError(t, Run(t.Name(),
 		func() string {
 			return "start"
 		},

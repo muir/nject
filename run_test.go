@@ -40,7 +40,7 @@ var testSeq = Cacheable(Sequence("TBF",
 func TestRunWorks(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		called := false
-		assert.NoError(t, Run("run1",
+		require.NoError(t, Run("run1",
 			s3("s3 value"),
 			s0("s0 value"),
 			testSeq, func(s s5) {
@@ -54,7 +54,7 @@ func TestRunWorks(t *testing.T) {
 func TestRunMissingValue(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		called := false
-		assert.Error(t, Run("run1",
+		require.Error(t, Run("run1",
 			s0("s0 value"),
 			testSeq, func(s s4) {
 				assert.Equal(t, s4("s4 value"), s)
@@ -85,11 +85,10 @@ func testRunReturnsError(t *testing.T, e error) {
 				return e
 			})
 		if e == nil {
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		} else {
-			if assert.Error(t, err) {
-				assert.Equal(t, e.Error(), err.Error())
-			}
+			require.Error(t, err)
+			assert.Equal(t, e.Error(), err.Error())
 		}
 		assert.True(t, called)
 	})
@@ -124,7 +123,7 @@ func TestNilLiterals(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		var intp *int
 		called := false
-		assert.NoError(t, Run("test nil",
+		require.NoError(t, Run("test nil",
 			intp,
 			nil,
 			func(ip *int) error {
@@ -141,7 +140,7 @@ func TestUnusedLiteral(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		var intp *int
 		called := false
-		assert.NoError(t, Run("test unused",
+		require.NoError(t, Run("test unused",
 			intp,
 			"seven",
 			func(s string) error {
@@ -214,23 +213,35 @@ func TestWrappersBindError(t *testing.T) {
 
 func TestEmpties(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
+		//nolint:testifylint
 		assert.Error(t, Run("no final func"))
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", nil))
+		//nolint:testifylint
 		assert.NoError(t, Run("no final func", func() {}))
 
 		seq := Sequence("empty")
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq))
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq, nil))
+		//nolint:testifylint
 		assert.NoError(t, Run("no final func", seq, func() {}))
 
 		seq2 := seq.Append("nothing")
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq2))
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq2, nil))
+		//nolint:testifylint
 		assert.NoError(t, Run("no final func", seq2, func() {}))
 
 		seq3 := seq.Append("more nothing", Sequence("empty too"))
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq3))
+		//nolint:testifylint
 		assert.Error(t, Run("no final func", seq3, nil))
+		//nolint:testifylint
 		assert.NoError(t, Run("no final func", seq3, func() {}))
 	})
 }
@@ -295,24 +306,33 @@ func TestAppend(t *testing.T) {
 func TestErrorStrings(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		invalid := func(int, func()) {}
+		//nolint:testifylint
 		assert.NoError(t, Run("one", func() {}))
 
 		err := Run("one", invalid, func() {})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "one(0) ")
+		//nolint:testifylint
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "one(0) ")
+		}
 
 		err = Run("two", Provide("i-name", invalid), func() {})
-		assert.Error(t, err)
-		assert.NotContains(t, err.Error(), "two(0)")
-		assert.Contains(t, err.Error(), "i-name ")
+		//nolint:testifylint
+		if assert.Error(t, err) {
+			assert.NotContains(t, err.Error(), "two(0)")
+			assert.Contains(t, err.Error(), "i-name ")
+		}
 
 		err = Run("three", nil, invalid, func() {})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "three(1) ")
+		//nolint:testifylint
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "three(1) ")
+		}
 
 		err = Run("four", nil, nil, Cacheable(invalid), func() {})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "four(2) ")
+		//nolint:testifylint
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "four(2) ")
+		}
 	})
 }
 
@@ -406,7 +426,7 @@ func TestInjectorsDebugging(t *testing.T) {
 			s3("s3 value"),
 			s0("s0 value"),
 			testSeq, func(s s5, d *Debugging) {
-				assert.True(t, len(d.Trace) > 10000, d.Trace)
+				assert.Greater(t, len(d.Trace), 10000, d.Trace)
 			}))
 	})
 }

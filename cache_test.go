@@ -291,7 +291,7 @@ func TestCacheSizes(t *testing.T) {
 		rw1, rw2, rw3, rw4,
 
 		func(s string, d *Debugging) {
-			assert.True(t, len(s) > 50, "length")
+			assert.Greater(t, len(s), 50, "length")
 			if count == 0 {
 				prior = s
 			} else {

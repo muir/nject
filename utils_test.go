@@ -211,6 +211,7 @@ func TestCurry(t *testing.T) {
 				}, "curry")
 				return
 			} else {
+				//nolint:testifylint
 				if !assert.NoError(t, err, "curry") {
 					return
 				}

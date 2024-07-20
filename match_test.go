@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -71,11 +72,11 @@ func TestBestMatch(t *testing.T) {
 					t.Logf("\tm[%s] = %s (%s) %d", tc.Type(), d.name, d.typeCode.Type(), d.layer)
 				}
 				got, _, err := m.bestMatch(getTypeCode(test.Find), "searching for "+test.Name)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, test.Want.String(), got.Type().String(), test.Name)
 			}
 			if test.Want == nil {
-				assert.Panics(t, f, test.Name)
+				require.Panics(t, f, test.Name)
 			} else {
 				f()
 			}

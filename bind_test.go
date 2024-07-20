@@ -223,7 +223,7 @@ func TestInitDependencyOnUnavailableData(t *testing.T) {
 		var shouldWorkInit func(s0) s2
 		var shouldWorkInvoke func(s3) s5
 		err := c.Bind(&shouldWorkInvoke, &shouldWorkInit)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Panics(t, func() {
 			MustBind(c, &shouldWorkInvoke, &shouldWorkInit)
 		})
