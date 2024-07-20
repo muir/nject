@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/muir/reflectutils v0.7.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
