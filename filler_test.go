@@ -72,6 +72,6 @@ func TestFiller(t *testing.T) {
 			assert.Equal(t, s3(""), f5.Sub.S3, "f5.s3 not filled")
 		},
 	)
-	assert.NoError(t, err)
+	assert.NoError(t, err) //nolint:testifylint
 	assert.True(t, called)
 }

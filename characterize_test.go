@@ -371,6 +371,7 @@ func TestCharacterize(t *testing.T) {
 			originFm := newProvider(test.fn, i, test.name)
 			fm, err := charFunc(originFm, cc)
 			if test.expectedToError {
+				//nolint:testifylint
 				assert.Error(t, err, "expected err for"+test.name)
 				continue
 			} else {
