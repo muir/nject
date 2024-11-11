@@ -258,6 +258,7 @@ var handlerRegistry = typeRegistry{
 			a.fm.class = literalValue
 			// the cast is safe because when the value is a Reflective, we look like
 			// like a func and this code only runs for non-funcs.
+			//nolint:errcheck // we know that a.t can convert to a reflect.Type
 			a.fm.flows[outputParams] = toTypeCodes([]reflect.Type{a.t.(reflect.Type)})
 		},
 	},

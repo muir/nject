@@ -377,6 +377,7 @@ func generateWrappers(
 					dumpValueArray(v, "AFTER", downVmap)
 					debugf("RETURNING %v", err)
 				}
+				//nolint:errcheck // we know that err can convert to error
 				return err.(error)
 			}
 			if debugEnabled() {

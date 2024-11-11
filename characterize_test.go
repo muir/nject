@@ -1,7 +1,6 @@
 package nject
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -391,12 +390,12 @@ func TestCharacterize(t *testing.T) {
 			}
 			for ft, ev := range test.flows {
 				t.Logf("flow %s: %s", flowType(ft), een(ev))
-				assert.EqualValues(t, een(ev), een(fm.flows[ft]), fmt.Sprintf("%s flow: %s", flowType(ft), test.name))
+				assert.EqualValuesf(t, een(ev), een(fm.flows[ft]), "%s flow: %s", flowType(ft), test.name)
 			}
 			for ft, gv := range fm.flows {
 				if test.flows[ft] == nil {
 					t.Logf("flow %s: %s", flowType(ft), een(gv))
-					assert.EqualValues(t, een(test.flows[ft]), een(gv), fmt.Sprintf("%s flow %s", flowType(ft), test.name))
+					assert.EqualValuesf(t, een(test.flows[ft]), een(gv), "%s flow %s", flowType(ft), test.name)
 				}
 			}
 		}

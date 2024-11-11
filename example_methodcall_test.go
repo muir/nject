@@ -14,7 +14,7 @@ func (s *S) Square() {
 	s.I *= s.I
 }
 
-func (s S) Print() {
+func (s *S) Print() {
 	fmt.Println(s.I)
 }
 

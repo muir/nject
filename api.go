@@ -11,6 +11,8 @@ import (
 // Collection holds a sequence of providers and sub-collections.  A Collection
 // implements the Provider interface and can be used anywhere a Provider is
 // required.
+//
+//nolint:recvcheck // some methods of Collection use a pointer, some do not
 type Collection struct {
 	// The above comment is wrong but helps understanding as-is.
 	// A collection holds a list of *provider not Provider. That list is already flattened.
