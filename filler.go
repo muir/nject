@@ -291,7 +291,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 			// PostActionByType
 			fieldTypes := []reflect.Type{field.Type}
 			if f.pointer {
-				fieldTypes = []reflect.Type{reflect.PtrTo(field.Type), field.Type}
+				fieldTypes = []reflect.Type{reflect.PointerTo(field.Type), field.Type}
 			}
 			for _, typ := range fieldTypes {
 				for _, fun := range byType[getTypeCode(typ)] {
@@ -358,7 +358,7 @@ func (f *filler) NumIn() int {
 
 func (f *filler) Out(i int) reflect.Type {
 	if f.pointer {
-		return reflect.PtrTo(f.typ)
+		return reflect.PointerTo(f.typ)
 	}
 	return f.typ
 }
@@ -482,7 +482,7 @@ func addFieldFiller(
 			continue
 		}
 		check(field.Type, false)
-		check(reflect.PtrTo(field.Type), true)
+		check(reflect.PointerTo(field.Type), true)
 	}
 	if option.matchToInterface && countEmptyInterfaces != 1 {
 		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in function", context)

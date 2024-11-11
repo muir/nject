@@ -11,6 +11,8 @@ import (
 var idCounter int32
 
 // provider is an annotated reference to a provider
+//
+//nolint:recvcheck // some provider methods use a pointer, some do not
 type provider struct {
 	origin string
 	index  int
@@ -177,7 +179,7 @@ func (fm provider) String() string {
 	return fmt.Sprintf("%s%s [%s]", class, fm.origin, t)
 }
 
-func (fm *provider) errorf(format string, args ...interface{}) error {
+func (fm provider) errorf(format string, args ...interface{}) error {
 	return errors.New(fm.String() + ": " + fmt.Sprintf(format, args...))
 }
 
