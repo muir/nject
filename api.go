@@ -579,3 +579,11 @@ func (c *Collection) MustSetCallback(binderFunction interface{}) {
 		panic(DetailedError(err))
 	}
 }
+
+type unused struct{}
+
+// Unused is value that a function that returns injectors can return that will never be
+// included in an injection chain. Unused can be used in situations where you want to
+// call a function as part of generating a list of injectors and functions in such a list
+// must have a return value.
+var Unused = Provide("unused", unused{})

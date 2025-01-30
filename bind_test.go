@@ -305,6 +305,9 @@ func TestLiteral(t *testing.T) {
 		counts := make(map[string]int)
 		c := Sequence("TBF",
 			s1("s1 value"),
+			func() Provider {
+				return Unused
+			}(),
 			Cacheable(func(s s1) s2 {
 				counts["s2"]++
 				assert.Equal(t, s1("s1 value"), s)
