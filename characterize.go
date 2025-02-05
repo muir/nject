@@ -140,7 +140,7 @@ var (
 	notLast              = predicate("must not be last", func(a testArgs) bool { return !a.cc.isLast })
 	unstaticOkay         = predicate("is marked MustCache", func(a testArgs) bool { return !a.fm.mustCache })
 	inStatic             = predicate("is after invoke", func(a testArgs) bool { return a.cc.inputsAreStatic })
-	hasOutputs           = predicate("does not have outputs", func(a testArgs) bool { return a.t.NumOut() != 0 })
+	hasOutputs           = predicate("does not have outputs", func(a testArgs) bool { return len(stripUnused(typesOut(a.t))) != 0 })
 	mustNotMemoize       = predicate("is marked Memoized", func(a testArgs) bool { return !a.fm.memoize })
 	markedMemoized       = predicate("is not marked Memoized", func(a testArgs) bool { return a.fm.memoize })
 	markedCacheable      = predicate("is not marked Cacheable", func(a testArgs) bool { return a.fm.cacheable })

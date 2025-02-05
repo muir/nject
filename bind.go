@@ -14,7 +14,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	var invokeF *provider
 	var initF *provider
 	var debuggingProvider **provider
-	funcs := make([]*provider, 0, len(sc.contents)+3)
+	funcs := make([]*provider, 0, len(sc.contents)+5)
 	{
 		var err error
 		invokeF, err = characterizeInitInvoke(originalInvokeF, charContext{inputsAreStatic: false})
@@ -61,10 +61,46 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		funcs = append(funcs, invokeF)
 		funcs = append(funcs, afterInvoke...)
 
+		var consumesUnused bool
+		var receivesUnused bool
 		for _, fm := range funcs {
 			if fm.required {
 				fm.include = true
 			}
+			for _, in := range fm.flows[inputParams] {
+				if in == unusedTypeCode {
+					consumesUnused = true
+				}
+			}
+			for _, in := range fm.flows[bypassParams] {
+				if in == unusedTypeCode {
+					consumesUnused = true
+				}
+			}
+			for _, in := range fm.flows[receivedParams] {
+				if in == unusedTypeCode {
+					receivesUnused = true
+				}
+			}
+		}
+		if consumesUnused {
+			funcs = append(funcs, nil)
+			for i := len(funcs) - 1; i > 0; i-- {
+				funcs[i] = funcs[i-1]
+			}
+			d, err := makeUnusedInputProvider()
+			if err != nil {
+				return err
+			}
+			funcs[0] = d
+		}
+		if receivesUnused {
+			d, err := makeUnusedReturnsProvider()
+			if err != nil {
+				return err
+			}
+			funcs = append(funcs, d)
+			funcs[len(funcs)-1], funcs[len(funcs)-2] = funcs[len(funcs)-2], funcs[len(funcs)-1]
 		}
 	}
 
@@ -406,6 +442,7 @@ func addToVmap(fm *provider, param flowType, vMap map[typeCode]int, rMap map[typ
 
 func makeDebuggingProvider() (*provider, error) {
 	d := newProvider(func() *Debugging { return nil }, -1, "Debugging")
+	d.nonFinal = true
 	d.cacheable = true
 	d.mustCache = true
 	d, err := characterizeFunc(d, charContext{inputsAreStatic: true})
@@ -413,5 +450,34 @@ func makeDebuggingProvider() (*provider, error) {
 		return nil, fmt.Errorf("internal error #29: problem with debugging injectors: %w", err)
 	}
 	d.isSynthetic = true
+	return d, nil
+}
+
+func makeUnusedInputProvider() (*provider, error) {
+	d := newProvider(Unused{}, -1, "provide unused")
+	d.nonFinal = true
+	d.cacheable = true
+	d.mustCache = true
+	d.consumptionOptional = true
+	d, err := characterizeFunc(d, charContext{inputsAreStatic: true})
+	if err != nil {
+		return nil, fmt.Errorf("internal error #328: problem with unused injectors: %w", err)
+	}
+	d.isSynthetic = true
+	d.shun = true
+	return d, nil
+}
+
+func makeUnusedReturnsProvider() (*provider, error) {
+	d := newProvider(func(inner func()) Unused { inner(); return Unused{} }, -1, "return unused")
+	d.nonFinal = true
+	d, err := characterizeFunc(d, charContext{inputsAreStatic: true})
+	if err != nil {
+		return nil, fmt.Errorf("internal error #278: problem with unused injectors: %w", err)
+	}
+	d.isSynthetic = true
+	d.shun = true
+	d.required = false
+	d.consumptionOptional = true
 	return d, nil
 }

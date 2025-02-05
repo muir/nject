@@ -88,7 +88,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 			fm.whyIncluded = "required"
 		} else if fm.desired {
 			fm.whyIncluded = "desired"
-		} else if fm.flows[outputParams] != nil && len(fm.flows[outputParams]) == 0 {
+		} else if fm.flows[outputParams] != nil && len(stripUnusedCodes(fm.flows[outputParams])) == 0 {
 			fm.whyIncluded = "auto-desired (injector with no outputs)"
 			if fm.cluster != 0 {
 				fm.d.wantedInCluster = true
@@ -138,7 +138,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 	}
 
 	debugln("eliminate unused providers")
-	eliminateUnused(funcs) // xxx
+	eliminateUnused(funcs)
 
 	tryWithout := func(without ...*provider) {
 		if len(without) == 1 {
@@ -308,6 +308,9 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 				}
 			Param:
 				for _, tc := range tclist {
+					if tc == unusedTypeCode {
+						continue
+					}
 					var extra string
 					for _, p := range fm.d.usedByDetail[param][tc] {
 						if p.include {
