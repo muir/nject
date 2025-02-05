@@ -9,8 +9,10 @@ import (
 	"github.com/muir/reflectutils"
 )
 
-type typeCode int
-type typeCodes []typeCode
+type (
+	typeCode  int
+	typeCodes []typeCode
+)
 
 var (
 	typeCounter = 0
@@ -24,6 +26,8 @@ type noType bool
 const noTypeExampleValue noType = false
 
 var noTypeCode = getTypeCode(noTypeExampleValue)
+
+var unusedTypeCode = getTypeCode(unusedType)
 
 // noNoType filters out noTypeCode from an array of typeCode
 func noNoType(types []typeCode) []typeCode {

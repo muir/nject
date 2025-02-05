@@ -184,3 +184,37 @@ func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
 		return fm.UpFlows()
 	})
 }
+
+// stirpUnused redacts unusedType from lists
+func stripUnused(list []reflect.Type) []reflect.Type {
+	for i, t := range list {
+		if t == unusedType {
+			n := make([]reflect.Type, i, len(list)-1)
+			copy(n, list[:i])
+			for _, t := range list[i+1:] {
+				if t != unusedType {
+					n = append(n, t)
+				}
+			}
+			return n
+		}
+	}
+	return list
+}
+
+// stirpUnusedCode redacts unusedTypeCode from lists
+func stripUnusedCodes(list []typeCode) []typeCode {
+	for i, t := range list {
+		if t == unusedTypeCode {
+			n := make([]typeCode, i, len(list)-1)
+			copy(n, list[:i])
+			for _, t := range list[i+1:] {
+				if t != unusedTypeCode {
+					n = append(n, t)
+				}
+			}
+			return n
+		}
+	}
+	return list
+}

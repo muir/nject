@@ -275,6 +275,28 @@ var characterizeTests = []struct {
 			returned(errorTC, intType3TC),
 	},
 	{
+		"middleware func return int",
+		func(func() intType3) {},
+		wrapperFunc,
+		lastF, staticT, panicF,
+		params().
+			input(noTypeCode).
+			output().
+			returns().
+			returned(intType3TC),
+	},
+	{
+		"middleware func return unused",
+		func(func() Unused) {},
+		wrapperFunc,
+		lastF, staticT, panicF,
+		params().
+			input(noTypeCode).
+			output().
+			returns().
+			returned(unusedTypeCode),
+	},
+	{
 		"simple middleware regression",
 		func(i func() error, w http.ResponseWriter) {},
 		wrapperFunc,

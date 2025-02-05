@@ -66,6 +66,12 @@ type Debugging struct {
 	Outer *Debugging
 }
 
+// Unused is a special type: as an input, it will be provided automatically. If output from a
+// MustConsume provider, no consumer is needed. If an injector only returns Unused, then that
+// injector will be included in the chain, if possible, same as an injector that doesn't return
+// anything at all.
+type Unused struct{}
+
 type classType int
 
 const (
@@ -121,4 +127,6 @@ var (
 	bypassDebugType = reflect.TypeOf((**bypassDebug)(nil)).Elem()
 
 	reflectiveFuncType = reflect.TypeOf((*func([]reflect.Type) []reflect.Type)(nil)).Elem()
+
+	unusedType = reflect.TypeOf((*Unused)(nil)).Elem()
 )
