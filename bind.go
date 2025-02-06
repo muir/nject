@@ -84,23 +84,18 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			}
 		}
 		if consumesUnused {
-			funcs = append(funcs, nil)
-			for i := len(funcs) - 1; i > 0; i-- {
-				funcs[i] = funcs[i-1]
-			}
 			d, err := makeUnusedInputProvider()
 			if err != nil {
 				return err
 			}
-			funcs[0] = d
+			funcs = insertAt(funcs, 0, d)
 		}
 		if receivesUnused {
 			d, err := makeUnusedReturnsProvider()
 			if err != nil {
 				return err
 			}
-			funcs = append(funcs, d)
-			funcs[len(funcs)-1], funcs[len(funcs)-2] = funcs[len(funcs)-2], funcs[len(funcs)-1]
+			funcs = insertAt(funcs, len(funcs)-1, d)
 		}
 	}
 
@@ -480,4 +475,20 @@ func makeUnusedReturnsProvider() (*provider, error) {
 	d.required = false
 	d.consumptionOptional = true
 	return d, nil
+}
+
+// position 0 inserts at the start of the slice
+// position len()-1 inserts before the last element
+// position len() would be append but is not supported by insertAt
+func insertAt[E any](slice []E, position int, elements ...E) []E {
+	// make enough room
+	slice = append(slice, elements...)
+	// shift things over to make space
+	for i := len(slice) - 1; i > position; i-- {
+		slice[i] = slice[i-len(elements)]
+	}
+	for i, ele := range elements {
+		slice[position+i] = ele
+	}
+	return slice
 }

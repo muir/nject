@@ -185,7 +185,7 @@ func (c Collection) UpFlows() ([]reflect.Type, []reflect.Type) {
 	})
 }
 
-// stirpUnused redacts unusedType from lists
+// stripUnused redacts unusedType from lists
 func stripUnused(list []reflect.Type) []reflect.Type {
 	for i, t := range list {
 		if t == unusedType {
@@ -202,7 +202,7 @@ func stripUnused(list []reflect.Type) []reflect.Type {
 	return list
 }
 
-// stirpUnusedCode redacts unusedTypeCode from lists
+// stripUnusedCode redacts unusedTypeCode from lists
 func stripUnusedCodes(list []typeCode) []typeCode {
 	for i, t := range list {
 		if t == unusedTypeCode {
