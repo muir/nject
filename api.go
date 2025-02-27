@@ -11,8 +11,6 @@ import (
 // Collection holds a sequence of providers and sub-collections.  A Collection
 // implements the Provider interface and can be used anywhere a Provider is
 // required.
-//
-//nolint:recvcheck // some methods of Collection use a pointer, some do not
 type Collection struct {
 	// The above comment is wrong but helps understanding as-is.
 	// A collection holds a list of *provider not Provider. That list is already flattened.
@@ -23,7 +21,7 @@ type Collection struct {
 var _ Provider = &Collection{}
 
 // Provider is an individual injector (function, constant, or
-// wrapper).  Functions that take injectors, take interface{}.
+// wrapper).  Functions that take injectors, take any.
 // Functions that return invjectors return Provider so that
 // methods can be attached.
 type Provider interface {
@@ -63,11 +61,11 @@ type Provider interface {
 //
 // Previsously created *Collection objects are considered providers along
 // with *Provider, named functions, anonymous functions, and literal values.
-func Sequence(name string, providers ...interface{}) *Collection {
+func Sequence(name string, providers ...any) *Collection {
 	return newCollection(name, providers...)
 }
 
-var clusterId int32 = 1
+var clusterID int32 = 1
 
 // Cluster is a variation on Sequence() with the additional behavior
 // that all of the providers in the in the cluster will be included
@@ -80,10 +78,10 @@ var clusterId int32 = 1
 //
 // A "Cluster" with only one member is not really a cluster and will
 // not be treated as a cluster.
-func Cluster(name string, providers ...interface{}) *Collection {
+func Cluster(name string, providers ...any) *Collection {
 	c := newCollection(name, providers...)
 	if len(providers) > 1 {
-		id := atomic.AddInt32(&clusterId, 1)
+		id := atomic.AddInt32(&clusterID, 1)
 		for _, fm := range c.contents {
 			fm.cluster = id
 		}
@@ -95,7 +93,7 @@ func Cluster(name string, providers ...interface{}) *Collection {
 // to create a new collection.  The additional providers may be
 // value literals, functions, Providers, or *Collections.  The original
 // collection is not modified.
-func (c *Collection) Append(name string, funcs ...interface{}) *Collection {
+func (c *Collection) Append(name string, funcs ...any) *Collection {
 	nc := newCollection(name, funcs...)
 	contents := make([]*provider, 0, len(c.contents)+len(nc.contents))
 	contents = append(contents, c.contents...)
@@ -111,7 +109,7 @@ func (c *Collection) Append(name string, funcs ...interface{}) *Collection {
 // in their collection combined with the name of the collection they are in.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func Provide(name string, fn interface{}) Provider {
+func Provide(name string, fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.origin = name
 	})
@@ -122,7 +120,7 @@ func Provide(name string, fn interface{}) Provider {
 // MustCache creates an Inject item and annotates it as required to be
 // in the STATIC set.  If it cannot be placed in the STATIC set
 // then any collection that includes it is invalid.
-func MustCache(fn interface{}) Provider {
+func MustCache(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.mustCache = true
 		fm.cacheable = true
@@ -136,7 +134,7 @@ func MustCache(fn interface{}) Provider {
 // Memoize, a provider will be in the RUN chain.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func Cacheable(fn interface{}) Provider {
+func Cacheable(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.cacheable = true
 	})
@@ -151,7 +149,7 @@ func Cacheable(fn interface{}) Provider {
 //
 // An alternative way to get singleton behavior is with Memoize() combined with
 // MustCache().
-func Singleton(fn interface{}) Provider {
+func Singleton(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.singleton = true
 		fm.mustCache = true
@@ -164,7 +162,7 @@ func Singleton(fn interface{}) Provider {
 // causes an invalid chain.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func NotCacheable(fn interface{}) Provider {
+func NotCacheable(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.notCacheable = true
 	})
@@ -194,7 +192,7 @@ func NotCacheable(fn interface{}) Provider {
 //
 // As long as consistent injection chains are used Memoize + MustCache can
 // guarantee singletons.
-func Memoize(fn interface{}) Provider {
+func Memoize(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.memoize = true
 		fm.cacheable = true
@@ -208,7 +206,7 @@ func Memoize(fn interface{}) Provider {
 // if its outputs are not used.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func Required(fn interface{}) Provider {
+func Required(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.required = true
 	})
@@ -224,7 +222,7 @@ func Required(fn interface{}) Provider {
 // considered desired.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func Desired(fn interface{}) Provider {
+func Desired(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.desired = true
 	})
@@ -236,7 +234,7 @@ func Desired(fn interface{}) Provider {
 // desired: even if it appears to be needed because another
 // provider uses its output, the chain will be built without
 // it if possible.
-func Shun(fn interface{}) Provider {
+func Shun(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.shun = true
 	})
@@ -272,7 +270,7 @@ func Shun(fn interface{}) Provider {
 // all values must be consumed.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func MustConsume(fn interface{}) Provider {
+func MustConsume(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.mustConsume = true
 	})
@@ -288,7 +286,7 @@ func MustConsume(fn interface{}) Provider {
 // In the downward direction, optional consumption is the default.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func ConsumptionOptional(fn interface{}) Provider {
+func ConsumptionOptional(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.consumptionOptional = true
 	})
@@ -304,7 +302,7 @@ func ConsumptionOptional(fn interface{}) Provider {
 // are invalid.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func callsInner(fn interface{}) Provider {
+func callsInner(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.callsInner = true
 	})
@@ -317,7 +315,7 @@ func callsInner(fn interface{}) Provider {
 // limited.  Returned values cannot be propagated
 // across such a call and the resulting lack of
 // initialization can cause a panic.
-func Parallel(fn interface{}) Provider {
+func Parallel(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.parallel = true
 	})
@@ -334,7 +332,7 @@ func Parallel(fn interface{}) Provider {
 // implements the interface.
 //
 // By default, an exact match of types is required for all providers.
-func Loose(fn interface{}) Provider {
+func Loose(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.loose = true
 	})
@@ -350,7 +348,7 @@ func Loose(fn interface{}) Provider {
 // final provider.  Without NonFinal, it's hard or impossible to insert
 // a provider very late in the chain.  If NonFinal providers are invoked,
 // they will be called before the final provider.
-func NonFinal(fn interface{}) Provider {
+func NonFinal(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.nonFinal = true
 	})
@@ -388,7 +386,7 @@ func NonFinal(fn interface{}) Provider {
 // creating durable type maps and closures to handle memoization and singletons.
 // Calls to the invokeFunc do not leak memory except where there are new inputs to
 // providers marked Memoize().
-func (c *Collection) Bind(invokeFunc interface{}, initFunc interface{}) error {
+func (c *Collection) Bind(invokeFunc any, initFunc any) error {
 	if err := c.bindFast(invokeFunc, initFunc); err != nil {
 		invokeF := newProvider(invokeFunc, -1, c.name+" invoke func")
 		var initF *provider
@@ -405,7 +403,7 @@ func (c *Collection) Bind(invokeFunc interface{}, initFunc interface{}) error {
 	return nil
 }
 
-func (c *Collection) bindFast(invokeFunc interface{}, initFunc interface{}) error {
+func (c *Collection) bindFast(invokeFunc any, initFunc any) error {
 	invokeF := newProvider(invokeFunc, -1, c.name+" invoke func")
 	var initF *provider
 	if initFunc != nil {
@@ -431,7 +429,7 @@ func (c *Collection) bindFast(invokeFunc interface{}, initFunc interface{}) erro
 // Whatever arguments the invoke and init functions take will be passed into the
 // chain.  Whatever values the invoke function returns must be produced by the
 // injection chain.
-func (c *Collection) SetCallback(setCallbackFunc interface{}) error {
+func (c *Collection) SetCallback(setCallbackFunc any) error {
 	setter := reflect.ValueOf(setCallbackFunc)
 	setterType := setter.Type()
 	if setterType.Kind() != reflect.Func {
@@ -493,7 +491,7 @@ func (c Collection) ForEachProvider(f func(Provider)) {
 //
 // Each call to Run() with unique providers may leak a small amount of memory,
 // creating durable type maps and closures to handle memoization and singletons.
-func Run(name string, providers ...interface{}) error {
+func Run(name string, providers ...any) error {
 	c := Sequence(name,
 		// include a default error responder so that the
 		// error return from Run() does not pull in any
@@ -511,7 +509,7 @@ func Run(name string, providers ...interface{}) error {
 }
 
 // MustRun is a wrapper for Run().  It panic()s if Run() returns error.
-func MustRun(name string, providers ...interface{}) {
+func MustRun(name string, providers ...any) {
 	err := Run(name, providers...)
 	if err != nil {
 		panic(err)
@@ -522,7 +520,7 @@ func MustRun(name string, providers ...interface{}) {
 // arguments and returns no arguments.  It panic()s if Bind() returns error.
 //
 // Deprecated: use the method on Collection instead
-func MustBindSimple(c *Collection, name string) func() {
+func MustBindSimple(c *Collection, _ string) func() {
 	return c.MustBindSimple()
 }
 
@@ -538,7 +536,7 @@ func (c *Collection) MustBindSimple() func() {
 // arguments and returns error.
 //
 // Deprecated: use the method on Collection instead
-func MustBindSimpleError(c *Collection, name string) func() error {
+func MustBindSimpleError(c *Collection, _ string) func() error {
 	return c.MustBindSimpleError()
 }
 
@@ -553,12 +551,12 @@ func (c *Collection) MustBindSimpleError() func() error {
 // MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
 //
 // Deprecated: use the method on Collection instead
-func MustBind(c *Collection, invokeFunc interface{}, initFunc interface{}) {
+func MustBind(c *Collection, invokeFunc any, initFunc any) {
 	c.MustBind(invokeFunc, initFunc)
 }
 
 // MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
-func (c *Collection) MustBind(invokeFunc interface{}, initFunc interface{}) {
+func (c *Collection) MustBind(invokeFunc any, initFunc any) {
 	err := c.Bind(invokeFunc, initFunc)
 	if err != nil {
 		panic(DetailedError(err))
@@ -568,12 +566,12 @@ func (c *Collection) MustBind(invokeFunc interface{}, initFunc interface{}) {
 // MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
 //
 // Deprecated: use the method on Collection instead
-func MustSetCallback(c *Collection, binderFunction interface{}) {
+func MustSetCallback(c *Collection, binderFunction any) {
 	c.MustSetCallback(binderFunction)
 }
 
 // MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
-func (c *Collection) MustSetCallback(binderFunction interface{}) {
+func (c *Collection) MustSetCallback(binderFunction any) {
 	err := c.SetCallback(binderFunction)
 	if err != nil {
 		panic(DetailedError(err))

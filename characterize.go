@@ -101,7 +101,7 @@ func toTypeCodes(in []reflect.Type) []typeCode {
 func mappable(inputs ...reflect.Type) bool {
 	ok := true
 	for _, in := range inputs {
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch in.Kind() {
 		case reflect.Map, reflect.Slice, reflect.Func:
 			ok = false
@@ -177,7 +177,7 @@ var hasInner = predicate("does not have an Inner function (untyped functional ar
 	return isWrapper(a.t, a.fm.fn)
 })
 
-func isWrapper(t reflectType, fn interface{}) bool {
+func isWrapper(t reflectType, fn any) bool {
 	if _, ok := fn.(ReflectiveWrapper); ok {
 		return true
 	}
@@ -208,6 +208,7 @@ var invokeRegistry = typeRegistry{
 			inStatic,
 			isFuncPointer,
 		},
+		//nolint:dupl // not totallly the same as what's below
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = initFunc
@@ -229,6 +230,7 @@ var invokeRegistry = typeRegistry{
 			notNil,
 			isFuncPointer,
 		},
+		//nolint:dupl // not totallly the same as what's above
 		mutate: func(a testArgs) {
 			a.fm.group = invokeGroup
 			a.fm.class = invokeFunc
@@ -258,7 +260,6 @@ var handlerRegistry = typeRegistry{
 			a.fm.class = literalValue
 			// the cast is safe because when the value is a Reflective, we look like
 			// like a func and this code only runs for non-funcs.
-			//nolint:errcheck // we know that a.t can convert to a reflect.Type
 			a.fm.flows[outputParams] = toTypeCodes([]reflect.Type{a.t.(reflect.Type)})
 		},
 	},
@@ -557,7 +558,7 @@ func (reg typeRegistry) characterizeFuncDetails(fm *provider, cc charContext) (*
 	} else {
 		v := reflect.ValueOf(fm.fn)
 		var isNil bool
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch v.Type().Kind() {
 		case reflect.Chan, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			isNil = v.IsNil()
@@ -587,7 +588,6 @@ Match:
 		return a.fm, nil
 	}
 
-	// panic(fmt.Sprintf("%s: %s - %s", fm.describe(), t, strings.Join(rejectReasons, "; ")))
 	return nil, fm.errorf("Could not match type %s to any prototype: %s", a.t, strings.Join(rejectReasons, "; "))
 }
 

@@ -23,7 +23,7 @@ type intType3 int
 
 var (
 	tsiwfsFunc1a = func() intType3 { return 9 }
-	tsiwfsFunc2a = func(w http.ResponseWriter, r *http.Request) {}
+	tsiwfsFunc2a = func(_ http.ResponseWriter, _ *http.Request) {}
 )
 
 type interfaceI interface {
@@ -54,26 +54,31 @@ func params() flowMapType {
 	return [lastFlowType]typeCodes{}
 }
 
+//nolint:gocritic // flowMapType is big
 func (flows flowMapType) returns(f ...typeCode) flowMapType {
 	flows[returnParams] = f
 	return flows
 }
 
+//nolint:gocritic // flowMapType is big
 func (flows flowMapType) input(f ...typeCode) flowMapType {
 	flows[inputParams] = f
 	return flows
 }
 
+//nolint:gocritic // flowMapType is big
 func (flows flowMapType) output(f ...typeCode) flowMapType {
 	flows[outputParams] = f
 	return flows
 }
 
+//nolint:gocritic // flowMapType is big
 func (flows flowMapType) returned(f ...typeCode) flowMapType {
 	flows[receivedParams] = f
 	return flows
 }
 
+//nolint:gocritic // flowMapType is big
 func (flows flowMapType) bypass(f ...typeCode) flowMapType {
 	flows[bypassParams] = f
 	return flows
@@ -81,7 +86,7 @@ func (flows flowMapType) bypass(f ...typeCode) flowMapType {
 
 var characterizeTests = []struct {
 	name            string
-	fn              interface{}
+	fn              any
 	expectedClass   classType
 	last            bool
 	inputsAreStatic bool
@@ -298,7 +303,7 @@ var characterizeTests = []struct {
 	},
 	{
 		"simple middleware regression",
-		func(i func() error, w http.ResponseWriter) {},
+		func(_ func() error, _ http.ResponseWriter) {},
 		wrapperFunc,
 		lastF, staticF, panicF,
 		params().
@@ -307,7 +312,7 @@ var characterizeTests = []struct {
 	},
 	{
 		"simple final regression",
-		func(i func() error, w http.ResponseWriter) {},
+		func(_ func() error, _ http.ResponseWriter) {},
 		wrapperFunc,
 		lastT, staticT, panicT,
 		params().input(noTypeCode, responseWriterTC).returned(errorTC),
@@ -363,9 +368,6 @@ func een(i []typeCode) string {
 		s = append(s, c.Type().String())
 	}
 	return "[" + strings.Join(s, "; ") + "]"
-
-	// if len(i) == 0 { return nil }
-	// return i
 }
 
 // This tests the basic functionality of characterizeFunc()
@@ -392,7 +394,7 @@ func TestCharacterize(t *testing.T) {
 			originFm := newProvider(test.fn, i, test.name)
 			fm, err := charFunc(originFm, cc)
 			if test.expectedToError {
-				//nolint:testifylint
+				//nolint:testifylint // okay to not require
 				assert.Error(t, err, "expected err for"+test.name)
 				continue
 			} else {

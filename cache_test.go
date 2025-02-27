@@ -34,7 +34,7 @@ type outer struct {
 	Inner    smt
 }
 
-func castToImt1(i interface{}) imt1 {
+func castToImt1(i any) imt1 {
 	return i.(imt1)
 }
 
@@ -44,20 +44,20 @@ func TestCanBeMapKey(t *testing.T) {
 	aimt := castToImt1(aimt1([]int{10, 11}))
 	cases := []struct {
 		name         string
-		values       []interface{}
+		values       []any
 		simple       bool // true if function should be nil
-		typeOverride []interface{}
+		typeOverride []any
 		mappable     bool
 	}{
 		{
 			name:     "array",
-			values:   []interface{}{[2]int{3, 7}, "foo"},
+			values:   []any{[2]int{3, 7}, "foo"},
 			simple:   true,
 			mappable: true,
 		},
 		{
 			name: "nil imp",
-			values: []interface{}{smt{
+			values: []any{smt{
 				Imt: nilimt,
 			}},
 			simple:   false,
@@ -65,7 +65,7 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 		{
 			name: "int imp",
-			values: []interface{}{smt{
+			values: []any{smt{
 				Imt: iimt,
 			}},
 			simple:   false,
@@ -73,7 +73,7 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 		{
 			name: "slice imp",
-			values: []interface{}{smt{
+			values: []any{smt{
 				Imt: aimt,
 			}},
 			simple:   false,
@@ -81,7 +81,7 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 		{
 			name: "slice imp",
-			values: []interface{}{outer{
+			values: []any{outer{
 				Inner: smt{
 					Imt: iimt,
 				},
@@ -91,7 +91,7 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 		{
 			name: "multiples-yes",
-			values: []interface{}{
+			values: []any{
 				outer{
 					Inner: smt{
 						Imt: iimt,
@@ -106,7 +106,7 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 		{
 			name: "multiples-no",
-			values: []interface{}{
+			values: []any{
 				outer{
 					Inner: smt{
 						Imt: iimt,
@@ -246,7 +246,7 @@ func TestCacheSizes(t *testing.T) {
 
 	rw1 := NotCacheable(Memoize(func(s00 CS00) string {
 		rc1++
-		return strings.Join([]string{string(s00), strconv.Itoa(rc1)}, "-")
+		return string(s00) + "-" + strconv.Itoa(rc1)
 	}))
 	rw2 := NotCacheable(Memoize(func(s string, s00 CS00, s01 CS01, s02 CS02) string {
 		rc2++
@@ -259,12 +259,14 @@ func TestCacheSizes(t *testing.T) {
 		s09 CS09, s17 CS17, s18 CS18,
 	) string {
 		rc3++
-		return strings.Join([]string{s,
+		return strings.Join([]string{
+			s,
 			string(s00), string(s01), string(s02),
 			string(s03), string(s04), string(s05),
 			string(s06), string(s07), string(s08),
 			string(s09), string(s17), string(s18),
-			strconv.Itoa(rc3)}, "+")
+			strconv.Itoa(rc3),
+		}, "+")
 	}))
 	rw4 := NotCacheable(Memoize(func(s string,
 		s00 CS00, s01 CS01, s02 CS02, s03 CS03, s04 CS04, s05 CS05, s06 CS06, s07 CS07, s08 CS08, s09 CS09,
@@ -273,12 +275,14 @@ func TestCacheSizes(t *testing.T) {
 		s30 CS30, s31 CS31, s32 CS32, s33 CS33, s34 CS34, s35 CS35, s36 CS36, s37 CS37, s38 CS38, s39 CS39,
 	) string {
 		rc4++
-		return strings.Join([]string{s,
+		return strings.Join([]string{
+			s,
 			string(s00), string(s01), string(s02), string(s03), string(s04), string(s05), string(s06), string(s07), string(s08), string(s09),
 			string(s10), string(s11), string(s12), string(s13), string(s14), string(s15), string(s16), string(s17), string(s18), string(s19),
 			string(s20), string(s21), string(s22), string(s23), string(s24), string(s25), string(s26), string(s27), string(s28), string(s29),
 			string(s30), string(s31), string(s32), string(s33), string(s34), string(s35), string(s36), string(s37), string(s38), string(s39),
-			strconv.Itoa(rc4)}, "/")
+			strconv.Itoa(rc4),
+		}, "/")
 	}))
 
 	var prior string

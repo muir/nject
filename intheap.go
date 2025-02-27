@@ -6,21 +6,19 @@ import (
 
 // Code below originated with the container/heap documentation
 
-//nolint:recvcheck // some methods of intsHeap use a pointer, some do not
 type intsHeap [][2]int
 
 func (h intsHeap) Len() int           { return len(h) }
 func (h intsHeap) Less(i, j int) bool { return h[i][0] < h[j][0] }
 func (h intsHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *intsHeap) Push(x interface{}) {
+func (h *intsHeap) Push(x any) {
 	// Push and Pop use pointer receivers because they modify the slice's length,
 	// not just its contents.
-	//nolint:errcheck // if you Push something other than [2]int, expect a panic
 	*h = append(*h, x.([2]int))
 }
 
-func (h *intsHeap) Pop() interface{} {
+func (h *intsHeap) Pop() any {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -37,7 +35,6 @@ func push(h *intsHeap, funcs []*provider, i int) {
 }
 
 func pop(h *intsHeap) int {
-	//nolint:errcheck // we trust the type
 	x := heap.Pop(h).([2]int)
 	return x[1]
 }

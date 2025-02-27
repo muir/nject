@@ -121,7 +121,7 @@ var (
 
 	ignoreType = reflect.TypeOf((*ignore)(nil)).Elem()
 
-	emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
+	emptyInterfaceType = reflect.TypeOf((*any)(nil)).Elem()
 
 	debuggingType   = reflect.TypeOf((**Debugging)(nil)).Elem()
 	bypassDebugType = reflect.TypeOf((**bypassDebug)(nil)).Elem()

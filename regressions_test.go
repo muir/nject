@@ -144,9 +144,9 @@ func TestOversizeRequestRegression1(t *testing.T) {
 					Provide("LogProvider", func() i2 { return nil }),
 					Provide("LogBegin", func(i2, s1) i3 { return nil }),
 					Provide("Writer", func(i3, i4) i4prime { return nil }),
-					Provide("WriteJSON", func(i func() ie, x i4prime, y i3) { wjCalled = true; i() }),
-					Desired(Provide("IfError", func(i func() (ie, a1), x i3, y i4prime) ie { ieCalled = true; i(); return nil })),
-					Provide("AsErrors", func(i func() error, x i3, y i4prime) a1 { aeCalled = true; i(); return nil }),
+					Provide("WriteJSON", func(i func() ie, _ i4prime, _ i3) { wjCalled = true; i() }),
+					Desired(Provide("IfError", func(i func() (ie, a1), _ i3, _ i4prime) ie { ieCalled = true; i(); return nil })),
+					Provide("AsErrors", func(i func() error, _ i3, _ i4prime) a1 { aeCalled = true; _ = i(); return nil }),
 					Provide("SaveRequest", func(i4, s1) (TerminalError, s5) { return nil, "" }),
 					Sequence("OpenDB",
 						Provide("DBOpen", NotCacheable(func(s1) (s7, TerminalError) {
@@ -158,7 +158,11 @@ func TestOversizeRequestRegression1(t *testing.T) {
 					),
 					// Tx should be excluded from the chain because AsError is the only
 					// required match for error
-					MustConsume(Provide("Tx", func(i func(s8, s9) error, w s1, x s7, y i3, z i4prime) error { txCalled = true; i("", ""); return nil })),
+					MustConsume(Provide("Tx", func(i func(s8, s9) error, _ s1, _ s7, _ i3, _ i4prime) error {
+						txCalled = true
+						_ = i("", "")
+						return nil
+					})),
 					Provide("ParentTx", func(s8) s8prime { return "" }),
 				),
 			),
@@ -258,20 +262,20 @@ func TestMissingPaymentProviderRegression(t *testing.T) {
 				Provide("QuoteUpdater", func() i3 { return nil }),
 				Provide("ServiceLog", func() s1 { return "" }),
 				Provide("CORS", func(http.ResponseWriter, *http.Request) {}),
-				Provide("LogBegin", func(i func(s2), a *http.Request, b s1) {
+				Provide("LogBegin", func(i func(s2), _ *http.Request, _ s1) {
 					i("")
 				}),
 				Provide("LogInjectors", func(s2, *Debugging) {}),
 				Provide("Writer", func(http.ResponseWriter, s2) s3 { return "" }),
-				Provide("WriteJSON", func(i func() ie, a s3, b s2) {
+				Provide("WriteJSON", func(i func() ie, _ s3, _ s2) {
 					i()
 				}),
-				Provide("IfError", func(i func() (ie, i1), a s2, b s3) ie {
+				Provide("IfError", func(i func() (ie, i1), _ s2, _ s3) ie {
 					i()
 					return nil
 				}),
-				Provide("AsErrors", func(i func() error, a s2, b s3) i1 {
-					i()
+				Provide("AsErrors", func(i func() error, _ s2, _ s3) i1 {
+					_ = i()
 					return nil
 				}),
 				Provide("SaveRequest", func(http.ResponseWriter, *http.Request) (TerminalError, s4) { return nil, "" }),
@@ -282,7 +286,7 @@ func TestMissingPaymentProviderRegression(t *testing.T) {
 				Provide("DBOpen", func(*http.Request) (s5, TerminalError) {
 					return "", nil
 				}),
-				Provide("DBClose", func(i func(s5), a s5) {
+				Provide("DBClose", func(i func(s5), _ s5) {
 					i("")
 				}),
 				Provide("TimeTravelHeader", func() i2 { return nil }),
@@ -291,8 +295,8 @@ func TestMissingPaymentProviderRegression(t *testing.T) {
 					cctCalled = true
 					return nil, ""
 				}),
-				Provide("WrapTx", func(i func(b2, b3) error, a *http.Request, b s5, c s2, d s3) error {
-					i(true, true)
+				Provide("WrapTx", func(i func(b2, b3) error, _ *http.Request, _ s5, _ s2, _ s3) error {
+					_ = i(true, true)
 					return nil
 				}),
 				Provide("ParentTx", func(b2) b4 { return false }),
@@ -341,20 +345,20 @@ func TestExtraneousConversionRegression(t *testing.T) {
 				Provide("QuoteUpdater", func() i3 { return nil }),
 				Provide("ServiceLog", func() s1 { return "" }),
 				Provide("CORS", func(http.ResponseWriter, *http.Request) {}),
-				Provide("LogBegin", func(i func(s2), a *http.Request, b s1) {
+				Provide("LogBegin", func(i func(s2), _ *http.Request, _ s1) {
 					i("")
 				}),
 				Provide("LogInjectors", func(s2, *Debugging) {}),
 				Provide("Writer", func(http.ResponseWriter, s2) s3 { return "" }),
-				Provide("WriteJSON", func(i func() ie, a s3, b s2) {
+				Provide("WriteJSON", func(i func() ie, _ s3, _ s2) {
 					i()
 				}),
-				Provide("IfError", func(i func() (ie, i1), a s2, b s3) ie {
+				Provide("IfError", func(i func() (ie, i1), _ s2, _ s3) ie {
 					i()
 					return nil
 				}),
-				Provide("AsErrors", func(i func() error, a s2, b s3) i1 {
-					i()
+				Provide("AsErrors", func(i func() error, _ s2, _ s3) i1 {
+					_ = i()
 					return nil
 				}),
 				Provide("SaveRequest", func(http.ResponseWriter, *http.Request) (TerminalError, s4) { return nil, "" }),
@@ -365,7 +369,7 @@ func TestExtraneousConversionRegression(t *testing.T) {
 				Provide("DBOpen", func(*http.Request) (s5, TerminalError) {
 					return "", nil
 				}),
-				Provide("DBClose", func(i func(s5), a s5) {
+				Provide("DBClose", func(i func(s5), _ s5) {
 					i("")
 				}),
 				Provide("TimeTravelHeader", func() i2 { return nil }),
@@ -374,8 +378,8 @@ func TestExtraneousConversionRegression(t *testing.T) {
 					cctCalled = true
 					return nil, ""
 				}),
-				Provide("WrapTx", func(i func(b2, b3) error, a *http.Request, b s5, c s2, d s3) error {
-					i(true, true)
+				Provide("WrapTx", func(i func(b2, b3) error, _ *http.Request, _ s5, _ s2, _ s3) error {
+					_ = i(true, true)
 					return nil
 				}),
 				Provide("ParentTx", func(b2) b4 { return false }),
@@ -387,7 +391,7 @@ func TestExtraneousConversionRegression(t *testing.T) {
 					return nil, false, true
 				}),
 				Provide("TransformResponse", func(i func() b12) ie {
-					i()
+					_ = i()
 					return nil
 				}),
 				Provide("endpoint", func(s2, *http.Request, s3, s4, b4, s5, b1) (b12, error) {
@@ -457,7 +461,7 @@ type i019 interface {
 type i020 interface {
 	x020()
 }
-type i021 interface{} // wrap.JSONResult
+type i021 any // wrap.JSONResult
 // httptools.Errors
 type s022 int
 
@@ -544,16 +548,16 @@ func TestRegressionPrior(t *testing.T) {
 				Provide("base-collection-2", func(_ i016, _ i019) i020 { called["base-collection-2"]++; return nil }),         // included
 				Provide("WriteJSON", func(inner func() i021, _ i020, _ i019) {
 					called["WriteJSON"]++
-					inner()
+					_ = inner()
 				}), // included
 				Desired(Provide("IfError", func(inner func() (i021, s022), _ i019, _ i020) i021 {
 					called["IfError"]++
-					inner()
+					_, _ = inner()
 					return nil
 				})), // included
 				Provide("AsErrors", func(inner func() error, _ i019, _ i020) s022 {
 					called["AsErrors"]++
-					inner()
+					_ = inner()
 					return 0
 				}), // included
 				Provide("SaveRequest", func(_ i016, _ s017) (TerminalError, s023) { called["SaveRequest"]++; return nil, 0 }),            // included
@@ -568,7 +572,7 @@ func TestRegressionPrior(t *testing.T) {
 				MustConsume(Provide("ConverteCardToken", func(_ i019, _ s057, _ i035) (s057, TerminalError) { called["ConverteCardToken"]++; return 0, nil })), // included
 				MustConsume(Provide("Tx", func(inner func(i030, i031) error, _ s017, _ i029, _ i019, _ i020) error {
 					called["Tx"]++
-					inner(nil, nil)
+					_ = inner(nil, nil)
 					return nil
 				})),
 				Provide("ConsumeTxDone", func(_ i031) { called["ConsumeTxDone"]++ }),
@@ -576,7 +580,7 @@ func TestRegressionPrior(t *testing.T) {
 				Provide("GetSessionID", func(_ i019, _ s017) (TerminalError, s043) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s044) error, _ i019, _ i029, _ s043) error {
 					called["AdvisoryLockQuote"]++
-					inner(0)
+					_ = inner(0)
 					return nil
 				}), // included
 				Provide("LoadSavedQuote", func(_ i019, _ s044, _ s043) (TerminalError, s058) { called["LoadSavedQuote"]++; return nil, 0 }), // included
@@ -594,7 +598,7 @@ func TestRegressionPrior(t *testing.T) {
 				}),
 				Provide("endpoint-0", func(inner func() s048) i021 {
 					called["endpoint-0"]++
-					inner()
+					_ = inner()
 					return nil
 				}), // included
 				Required(Provide("endpoint-1", func(_ i019, _ s017, _ i020, _ s023, _ i029, _ s050) (s048, error) {
@@ -632,7 +636,7 @@ type i033 interface {
 type i034 interface {
 	x034()
 }
-type i036 interface{} // wrap.JSONResult
+type i036 any // wrap.JSONResult
 // httptools.Errors
 type s037 int
 
@@ -698,16 +702,16 @@ func TestRegression7642(t *testing.T) {
 				Provide("base-collection-2", func(_ i031, _ i034) i035 { called["base-collection-2"]++; return nil }),         // included
 				Provide("WriteJSON", func(inner func() i036, _ i035, _ i034) {
 					called["WriteJSON"]++
-					inner()
+					_ = inner()
 				}), // included
 				Desired(Provide("IfError", func(inner func() (i036, s037), _ i034, _ i035) i036 {
 					called["IfError"]++
-					inner()
+					_, _ = inner()
 					return nil
 				})), // included
 				Provide("AsErrors", func(inner func() error, _ i034, _ i035) s037 {
 					called["AsErrors"]++
-					inner()
+					_ = inner()
 					return 0
 				}), // included
 				Provide("SaveRequest", func(_ i031, _ s032) (TerminalError, s038) { called["SaveRequest"]++; return nil, 0 }),            // included
@@ -721,7 +725,7 @@ func TestRegression7642(t *testing.T) {
 				Provide("ConvertCardToken", func(_ i034, _ s066) (s066, TerminalError) { called["ConvertCardToken"]++; return 0, nil }),
 				MustConsume(Provide("Tx", func(inner func(i045, i046) error, _ s032, _ i044, _ i034, _ i035) error {
 					called["Tx"]++
-					inner(nil, nil)
+					_ = inner(nil, nil)
 					return nil
 				})),
 				Provide("ConsumeTxDone", func(_ i046) { called["ConsumeTxDone"]++ }),
@@ -729,13 +733,13 @@ func TestRegression7642(t *testing.T) {
 				Provide("GetSessionID", func(_ i034, _ s032) (TerminalError, s053) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s054) error, _ i034, _ i044, _ s053) error {
 					called["AdvisoryLockQuote"]++
-					inner(0)
+					_ = inner(0)
 					return nil
 				}), // included
 				Provide("LoadSavedQuote", func(_ i034, _ s054, _ s053) (TerminalError, s067) { called["LoadSavedQuote"]++; return nil, 0 }), // included
 				Desired(MustConsume(Provide("PurchaseFailureAlerter", func(inner func(s068) error, _ i034, _ s067, _ s053) {
 					called["PurchaseFailureAlerter"]++
-					inner(0)
+					_ = inner(0)
 				}))),
 				Provide("VariationsRuleChecker", func(_ i034, _ s062, _ s053, _ s054) s069 { called["VariationsRuleChecker"]++; return 0 }), // included
 				Provide("ReassembleQuote", func(_ i034, _ s066, _ s067, _ s061) (TerminalError, s070, s071) {
@@ -748,7 +752,7 @@ func TestRegression7642(t *testing.T) {
 				}),
 				Provide("endpoint-0", func(inner func() s058) i036 {
 					called["endpoint-0"]++
-					inner()
+					_ = inner()
 					return nil
 				}), // included
 				Required(Provide("endpoint-1", func(_ i034, _ s032, _ i035, _ s038, _ i044, _ s060) (s058, error) {
@@ -838,7 +842,7 @@ func TestRegression9(t *testing.T) {
 			Provide("TCP-0", func() i003 { called["TCP-0"]++; return nil }),
 			Provide("TCP-1", func(inner func() error, _ s004) {
 				called["TCP-1"]++
-				inner()
+				_ = inner()
 			}),
 			Provide("TCP-2", func() i005 { called["TCP-2"]++; return nil }),
 			Provide("TCP-3", func(_ i005) i005 { called["TCP-3"]++; return nil }),
@@ -906,7 +910,7 @@ func TestRegression9(t *testing.T) {
 			}))),
 			Provide("user-chain-3", func(_ i005, _ s054, _ s014, _ s019, _ s012) { called["user-chain-3"]++ }),
 		).Bind(&invoker, nil)
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		if !assert.NoError(t, err, "bind error") {
 			t.Log(DetailedError(err))
 		}
@@ -918,26 +922,26 @@ func TestClusterRegression(t *testing.T) {
 	genTest := func(clustering bool) func(*testing.T) {
 		return func(t *testing.T) {
 			var nn, nd, ndd, tc bool
-			seq1 := []interface{}{
-				Provide("needed", func() string { return "foo" }),
+			seq1 := []any{
+				Provide("needed", func() string { return "foo4" }),
 				Provide("not-needed", func() int64 {
 					nn = true
 					return 0
 				}),
 			}
-			seq2 := []interface{}{
+			seq2 := []any{
 				Provide("normally-desired", func(string) {
 					nd = true
 				}),
 				Provide("normally-desired too", func(string) {}),
 			}
-			seq3 := []interface{}{
+			seq3 := []any{
 				Provide("normally-desired in degenerate cluster", func(string) {
 					ndd = true
 				}),
 			}
 			test := func(s string) {
-				assert.Equal(t, "foo", s)
+				assert.Equal(t, "foo4", s)
 				tc = true
 			}
 			if clustering {

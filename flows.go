@@ -4,7 +4,7 @@ import (
 	"reflect"
 )
 
-func (fm provider) DownFlows() ([]reflect.Type, []reflect.Type) {
+func (fm *provider) DownFlows() ([]reflect.Type, []reflect.Type) {
 	switch fm.class {
 	case unsetClassType:
 		// continue
@@ -116,7 +116,7 @@ func (c Collection) DownFlows() ([]reflect.Type, []reflect.Type) {
 	})
 }
 
-func (fm provider) UpFlows() ([]reflect.Type, []reflect.Type) {
+func (fm *provider) UpFlows() ([]reflect.Type, []reflect.Type) {
 	switch fm.class {
 	case unsetClassType:
 		// continue

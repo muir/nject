@@ -34,7 +34,7 @@ func ExampleCollection_MustSetCallback() {
 		func(s string, i int) {
 			fmt.Println("got", s, i)
 		},
-	).SetCallback(func(f func(string)) {
+	).MustSetCallback(func(f func(string)) {
 		cb = f
 	})
 	cb("foo")

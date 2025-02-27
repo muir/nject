@@ -9,20 +9,20 @@ import (
 func ExampleSequence() {
 	seq := nject.Sequence("example",
 		func() string {
-			return "foo"
+			return "foo12"
 		},
 		func(s string) {
 			fmt.Println(s)
 		},
 	)
-	nject.Run("run", seq)
-	// Output: foo
+	nject.MustRun("run", seq)
+	// Output: foo12
 }
 
 func ExampleCollection_Append() {
 	one := nject.Sequence("first sequence",
 		func() string {
-			return "foo"
+			return "foo13"
 		},
 		func(s string) error {
 			fmt.Println("from one,", s)
@@ -43,16 +43,16 @@ func ExampleCollection_Append() {
 	)
 	fmt.Println(nject.Run("one", one))
 	fmt.Println(nject.Run("two", two))
-	// Output: from one, foo
+	// Output: from one, foo13
 	// <nil>
-	// from two, foo 3
+	// from two, foo13 3
 	// <nil>
 }
 
 func ExampleCollection_String() {
 	one := nject.Sequence("sequence",
 		func() string {
-			return "foo"
+			return "foo14"
 		},
 		func(s string) error {
 			fmt.Println("from one,", s)

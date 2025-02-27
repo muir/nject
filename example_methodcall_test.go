@@ -19,14 +19,14 @@ func (s *S) Print() {
 }
 
 func ExampleWithMethodCall() {
-	nject.Run("example",
+	nject.MustRun("example",
 		func() int {
 			return 4
 		},
 		nject.MustMakeStructBuilder(&S{},
 			nject.WithMethodCall("Square"),
 			nject.WithMethodCall("Print")),
-		func(s *S) {
+		func(_ *S) {
 			fmt.Println("end")
 		},
 	)

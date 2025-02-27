@@ -94,7 +94,8 @@ func generateInputMapper(fm *provider, start int, param flowType, rmap map[typeC
 }
 
 // generateOutputMapper returns a function that copies values from an array of reflect.Value to a valueCollection
-// nolint:unparam
+//
+//nolint:unparam // start is always 0
 func generateOutputMapper(fm *provider, start int, param flowType, vmap map[typeCode]int, purpose string) (func(valueCollection, []reflect.Value), error) {
 	pMap, err := generateParameterMap(fm, param, start, nil, vmap, purpose+" []->valueCollection")
 	if err != nil {
@@ -377,7 +378,6 @@ func generateWrappers(
 					dumpValueArray(v, "AFTER", downVmap)
 					debugf("RETURNING %v", err)
 				}
-				//nolint:errcheck // we know that err can convert to error
 				return err.(error)
 			}
 			if debugEnabled() {
@@ -391,6 +391,7 @@ func generateWrappers(
 		// handled elsewhere
 		return nil
 	case unsetClassType:
+		//nolint:gocritic // could remove test case
 		fallthrough
 	default:
 		return fmt.Errorf("internal error #11: unexpected class")

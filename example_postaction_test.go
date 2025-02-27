@@ -10,7 +10,7 @@ func ExamplePostActionByTag() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
-	nject.Run("example",
+	nject.MustRun("example",
 		func() int {
 			return 4
 		},
@@ -28,7 +28,7 @@ func ExamplePostActionByTag_wihtoutPointers() {
 	type S struct {
 		I int `nject:"square-me"`
 	}
-	nject.Run("example",
+	nject.MustRun("example",
 		func() int {
 			return 4
 		},
@@ -121,7 +121,7 @@ func ExamplePostActionByType() {
 			nject.PostActionByType(func(i int32, a *[]int) {
 				*a = append(*a, int(i))
 			}, nject.WithFill(true)),
-			nject.PostActionByType(func(i *int32, a *[]int) {
+			nject.PostActionByType(func(i *int32, _ *[]int) {
 				*i += 5
 			}, nject.WithFill(true)),
 		),

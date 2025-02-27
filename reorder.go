@@ -25,7 +25,7 @@ import (
 // Reorder should be considered experimental in the sense that the rules
 // for placement of such providers are likely to be adjusted as feedback
 // arrives.
-func Reorder(fn interface{}) Provider {
+func Reorder(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.reorder = true
 	})
@@ -220,13 +220,14 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 		nodes[pair[0]].weakAfter[pair[1]] = struct{}{}
 	}
 	for _, pair := range weakPairs {
-		if _, ok := nodes[pair[0]].weakBefore[pair[1]]; ok {
-			debugln("\tremove mutual weak", pair)
-			delete(nodes[pair[1]].weakBefore, pair[0])
-			delete(nodes[pair[0]].weakBefore, pair[0])
-			delete(nodes[pair[0]].weakAfter, pair[1])
-			delete(nodes[pair[1]].weakAfter, pair[1])
+		if _, ok := nodes[pair[0]].weakBefore[pair[1]]; !ok {
+			continue
 		}
+		debugln("\tremove mutual weak", pair)
+		delete(nodes[pair[1]].weakBefore, pair[0])
+		delete(nodes[pair[0]].weakBefore, pair[0])
+		delete(nodes[pair[0]].weakAfter, pair[1])
+		delete(nodes[pair[1]].weakAfter, pair[1])
 	}
 
 	unblocked := &intsHeap{}

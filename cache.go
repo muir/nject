@@ -8,10 +8,10 @@ import (
 )
 
 type (
-	in3  [3]interface{}
-	in10 [10]interface{}
-	in30 [30]interface{}
-	in90 [90]interface{}
+	in3  [3]any
+	in10 [10]any
+	in30 [30]any
+	in90 [90]any
 )
 
 type cacherFunc func(in []reflect.Value) []reflect.Value
@@ -34,6 +34,7 @@ func canSimpleTypeBeMapKey(t reflect.Type) bool {
 		reflect.Slice, reflect.UnsafePointer:
 		return false
 	case reflect.Interface, reflect.Struct, reflect.Invalid:
+		//nolint:gocritic // could remove case entirely
 		fallthrough
 	default:
 		// we shouldn't be here
@@ -47,7 +48,7 @@ func canValueBeMapKey(v reflect.Value, recurseOkay bool) bool {
 		// typed nils is too hard
 		return false
 	}
-	// nolint:exhaustive
+	//nolint:exhaustive // on purpose
 	switch v.Type().Kind() {
 	case reflect.Interface:
 		if v.IsNil() {
@@ -84,7 +85,7 @@ func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 	var checkers []func([]reflect.Value) bool
 	for i, t := range in {
 		i := i
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch t.Kind() {
 		case reflect.Struct:
 			for j := 0; j < t.NumField(); j++ {
@@ -179,7 +180,7 @@ func generateCache(id int32, fv canCall, l int, okayCheck func([]reflect.Value) 
 	return cacher
 }
 
-func fillKeyFromInputs(key []interface{}, in []reflect.Value) {
+func fillKeyFromInputs(key []any, in []reflect.Value) {
 	for i, v := range in {
 		if !v.IsValid() {
 			key[i] = ""

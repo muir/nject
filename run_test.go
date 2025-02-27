@@ -213,35 +213,34 @@ func TestWrappersBindError(t *testing.T) {
 
 func TestEmpties(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func"))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", nil))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.NoError(t, Run("no final func", func() {}))
 
 		seq := Sequence("empty")
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq, nil))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.NoError(t, Run("no final func", seq, func() {}))
 
 		seq2 := seq.Append("nothing")
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq2))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq2, nil))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.NoError(t, Run("no final func", seq2, func() {}))
 
 		seq3 := seq.Append("more nothing", Sequence("empty too"))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq3))
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.Error(t, Run("no final func", seq3, nil))
-		//nolint:testifylint
 		assert.NoError(t, Run("no final func", seq3, func() {}))
 	})
 }
@@ -306,30 +305,26 @@ func TestAppend(t *testing.T) {
 func TestErrorStrings(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		invalid := func(int, func()) {}
-		//nolint:testifylint
+		//nolint:testifylint // assert is okay
 		assert.NoError(t, Run("one", func() {}))
 
 		err := Run("one", invalid, func() {})
-		//nolint:testifylint
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "one(0) ")
 		}
 
 		err = Run("two", Provide("i-name", invalid), func() {})
-		//nolint:testifylint
 		if assert.Error(t, err) {
 			assert.NotContains(t, err.Error(), "two(0)")
 			assert.Contains(t, err.Error(), "i-name ")
 		}
 
 		err = Run("three", nil, invalid, func() {})
-		//nolint:testifylint
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "three(1) ")
 		}
 
 		err = Run("four", nil, nil, Cacheable(invalid), func() {})
-		//nolint:testifylint
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "four(2) ")
 		}
@@ -363,7 +358,7 @@ func TestInjectorsIncluded(t *testing.T) {
 		assert.NoError(t, Run("run1",
 			s3("s3 value"),
 			s0("s0 value"),
-			testSeq, func(s s5, d *Debugging) {
+			testSeq, func(_ s5, d *Debugging) {
 				assert.Equal(t, []string{
 					"static static-injector: Debugging [func() *nject.Debugging]",
 					"literal literal-value: run1(1) [nject.s0]",
@@ -383,7 +378,7 @@ func TestInjectorNamesIncluded(t *testing.T) {
 		assert.NoError(t, Run("run1",
 			s3("s3 value"),
 			Provide("S0", s0("s0 value")),
-			testSeq, func(s s5, d *Debugging) {
+			testSeq, func(_ s5, d *Debugging) {
 				assert.Equal(t, []string{
 					"Debugging",
 					"S0",
@@ -403,7 +398,7 @@ func TestInjectorsIncludeExclude(t *testing.T) {
 		assert.NoError(t, Run("run1",
 			s3("s3 value"),
 			s0("s0 value"),
-			testSeq, func(s s5, d *Debugging) {
+			testSeq, func(_ s5, d *Debugging) {
 				assert.Equal(t, []string{
 					"INCLUDED: static static-injector: Debugging [func() *nject.Debugging] BECAUSE used by final-func: run1(3) [func(nject.s5, *nject.Debugging)] (required)",
 					"EXCLUDED: literal literal-value: run1(0) [nject.s3] BECAUSE not used by any remaining providers",
@@ -425,7 +420,7 @@ func TestInjectorsDebugging(t *testing.T) {
 		assert.NoError(t, Run("run1",
 			s3("s3 value"),
 			s0("s0 value"),
-			testSeq, func(s s5, d *Debugging) {
+			testSeq, func(_ s5, d *Debugging) {
 				assert.Greater(t, len(d.Trace), 10000, d.Trace)
 			}))
 	})
@@ -436,7 +431,7 @@ func TestInjectorsReproduce(t *testing.T) {
 		assert.NoError(t, Run("run1",
 			s3("s3 value"),
 			s0("s0 value"),
-			testSeq, func(s s5, d *Debugging) {
+			testSeq, func(_ s5, d *Debugging) {
 				assert.Regexp(t, ` \*Debugging`, d.Reproduce)
 				assert.NotRegexp(t, `// \*nject\.Debugging`, d.Reproduce)
 				assert.NotRegexp(t, `\S\t`, d.Reproduce)

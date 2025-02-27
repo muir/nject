@@ -17,7 +17,7 @@ import (
 // EXPERIMENTAL: This is currently considered experimental and could be removed or
 // moved to another package. If you're using this, open a pull request to remove
 // this comment.
-func Curry(originalFunction interface{}, pointerToCurriedFunction interface{}) (Provider, error) {
+func Curry(originalFunction any, pointerToCurriedFunction any) (Provider, error) {
 	o := reflect.ValueOf(originalFunction)
 	if !o.IsValid() {
 		return nil, fmt.Errorf("original function is not a valid value")
@@ -124,7 +124,7 @@ func Curry(originalFunction interface{}, pointerToCurriedFunction interface{}) (
 // EXPERIMENTAL: This is currently considered experimental and could be removed or
 // moved to another package. If you're using this, open a pull request to remove
 // this comment.
-func MustSaveTo(varPointers ...interface{}) Provider {
+func MustSaveTo(varPointers ...any) Provider {
 	p, err := SaveTo(varPointers...)
 	if err != nil {
 		panic(err)
@@ -139,7 +139,7 @@ func MustSaveTo(varPointers ...interface{}) Provider {
 // If you want to fill a struct, use MakeStructBuilder() instead.
 //
 // The first argument to FillVars may not be a pointer to a function.
-func SaveTo(varPointers ...interface{}) (Provider, error) {
+func SaveTo(varPointers ...any) (Provider, error) {
 	inputs := make([]reflect.Type, len(varPointers))
 	pointers := make([]reflect.Value, len(varPointers))
 	for i, vp := range varPointers {
@@ -171,7 +171,7 @@ func SaveTo(varPointers ...interface{}) (Provider, error) {
 }
 
 // MustCurry calls Curry and panics if Curry returns error
-func MustCurry(originalFunction interface{}, pointerToCurriedFunction interface{}) Provider {
+func MustCurry(originalFunction any, pointerToCurriedFunction any) Provider {
 	p, err := Curry(originalFunction, pointerToCurriedFunction)
 	if err != nil {
 		panic(err)

@@ -12,12 +12,12 @@ import (
 // error creating an injection chain.
 func ExampleProvide() {
 	fmt.Println(nject.Run("failure1",
-		func(s string) int {
+		func(_ string) int {
 			return 4
 		},
 	))
 	fmt.Println(nject.Run("failure2",
-		nject.Provide("create-int", func(s string) int {
+		nject.Provide("create-int", func(_ string) int {
 			return 4
 		}),
 	))
@@ -42,11 +42,7 @@ func ExampleProvide_regular_injector() {
 		func() int {
 			return 7
 		},
-		nject.Provide("convert-int-to-string",
-			func(i int) string {
-				return strconv.Itoa(i)
-			},
-		),
+		nject.Provide("convert-int-to-string", strconv.Itoa),
 		func(s string) {
 			fmt.Println(s)
 		},

@@ -11,12 +11,10 @@ import (
 var idCounter int32
 
 // provider is an annotated reference to a provider
-//
-//nolint:recvcheck // some provider methods use a pointer, some do not
 type provider struct {
 	origin string
 	index  int
-	fn     interface{}
+	fn     any
 	id     int32
 
 	// user annotations (match these in debug.go)
@@ -121,11 +119,9 @@ type thing interface {
 	String() string
 }
 
-func newThing(fn interface{}) thing {
+func newThing(fn any) thing {
 	switch v := fn.(type) {
 	case *provider:
-		return v
-	case provider:
 		return v
 	case *Collection:
 		return v
@@ -136,7 +132,7 @@ func newThing(fn interface{}) thing {
 	}
 }
 
-func newProvider(fn interface{}, index int, origin string) *provider {
+func newProvider(fn any, index int, origin string) *provider {
 	if fn == nil {
 		return nil
 	}
@@ -157,7 +153,7 @@ func newProvider(fn interface{}, index int, origin string) *provider {
 	}
 }
 
-func (fm provider) String() string {
+func (fm *provider) String() string {
 	t := func() string {
 		if fm.fn == nil {
 			return "nil"
@@ -179,7 +175,7 @@ func (fm provider) String() string {
 	return fmt.Sprintf("%s%s [%s]", class, fm.origin, t)
 }
 
-func (fm provider) errorf(format string, args ...interface{}) error {
+func (fm *provider) errorf(format string, args ...any) error {
 	return errors.New(fm.String() + ": " + fmt.Sprintf(format, args...))
 }
 
@@ -258,7 +254,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 				}
 			}
 		}
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch fm.group {
 		case runGroup, invokeGroup:
 			for _, out := range fm.flows[outputParams] {
@@ -266,7 +262,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 			}
 		}
 
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch fm.group {
 		case staticGroup, literalGroup:
 			afterInit = append(afterInit, fm)
@@ -279,7 +275,7 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	return afterInit, afterInvoke, nil
 }
 
-func newCollection(name string, funcs ...interface{}) *Collection {
+func newCollection(name string, funcs ...any) *Collection {
 	var contents []*provider
 	for i, fn := range funcs {
 		if fn == nil {
@@ -325,7 +321,7 @@ func (c Collection) string(indent string) string {
 	return buf.String()
 }
 
-func (fm provider) renameIfEmpty(i int, name string) *provider {
+func (fm *provider) renameIfEmpty(i int, name string) *provider {
 	if fm.origin == "" {
 		nfm := fm.copy()
 		nfm.origin = name
@@ -334,18 +330,18 @@ func (fm provider) renameIfEmpty(i int, name string) *provider {
 		}
 		return nfm
 	}
-	return &fm
+	return fm
 }
 
-func (fm provider) flatten() []*provider {
-	return []*provider{&fm}
+func (fm *provider) flatten() []*provider {
+	return []*provider{fm}
 }
 
 func (c Collection) flatten() []*provider {
 	return c.contents
 }
 
-func (fm provider) modify(f func(*provider)) thing {
+func (fm *provider) modify(f func(*provider)) thing {
 	nfm := fm.copy()
 	f(nfm)
 	return nfm

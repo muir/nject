@@ -16,15 +16,15 @@ var (
 )
 
 var (
-	debuglnHook func(...interface{})
-	debugfHook  func(string, ...interface{})
+	debuglnHook func(...any)
+	debugfHook  func(string, ...any)
 )
 
 func debugEnabled() bool {
 	return atomic.LoadUint32(&debug) == 1
 }
 
-func debugln(stuff ...interface{}) {
+func debugln(stuff ...any) {
 	if !debugEnabled() {
 		return
 	}
@@ -38,7 +38,7 @@ func debugln(stuff ...interface{}) {
 	debugOutputMu.Unlock()
 }
 
-func debugf(format string, stuff ...interface{}) {
+func debugf(format string, stuff ...any) {
 	if !debugEnabled() {
 		return
 	}
@@ -185,7 +185,7 @@ func formatFlow(flow []typeCode) string {
 	return strings.Join(types, ", ")
 }
 
-func elem(i interface{}) reflect.Type {
+func elem(i any) reflect.Type {
 	t := reflect.TypeOf(i)
 	if t.Kind() == reflect.Ptr {
 		return t.Elem()
@@ -238,7 +238,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			extraIndent = "\t"
 		}
 		f += "\t\t\t\t" + extraIndent
-		close := ""
+		closeParens := ""
 		for annotation, active := range map[string]bool{
 			"NonFinal":            fm.nonFinal,
 			"Cacheable":           fm.cacheable,
@@ -258,7 +258,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 		} {
 			if active {
 				f += annotation + "("
-				close += ")"
+				closeParens += ")"
 			}
 		}
 		n := fm.origin
@@ -266,7 +266,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			n = fmt.Sprintf("%s-%d", fm.origin, fm.index)
 		}
 		f += fmt.Sprintf("Provide(%q, ", n)
-		close += ")"
+		closeParens += ")"
 		typ := reflect.TypeOf(fm.fn)
 		if typ.Kind() == reflect.Func {
 			f += "func("
@@ -303,7 +303,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 					f += fmt.Sprintf(" { called[%q]++ }", n)
 				}
 			}
-			f += close + ","
+			f += closeParens + ","
 			if fm.include {
 				f += " // included"
 			}
@@ -311,7 +311,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 		} else {
 			tca := substituteTypes(subs, &t, []reflect.Type{typ})
 			def := substituteDefaults(subs, []reflect.Type{typ})
-			f += fmt.Sprintf("%s(%s)%s,\n", tca[0], def[0], close)
+			f += fmt.Sprintf("%s(%s)%s,\n", tca[0], def[0], closeParens)
 		}
 	}
 	if inCluster != 0 {
@@ -346,7 +346,7 @@ func substituteTypes(subs map[typeCode]string, defineTypes *string, types []refl
 						subs[tc] = "interface {}"
 					} else {
 						subs[tc] = fmt.Sprintf("i%03d", tc)
-						*defineTypes += fmt.Sprintf("type i%03d interface{} // %s\n", tc, tc)
+						*defineTypes += fmt.Sprintf("type i%03d any // %s\n", tc, tc)
 					}
 				} else {
 					subs[tc] = fmt.Sprintf("i%03d", tc)
