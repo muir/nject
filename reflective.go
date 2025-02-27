@@ -169,6 +169,7 @@ type thinReflectiveWrapper struct {
 
 var _ ReflectiveWrapper = thinReflectiveWrapper{}
 
+//nolint:gocritic // r is heavy
 func (r thinReflectiveWrapper) Inner() ReflectiveArgs { return r.inner }
 
 // wrappedReflective allows Refelective to kinda pretend to be a reflect.Type
@@ -189,7 +190,10 @@ type reflectType interface {
 
 var _ reflectType = wrappedReflective{}
 
+//nolint:revive // recevier unused
 func (w wrappedReflective) Kind() reflect.Kind { return reflect.Func }
+
+//nolint:revive // recevier unused
 func (w wrappedReflective) Elem() reflect.Type { panic("call not expected") }
 
 func (w wrappedReflective) String() string {

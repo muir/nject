@@ -37,7 +37,7 @@ func TestCondenseTerminalError(t *testing.T) {
 				return fmt.Errorf("4")
 			}
 			return nil
-		}).Bind(&x, nil)
+		}).MustBind(&x, nil)
 	c := func(i int) string {
 		err := x(i)
 		if err == nil {
@@ -66,7 +66,7 @@ func TestCondenseErrorTreatment(t *testing.T) {
 			}),
 			func(err error) error {
 				return fmt.Errorf("2: %w", err)
-			}).Bind(&x, nil)
+			}).MustBind(&x, nil)
 		return x().Error()
 	}
 	assert.Equal(t, "1", run(true), "treat errors as terminal")
@@ -85,7 +85,7 @@ func TestCondenseDebugging(t *testing.T) {
 			func() {},
 		).MustCondense(true),
 		func() {},
-	).Bind(&x, nil)
+	).MustBind(&x, nil)
 	x()
 	assert.True(t, called, "called")
 }
@@ -96,7 +96,7 @@ func TestCondenseSelfSatisfied(t *testing.T) {
 	var x func()
 	condensed := nject.Required(nject.Sequence("c",
 		func(_ int) string {
-			return "foo"
+			return "foo2"
 		},
 		func(_ string) {
 			called = true
@@ -111,7 +111,7 @@ func TestCondenseSelfSatisfied(t *testing.T) {
 		func() {
 			alsoCalled = true
 		},
-	).Bind(&x, nil)
+	).MustBind(&x, nil)
 	x()
 	assert.True(t, called, "condensed called")
 	assert.True(t, alsoCalled, "main called")
@@ -123,7 +123,7 @@ func TestCondenseSelfSatisfied(t *testing.T) {
 
 func TestCondenseStringified(t *testing.T) {
 	c1 := nject.Sequence("x",
-		func() (int, string) { return 7, "foo" },
+		func() (int, string) { return 7, "foo3" },
 	).MustCondense(true)
 	assert.Equal(t, " [<reflectiveFunc>() (int, string)]", c1.String(), "c1")
 

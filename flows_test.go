@@ -14,9 +14,9 @@ type flows interface {
 	String() string
 }
 
-func toTypes(real ...interface{}) []reflect.Type {
-	types := make([]reflect.Type, len(real))
-	for i, r := range real {
+func toTypes(typs ...any) []reflect.Type {
+	types := make([]reflect.Type, len(typs))
+	for i, r := range typs {
 		switch t := r.(type) {
 		case reflect.Type:
 			types[i] = t
@@ -50,37 +50,37 @@ func TestFlows(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name     string
-		provider interface{}
-		upIn     []interface{}
-		upOut    []interface{}
-		downIn   []interface{}
-		downOut  []interface{}
+		provider any
+		upIn     []any
+		upOut    []any
+		downIn   []any
+		downOut  []any
 		class    classType
 	}{
 		{
 			name:     "fallable injector",
 			provider: func(int, string) TerminalError { return nil },
-			upOut:    []interface{}{errorType},
-			downIn:   []interface{}{3, ""},
+			upOut:    []any{errorType},
+			downIn:   []any{3, ""},
 		},
 		{
 			name:     "injecting error",
 			provider: func(int, string) error { return nil },
-			downOut:  []interface{}{errorType},
-			downIn:   []interface{}{3, ""},
+			downOut:  []any{errorType},
+			downIn:   []any{3, ""},
 		},
 		{
 			name:     "wrapper",
 			provider: func(func(int, string) bool, float64) float32 { return 3.2 },
-			downIn:   []interface{}{float64(3.3)},
-			downOut:  []interface{}{3, ""},
-			upOut:    []interface{}{float32(9.2)},
-			upIn:     []interface{}{true},
+			downIn:   []any{float64(3.3)},
+			downOut:  []any{3, ""},
+			upOut:    []any{float32(9.2)},
+			upIn:     []any{true},
 		},
 		{
 			name:     "constant",
 			provider: int64(32),
-			downOut:  []interface{}{int64(10)},
+			downOut:  []any{int64(10)},
 		},
 		{
 			name: "collection",
@@ -91,10 +91,10 @@ func TestFlows(t *testing.T) {
 				func(bool) TerminalError { return nil },                       // bool down/in; error up/out
 				func(func(float64) string, bool) complex128 { return 7 + 2i }, // bool down/in; float64 down/out; complex128 up/out; string up/in
 			),
-			downIn:  []interface{}{"", float32(3)},
-			downOut: []interface{}{true, int64(10), float64(10)},
-			upOut:   []interface{}{errorType, complex128(7 + 2i)},
-			upIn:    []interface{}{""},
+			downIn:  []any{"", float32(3)},
+			downOut: []any{true, int64(10), float64(10)},
+			upOut:   []any{errorType, complex128(7 + 2i)},
+			upIn:    []any{""},
 		},
 		{
 			name: "reflective injector",
@@ -104,8 +104,8 @@ func TestFlows(t *testing.T) {
 				func([]reflect.Value) []reflect.Value {
 					return nil
 				}),
-			downIn:  []interface{}{9, ""},
-			downOut: []interface{}{float32(8)},
+			downIn:  []any{9, ""},
+			downOut: []any{float32(8)},
 		},
 		{
 			name: "Reflective wrapper",
@@ -115,10 +115,10 @@ func TestFlows(t *testing.T) {
 				func([]reflect.Value) []reflect.Value {
 					return nil
 				}),
-			downIn:  []interface{}{9, ""},
-			upOut:   []interface{}{float32(8)},
-			upIn:    []interface{}{true},
-			downOut: []interface{}{""},
+			downIn:  []any{9, ""},
+			upOut:   []any{float32(8)},
+			upIn:    []any{true},
+			downOut: []any{""},
 			class:   wrapperFunc,
 		},
 		{
@@ -131,10 +131,10 @@ func TestFlows(t *testing.T) {
 				func([]reflect.Value) []reflect.Value {
 					return nil
 				}),
-			downIn:  []interface{}{7, 9, ""},
-			upOut:   []interface{}{float32(8)},
-			downOut: []interface{}{""},
-			upIn:    []interface{}{true},
+			downIn:  []any{7, 9, ""},
+			upOut:   []any{float32(8)},
+			downOut: []any{""},
+			upIn:    []any{true},
 			class:   wrapperFunc,
 		},
 	}

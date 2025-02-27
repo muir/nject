@@ -32,24 +32,26 @@ func DetailedError(err error) string {
 	return err.Error()
 }
 
-var duplicatesThrough int
-var dupLock sync.Mutex
-var duplicates string
-var duplicatesFound = make(map[string]struct{})
+var (
+	duplicatesThrough int
+	dupLock           sync.Mutex
+	duplicates        string
+	duplicatesFound   = make(map[string]struct{})
+)
 
 func duplicateTypes() string {
-	max := func() int {
+	maxTC := func() int {
 		lock.Lock()
 		defer lock.Unlock()
 		return typeCounter
 	}()
 	dupLock.Lock()
 	defer dupLock.Unlock()
-	if duplicatesThrough == max {
+	if duplicatesThrough == maxTC {
 		return duplicates
 	}
 	names := make(map[string]struct{})
-	for i := 1; i <= max; i++ {
+	for i := 1; i <= maxTC; i++ {
 		n := typeCode(i).String()
 		if _, ok := names[n]; ok {
 			if _, ok := duplicatesFound[n]; !ok {
@@ -59,6 +61,6 @@ func duplicateTypes() string {
 		}
 		names[n] = struct{}{}
 	}
-	duplicatesThrough = max
+	duplicatesThrough = maxTC
 	return duplicates
 }

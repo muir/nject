@@ -15,7 +15,7 @@ func TestReplace(t *testing.T) {
 	type action struct {
 		at     int
 		target int
-		op     func(target string, fn interface{}) nject.Provider
+		op     func(target string, fn any) nject.Provider
 	}
 	cases := []struct {
 		name    string
@@ -264,7 +264,7 @@ func TestReplace(t *testing.T) {
 		})
 	}
 	mkInjectors := func(count int, i int) *nject.Collection {
-		injectors := make([]interface{}, 0, count)
+		injectors := make([]any, 0, count)
 		n := strconv.Itoa(count) + "@" + strconv.Itoa(i)
 		for j := 1; j <= count; j++ {
 			injectors = append(injectors, mkInjector(n, i))
@@ -273,11 +273,11 @@ func TestReplace(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			injectors := []interface{}{
+			injectors := []any{
 				func() string { return ">" },
 			}
 			for i := 1; i <= tc.n; i++ {
-				var injector interface{}
+				var injector any
 				for _, m := range []int{7, 5, 3, 2} {
 					if i > m && i%m == 0 {
 						injector = mkInjectors(m, i)

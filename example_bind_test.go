@@ -18,14 +18,20 @@ func ExampleCollection_Bind() {
 
 	var aInit func(string)
 	var aInvoke func()
-	providerChain.Bind(&aInvoke, &aInit)
+	err := providerChain.Bind(&aInvoke, &aInit)
+	if err != nil {
+		panic(err)
+	}
 	aInit("string comes from init")
 	aInit("ignored since invoke is done")
 	aInvoke()
 	aInvoke()
 
 	var bInvoke func(string)
-	providerChain.Bind(&bInvoke, nil)
+	err = providerChain.Bind(&bInvoke, nil)
+	if err != nil {
+		panic(err)
+	}
 	bInvoke("string comes from invoke")
 	bInvoke("not a constant")
 
@@ -54,13 +60,13 @@ func ExampleCollection_Bind_passing_in_parameters() {
 		nject.Provide("final-injector",
 			// This will be the last injector in the chain and thus
 			// is the final injector and it must be included
-			func(i int64, j int) int32 {
+			func(i int64, j int) int64 {
 				fmt.Println(i, j)
-				return int32(i) + int32(j)
+				return i + int64(j)
 			}),
 	)
 	var initFunc func(string)
-	var invokeFunc func(int32) int32
+	var invokeFunc func(int32) int64
 	fmt.Println(chain.Bind(&invokeFunc, &initFunc))
 	initFunc("example thirty-seven character string")
 	fmt.Println(invokeFunc(10))

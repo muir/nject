@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// When !real, do not actually bind.  !real is used for generating debug traces.
-func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, real bool) error {
+// When !isReal, do not actually bind.  !isReal is used for generating debug traces.
+func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, isReal bool) error {
 	// Split up the collection into LITERAL, STATIC, RUN, and FINAL groups. Add
 	// init and invoke as faked providers.  Flatten into one ordered list.
 	var invokeIndex int
@@ -254,7 +254,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	for i := len(collections[runGroup]) - 1; i >= 0; i-- {
 		n := collections[runGroup][i]
 
-		// nolint:exhaustive
+		//nolint:exhaustive // on purpose
 		switch n.class {
 		case wrapperFunc:
 			inner := f
@@ -267,7 +267,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			j := i - 1
 		Injectors:
 			for j >= 0 {
-				// nolint:exhaustive
+				//nolint:exhaustive // on purpose
 				switch collections[runGroup][j].class {
 				default:
 					break Injectors
@@ -341,7 +341,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		}
 
 		debugln("SET INIT FUNC")
-		if real {
+		if isReal {
 			initImp := func(inputs []reflect.Value) []reflect.Value {
 				debugln("INSIDE INIT")
 				// if initDone panic, return error, or ignore?
@@ -367,7 +367,6 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			}
 		}
 		debugln("SET INIT FUNC - DONE")
-
 	} else {
 		initFunc = func() {
 			initOnce.Do(func() {
@@ -389,7 +388,7 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 		}
 
 		debugln("SET INVOKE FUNC")
-		if real {
+		if isReal {
 			invokeImpl := func(inputs []reflect.Value) []reflect.Value {
 				initFunc()
 				values := baseValues.Copy()

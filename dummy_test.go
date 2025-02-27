@@ -12,41 +12,43 @@ func init() {
 	sql.Register("dummy", &DummyDriver{})
 }
 
-var _ driver.Driver = &DummyDriver{}
-var _ driver.Conn = &DummyConn{}
-var _ driver.Tx = &DummyTx{}
+var (
+	_ driver.Driver = &DummyDriver{}
+	_ driver.Conn   = &DummyConn{}
+	_ driver.Tx     = &DummyTx{}
+)
 
 type DummyDriver struct{}
 
-func (d *DummyDriver) Open(name string) (driver.Conn, error) {
+func (*DummyDriver) Open(_ string) (driver.Conn, error) {
 	fmt.Println("db open")
 	return &DummyConn{}, nil
 }
 
 type DummyConn struct{}
 
-func (c *DummyConn) Prepare(query string) (driver.Stmt, error) {
+func (*DummyConn) Prepare(_ string) (driver.Stmt, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *DummyConn) Close() error {
+func (*DummyConn) Close() error {
 	fmt.Println("db close")
 	return nil
 }
 
-func (c *DummyConn) Begin() (driver.Tx, error) {
+func (*DummyConn) Begin() (driver.Tx, error) {
 	fmt.Println("tx begin")
 	return &DummyTx{}, nil
 }
 
 type DummyTx struct{}
 
-func (t *DummyTx) Commit() error {
+func (*DummyTx) Commit() error {
 	fmt.Println("tx committed")
 	return nil
 }
 
-func (t *DummyTx) Rollback() error {
+func (*DummyTx) Rollback() error {
 	fmt.Println("tx rolled back")
 	return nil
 }

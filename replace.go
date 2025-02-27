@@ -10,7 +10,7 @@ import (
 // This replacement happens very early in the
 // injection chain processing, before Reorder or injector selection.
 // If target does not exist, the injection chain is deemed invalid.
-func ReplaceNamed(target string, fn interface{}) Provider {
+func ReplaceNamed(target string, fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.replaceByName = target
 	})
@@ -22,7 +22,7 @@ func ReplaceNamed(target string, fn interface{}) Provider {
 // Collection.  This re-arrangement happens very early in the injection
 // chain processing, before Reorder or injector selection.
 // If target does not exist, the injection chain is deemed invalid.
-func InsertAfterNamed(target string, fn interface{}) Provider {
+func InsertAfterNamed(target string, fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.insertAfterName = target
 	})
@@ -34,7 +34,7 @@ func InsertAfterNamed(target string, fn interface{}) Provider {
 // Collection.  This re-arrangement happens very early in the injection
 // chain processing, before Reorder or injector selection.
 // If target does not exist, the injection chain is deemed invalid.
-func InsertBeforeNamed(target string, fn interface{}) Provider {
+func InsertBeforeNamed(target string, fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.insertBeforeName = target
 	})
@@ -47,7 +47,7 @@ func InsertBeforeNamed(target string, fn interface{}) Provider {
 // thus naming multiple providers with the same name.
 //
 // Likewise, when you tag a provider with InsertAfterName, you can
-// be tagging a colleciton, not an individual.
+// be tagging a collection, not an individual.
 func (c *Collection) handleReplaceByName() (err error) {
 	defer func() {
 		if debugEnabled() {

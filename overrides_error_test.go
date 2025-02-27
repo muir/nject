@@ -24,22 +24,21 @@ func TestOverridesError(t *testing.T) {
 	var target func(anotherType) error
 
 	t.Log("test: okay because no error bubbling up")
-	//nolint:testifylint
+	//nolint:testifylint // assert is okay
 	assert.NoError(t, Sequence("A", danger, finalWithoutError).Bind(&target, nil))
 
 	t.Log("test: should fail because the final function returns error that gets clobbered")
-	//nolint:testifylint
+	//nolint:testifylint // assert is okay
 	assert.Error(t, Sequence("B", danger, finalWithError).Bind(&target, nil))
 
 	t.Log("test: should fail because there is a terminal-error injector that gets clobbered")
-	//nolint:testifylint
+	//nolint:testifylint // assert is okay
 	assert.Error(t, Sequence("C", danger, returnsTerminal, finalWithoutError).Bind(&target, nil))
 
 	t.Log("test: okay because marked even though the final function returns error that gets clobbered")
-	//nolint:testifylint
+	//nolint:testifylint // assert is okay
 	assert.NoError(t, Sequence("B", OverridesError(danger), finalWithError).Bind(&target, nil))
 
 	t.Log("test: okay because marked even though there is a terminal-error injector that gets clobbered")
-	//nolint:testifylint
 	assert.NoError(t, Sequence("C", OverridesError(danger), returnsTerminal, finalWithoutError).Bind(&target, nil))
 }

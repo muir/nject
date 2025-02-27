@@ -52,7 +52,7 @@ func noNoType(types []typeCode) []typeCode {
 }
 
 // getTypeCode maps reflect.Type to integers.
-func getTypeCode(a interface{}) typeCode {
+func getTypeCode(a any) typeCode {
 	if a == nil {
 		panic("nil has no type")
 	}

@@ -105,7 +105,7 @@ func Example_transaction() {
 	fmt.Println("\nDatabase used...")
 	nject.MustRun("B", upstream, InjectDB("dummy", "ignored", nil),
 		func(db *sql.DB) error {
-			// nolint:sqlclosecheck
+			//nolint:sqlclosecheck // we don't care
 			_, _ = db.Prepare("ignored") // database opens are lazy so this triggers the logging
 			fmt.Println("final-func")
 			return nil

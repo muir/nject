@@ -11,9 +11,10 @@ type (
 	dataSourceName string
 )
 
-// openDBErrorReturnRequired is a provider that opens a database.   Surface it seems
+// openDBErrorReturnRequired is a provider that opens a database. On the surface it seems
 // fine but it has a problem: what if nothing below it returns error?
-// nolint:deadcode,unused
+//
+//nolint:unused // function is just an example
 func openDBErrorReturnRequired(inner func(*sql.DB) error, driver driverName, name dataSourceName) error {
 	db, err := sql.Open(string(driver), string(name))
 	if err != nil {

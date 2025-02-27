@@ -13,10 +13,10 @@ import (
 
 func debugOn(t *testing.T) {
 	debugOutputMu.Lock()
-	debuglnHook = func(stuff ...interface{}) {
+	debuglnHook = func(stuff ...any) {
 		t.Log(stuff...)
 	}
-	debugfHook = func(format string, stuff ...interface{}) {
+	debugfHook = func(format string, stuff ...any) {
 		t.Logf(format+"\n", stuff...)
 	}
 	debugOutputMu.Unlock()
@@ -65,22 +65,23 @@ func TestDetailedError(t *testing.T) {
 		Shun(func(m MyType1) MyType3 { return &m }),
 		Required(func(m MyType3) MyType2 { return []MyType1{*m} }),
 		Cacheable(func() int { return 4 }),
-		MustCache(func() string { return "foo" }),
+		MustCache(func() string { return "foo1" }),
 		Cluster("c1",
 			Singleton(func(i int) int64 { return int64(i) }),
 			Loose(func(m MyType4) string { return m.String() }),
 		),
 		Cluster("c2",
-			Reorder(func() time.Time { return time.Now() }),
+			Reorder(time.Now),
+			//nolint:gosec // int overflow
 			NotCacheable(func(i int) int32 { return int32(i) }),
 		),
 		func(_ MyType1, _ MyType3) {},
 		// CallsInner(func(i func()) { i() }),
 		Memoize(func(i int32) int32 { return i }),
-		OverridesError(func(i func()) error { return nil }),
+		OverridesError(func(_ func()) error { return nil }),
 		MustConsume(func(i int32) int64 { return int64(i) }),
 		ConsumptionOptional(func(i int64) float64 { return float64(i) }),
-		func(m MyType5) error { return nil },
+		func(_ MyType5) error { return nil },
 		NonFinal(func() {}),
 	)
 	require.Error(t, err, "mess from the above")

@@ -27,7 +27,7 @@ func Example() {
 			func() error { return errors.New("overwrite me") })),
 		nject.Provide("Names",
 			func(inner func() error, d *nject.Debugging) error {
-				inner()
+				_ = inner()
 				return errors.New(strings.Join(d.NamesIncluded, ", "))
 			}),
 		nject.Provide("ReflectError",
@@ -39,7 +39,7 @@ func Example() {
 		nject.Provide("IntInjector", func() int { return 1 }),
 		nject.Provide("BoolInjector", func() bool { return true }),
 		nject.Provide("IntReinjector", func(bool) int { return 2 }),
-		nject.Provide("IntConsumer", func(i int, d *nject.Debugging) error {
+		nject.Provide("IntConsumer", func(_ int, d *nject.Debugging) error {
 			return errors.New(strings.Join(d.NamesIncluded, ", "))
 		})))
 

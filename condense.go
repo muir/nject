@@ -48,7 +48,7 @@ func (c *Collection) Condense(treatErrorAsTerminal bool) (Provider, error) {
 		if err != nil {
 			return nil, err
 		}
-		ia := make([]interface{}, 0, len(beforeInvoke)+len(afterInvoke))
+		ia := make([]any, 0, len(beforeInvoke)+len(afterInvoke))
 		for _, fm := range beforeInvoke {
 			ia = append(ia, fm)
 		}
@@ -84,7 +84,6 @@ func (c *Collection) Condense(treatErrorAsTerminal bool) (Provider, error) {
 			func(d *Debugging, b *bypassDebug) {
 				d.Outer = (*Debugging)(b)
 			}, c)
-
 	}
 
 	invokeF := &reflectiveBinder{

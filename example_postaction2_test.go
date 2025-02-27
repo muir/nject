@@ -44,7 +44,7 @@ func ExamplePostActionByTag_withInterfaces() {
 				fmt.Println("Cause:", err.Unwrap())
 			}),
 		),
-		func(s S) {
+		func(_ S) {
 			fmt.Println("Done")
 		},
 	))

@@ -14,10 +14,11 @@ func ExampleRun() {
 		func(s string) int {
 			return len(s)
 		})
-	nject.Run("example",
+	fmt.Println(nject.Run("example",
 		providerChain,
 		func(i int, s string) {
 			fmt.Println(i, len(s))
-		})
+		}))
 	// Output: 22 22
+	// <nil>
 }

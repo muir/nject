@@ -49,8 +49,7 @@ import (
 //		}()
 //		return inner(thing)
 //	}
-//
-func OverridesError(fn interface{}) Provider {
+func OverridesError(fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
 		fm.overridesError = true
 	})

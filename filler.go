@@ -33,7 +33,7 @@ type canCall interface {
 	Call([]reflect.Value) []reflect.Value
 }
 
-func getCanCall(f interface{}) canCall {
+func getCanCall(f any) canCall {
 	if r, ok := f.(Reflective); ok {
 		return r
 	}
@@ -52,7 +52,7 @@ type canInner interface {
 	Inner() ReflectiveArgs
 }
 
-func getReflectType(i interface{}) reflectType {
+func getReflectType(i any) reflectType {
 	if r, ok := i.(Reflective); ok {
 		w := wrappedReflective{r}
 		return w
@@ -135,7 +135,7 @@ var reservedTags = map[string]struct{}{
 // post-actions.
 //
 // If you just want to provide a value variable, use FillVars() instead.
-func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, error) {
+func MakeStructBuilder(model any, optArgs ...FillerFuncArg) (Provider, error) {
 	// Options handling
 	options := fillerOptions{
 		tag:              "nject",
@@ -148,7 +148,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 	}
 	for tag := range options.postActionByTag {
 		if _, ok := reservedTags[tag]; ok {
-			return nil, fmt.Errorf("Tag value '%s' is reserved and cannot be used by PostAction", tag)
+			return nil, fmt.Errorf("tag value '%s' is reserved and cannot be used by PostAction", tag)
 		}
 	}
 	byType := make(map[typeCode][]postActionOption)
@@ -186,7 +186,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 		})
 		f.copy = true
 		if !f.pointer {
-			return nil, fmt.Errorf("Cannot fill an existing struct that is not a pointer.  Called with %T", model)
+			return nil, fmt.Errorf("cannot fill an existing struct that is not a pointer.  Called with %T", model)
 		}
 	} else if t.NumField() > 0 && t.Field(0).Type.Kind() == reflect.Func {
 		// uh, oh, we don't want to take a function
@@ -198,7 +198,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 
 	// Field handling.  A closure so that it can be invoked recursively
 	// since that's how you have to traverse nested structures.
-	var additionalReflectives []interface{}
+	var additionalReflectives []any
 	var mapStruct func(t reflect.Type, path []int) error
 	mapStruct = func(t reflect.Type, path []int) error {
 		for i := 0; i < t.NumField(); i++ {
@@ -220,7 +220,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 				if hardSkip {
 					return nil
 				}
-				ap, filledWithPtr, err := addFieldFiller(np, field, originalType, fun, description)
+				ap, filledWithPtr, err := addFieldFiller(np, &field, originalType, fun, description)
 				if err != nil {
 					return err
 				}
@@ -254,14 +254,14 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 							if field.Type.Kind() == reflect.Struct {
 								whole = true
 							} else {
-								return fmt.Errorf("Cannot use tag %s on type %s (%s) for building struct filler",
+								return fmt.Errorf("cannot use tag %s on type %s (%s) for building struct filler",
 									tv, field.Name, field.Type)
 							}
 						case "fields":
 							if field.Type.Kind() == reflect.Struct {
 								whole = false
 							} else {
-								return fmt.Errorf("Cannot use tag %s on type %s (%s) for building struct filler",
+								return fmt.Errorf("cannot use tag %s on type %s (%s) for building struct filler",
 									tv, field.Name, field.Type)
 							}
 						default:
@@ -273,7 +273,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 									return err
 								}
 							} else {
-								return fmt.Errorf("Invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
+								return fmt.Errorf("invalid struct tag '%s' on %s for building struct filler", tv, field.Name)
 							}
 						}
 					}
@@ -329,7 +329,7 @@ func MakeStructBuilder(model interface{}, optArgs ...FillerFuncArg) (Provider, e
 
 	// Build the Provider/Cluster
 	p := Provide(fmt.Sprintf("builder for %T", model), &f)
-	var chain []interface{}
+	var chain []any
 	if addIgnore {
 		chain = append(chain, ignore{})
 	}
@@ -356,14 +356,14 @@ func (f *filler) NumIn() int {
 	return len(f.inputs)
 }
 
-func (f *filler) Out(i int) reflect.Type {
+func (f *filler) Out(_ int) reflect.Type {
 	if f.pointer {
 		return reflect.PointerTo(f.typ)
 	}
 	return f.typ
 }
 
-func (f *filler) NumOut() int {
+func (*filler) NumOut() int {
 	return 1
 }
 
@@ -423,7 +423,7 @@ func copyIntSlice(in []int) []int {
 // post-filling.
 func addFieldFiller(
 	path []int,
-	field reflect.StructField,
+	field *reflect.StructField,
 	outerStruct reflect.Type,
 	option postActionOption,
 	context string,
@@ -485,7 +485,7 @@ func addFieldFiller(
 		check(reflect.PointerTo(field.Type), true)
 	}
 	if option.matchToInterface && countEmptyInterfaces != 1 {
-		return nil, false, fmt.Errorf("%s need exactly one interface{} parameters in function", context)
+		return nil, false, fmt.Errorf("%s need exactly one any parameter in function", context)
 	}
 	if score == bad {
 		return nil, false, fmt.Errorf("%s no match found between field type %s and function inputs",
@@ -526,7 +526,7 @@ func addFieldFiller(
 func generatePostMethod(modelType reflect.Type, methodName string) (Provider, error) {
 	method, ok := modelType.MethodByName(methodName)
 	if !ok {
-		return nil, fmt.Errorf("WIthPostMethod(%s) on %s: no such method exists", methodName, modelType)
+		return nil, fmt.Errorf("WithPostMethod(%s) on %s: no such method exists", methodName, modelType)
 	}
 	desc := fmt.Sprintf("%s.%s()", modelType, methodName)
 	mt := method.Func.Type()

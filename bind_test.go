@@ -58,7 +58,7 @@ type i4 interface {
 	s4() s4
 }
 type (
-	ie      interface{}
+	ie      any
 	i4prime interface {
 		s4() s4
 		s4prime() s4prime
@@ -86,7 +86,15 @@ type i9 interface {
 }
 type i2imp int
 
-func (i i2imp) s2() s2 { return "" }
+func (i2imp) s2() s2 { return "" }
+
+const (
+	s1Value s1 = "s1 value"
+	s2Value s2 = "s2 value"
+	s3Value s3 = "s3 value"
+	s4Value s4 = "s4 value"
+	s5Value s5 = "s5 value"
+)
 
 // TestInitInvokeInjections does a very basic test of
 // providing values in init and invoke and seeing return
@@ -101,34 +109,34 @@ func TestInitInvokeInjections(t *testing.T) {
 			Cacheable(func(s s0) s1 {
 				counts["s1"]++
 				assert.Equal(t, s0("s0 value"), s)
-				return "s1 value"
+				return s1Value
 			}),
 			Cacheable(func(s s1) s2 {
 				counts["s2"]++
-				assert.Equal(t, s1("s1 value"), s)
-				return "s2 value"
+				assert.Equal(t, s1Value, s)
+				return s2Value
 			}),
 			Cacheable(func(s s3) s4 {
 				// Nothing uses s4 so this doesn't run
 				counts["s4"]++
-				assert.Equal(t, s3("s3 value"), s)
-				return "s4 value"
+				assert.Equal(t, s3Value, s)
+				return s4Value
 			}),
 			Cacheable(func(s s2) s5 {
 				counts["s5"]++
-				assert.Equal(t, s2("s2 value"), s)
-				return "s5 value"
+				assert.Equal(t, s2Value, s)
+				return s5Value
 			}),
 		)
 		var shouldWorkInit func(s0) s2
 		var shouldWorkInvoke func(s3) s5
 		err := c.Bind(&shouldWorkInvoke, &shouldWorkInit)
 		require.NoError(t, err)
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("s0 value"))
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("ignored"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("s0 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("ignored"))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
 		assert.Equal(t, 1, counts["s1"])
 		assert.Equal(t, 1, counts["s2"])
 		assert.Equal(t, 0, counts["s4"])
@@ -147,25 +155,25 @@ func TestRequired(t *testing.T) {
 				t.Logf("s1 called with '%s'", s)
 				counts["s1"]++
 				assert.Equal(t, s0("s0 value"), s)
-				return "s1 value"
+				return s1Value
 			}),
 			Cacheable(func(s s1) s2 {
 				t.Logf("s2 called with '%s'", s)
 				counts["s2"]++
-				assert.Equal(t, s1("s1 value"), s)
-				return "s2 value"
+				assert.Equal(t, s1Value, s)
+				return s2Value
 			}),
 			Required(Cacheable(func(s s3) s4 {
 				t.Logf("s4 called with '%s'", s)
 				counts["s4"]++
-				assert.Equal(t, s3("s3 value"), s)
-				return "s4 value"
+				assert.Equal(t, s3Value, s)
+				return s4Value
 			})),
 			Cacheable(func(s s2) s5 {
 				t.Logf("s5 called with '%s'", s)
 				counts["s5"]++
-				assert.Equal(t, s2("s2 value"), s)
-				return "s5 value"
+				assert.Equal(t, s2Value, s)
+				return s5Value
 			}),
 		)
 		var shouldWorkInit func(s0) s2
@@ -173,12 +181,12 @@ func TestRequired(t *testing.T) {
 		err := c.Bind(&shouldWorkInvoke, &shouldWorkInit)
 		require.NoError(t, err)
 
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("s0 value"))
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("ignored"))
+		assert.Equal(t, s2Value, shouldWorkInit("s0 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("ignored"))
 
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
 
 		assert.Equal(t, 1, counts["s1"])
 		assert.Equal(t, 1, counts["s2"])
@@ -199,25 +207,25 @@ func TestInitDependencyOnUnavailableData(t *testing.T) {
 				t.Logf("s1 called with '%s'", s)
 				counts["s1"]++
 				assert.Equal(t, s0("s0 value"), s)
-				return "s1 value"
+				return s1Value
 			}),
 			Provide("s2", func(s s1) s2 {
 				t.Logf("s2 called with '%s'", s)
 				counts["s2"]++
-				assert.Equal(t, s1("s1 value"), s)
-				return "s2 value"
+				assert.Equal(t, s1Value, s)
+				return s2Value
 			}),
 			Cacheable(func(s s3) s4 {
 				t.Logf("s4 called with '%s'", s)
 				counts["s4"]++
-				assert.Equal(t, s3("s3 value"), s)
-				return "s4 value"
+				assert.Equal(t, s3Value, s)
+				return s4Value
 			}),
 			Cacheable(func(s s2) s5 {
 				t.Logf("s5 called with '%s'", s)
 				counts["s5"]++
-				assert.Equal(t, s2("s2 value"), s)
-				return "s5 value"
+				assert.Equal(t, s2Value, s)
+				return s5Value
 			}),
 		)
 		var shouldWorkInit func(s0) s2
@@ -237,28 +245,28 @@ func TestHoistToStaticFromSubCollections(t *testing.T) {
 			Cacheable(func(s s0) s1 {
 				counts["s1"]++
 				assert.Equal(t, s0("s0 value"), s)
-				return "s1 value"
+				return s1Value
 			}),
 			Cacheable(func(s s1) s2 {
 				counts["s2"]++
-				assert.Equal(t, s1("s1 value"), s)
-				return "s2 value"
+				assert.Equal(t, s1Value, s)
+				return s2Value
 			}),
 			Sequence("Inner",
 				Cacheable(func(s s1) s6 {
 					counts["s6"]++
-					assert.Equal(t, s1("s1 value"), s)
+					assert.Equal(t, s1Value, s)
 					return "s6 value"
 				}),
 				// This is not static because it gets its input from invoke
 				Required(Cacheable(func(s s3) s7 {
 					counts["s7"]++
-					assert.Equal(t, s3("s3 value"), s)
+					assert.Equal(t, s3Value, s)
 					return "s7 value"
 				})),
 				Provide("s8", func(s s1) s8 {
 					counts["s8"]++
-					assert.Equal(t, s1("s1 value"), s)
+					assert.Equal(t, s1Value, s)
 					return "s8 value"
 				}),
 			),
@@ -270,23 +278,23 @@ func TestHoistToStaticFromSubCollections(t *testing.T) {
 			Required(Cacheable(func(s s8) s4 {
 				counts["s4"]++
 				assert.Equal(t, s8("s8 value"), s)
-				return "s4 value"
+				return s4Value
 			})),
 			Cacheable(func(s s2) s5 {
 				counts["s5"]++
-				assert.Equal(t, s2("s2 value"), s)
-				return "s5 value"
+				assert.Equal(t, s2Value, s)
+				return s5Value
 			}),
 		)
 		var shouldWorkInit func(s0) s2
 		var shouldWorkInvoke func(s3) s5
 		err := c.Bind(&shouldWorkInvoke, &shouldWorkInit)
 		require.NoError(t, err)
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("s0 value"))
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("ignored"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("s0 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("ignored"))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
 		assert.Equal(t, 1, counts["s1"], "s1 static chain")
 		assert.Equal(t, 1, counts["s2"], "s2 static chain")
 		assert.Equal(t, 3, counts["s4"], "s4 invoke chain")
@@ -304,32 +312,32 @@ func TestLiteral(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		counts := make(map[string]int)
 		c := Sequence("TBF",
-			s1("s1 value"),
+			s1Value,
 			Cacheable(func(s s1) s2 {
 				counts["s2"]++
-				assert.Equal(t, s1("s1 value"), s)
-				return "s2 value"
+				assert.Equal(t, s1Value, s)
+				return s2Value
 			}),
 			Cacheable(func(s s3) s4 {
 				// Nothing uses s4 so this doesn't run
 				counts["s4"]++
-				assert.Equal(t, s3("s3 value"), s)
-				return "s4 value"
+				assert.Equal(t, s3Value, s)
+				return s4Value
 			}),
 			Cacheable(func(s s2) s5 {
 				counts["s5"]++
-				assert.Equal(t, s2("s2 value"), s)
-				return "s5 value"
+				assert.Equal(t, s2Value, s)
+				return s5Value
 			}),
 		)
 		var shouldWorkInit func(s0) s2
 		var shouldWorkInvoke func(s3) s5
 		MustBind(c, &shouldWorkInvoke, &shouldWorkInit)
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("s0 value"))
-		assert.Equal(t, s2("s2 value"), shouldWorkInit("ignored"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
-		assert.Equal(t, s5("s5 value"), shouldWorkInvoke("s3 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("s0 value"))
+		assert.Equal(t, s2Value, shouldWorkInit("ignored"))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
+		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
 		assert.Equal(t, 1, counts["s2"])
 		assert.Equal(t, 0, counts["s4"])
 		assert.Equal(t, 3, counts["s5"])
@@ -350,12 +358,12 @@ func TestMemoize(t *testing.T) {
 			Cacheable(func(s s1) s2 {
 				counts["s2"]++
 				assert.Equal(t, s1("s1 value"+expected), s)
-				return s2("s2 value" + string(s))
+				return s2Value + s2(string(s))
 			}),
 			Cacheable(func(s s2) s5 {
 				counts["s5"]++
 				assert.Equal(t, s2("s2 values1 value"+expected), s)
-				return "s5 value"
+				return s5Value
 			}),
 		)
 		var seqInit1 func(s0) s2
@@ -375,23 +383,23 @@ func TestMemoize(t *testing.T) {
 
 		assert.Equal(t, s2("s2 values1 values0 value"), seqInit1("s0 value"))
 		assert.Equal(t, s2("s2 values1 values0 value"), seqInit1("ignored"))
-		assert.Equal(t, s5("s5 value"), seqInvoke1("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke1("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke1("s3 value"))
+		assert.Equal(t, s5Value, seqInvoke1(s3Value))
+		assert.Equal(t, s5Value, seqInvoke1(s3Value))
+		assert.Equal(t, s5Value, seqInvoke1(s3Value))
 
 		expected = "s0 value #2"
 		assert.Equal(t, s2("s2 values1 values0 value #2"), seqInit2("s0 value #2"))
 		assert.Equal(t, s2("s2 values1 values0 value #2"), seqInit2("ignored"))
-		assert.Equal(t, s5("s5 value"), seqInvoke2("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke2("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke2("s3 value"))
+		assert.Equal(t, s5Value, seqInvoke2(s3Value))
+		assert.Equal(t, s5Value, seqInvoke2(s3Value))
+		assert.Equal(t, s5Value, seqInvoke2(s3Value))
 
 		expected = "s0 value"
 		assert.Equal(t, s2("s2 values1 values0 value"), seqInit3("s0 value"))
 		assert.Equal(t, s2("s2 values1 values0 value"), seqInit3("ignored"))
-		assert.Equal(t, s5("s5 value"), seqInvoke3("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke3("s3 value"))
-		assert.Equal(t, s5("s5 value"), seqInvoke3("s3 value"))
+		assert.Equal(t, s5Value, seqInvoke3(s3Value))
+		assert.Equal(t, s5Value, seqInvoke3(s3Value))
+		assert.Equal(t, s5Value, seqInvoke3(s3Value))
 
 		assert.Equal(t, 2, counts["s1"])
 		assert.Equal(t, 3, counts["s2"])
@@ -399,7 +407,7 @@ func TestMemoize(t *testing.T) {
 	})
 }
 
-func errorIfNotEqual(a interface{}, b interface{}) error {
+func errorIfNotEqual(a any, b any) error {
 	if a != b {
 		return fmt.Errorf("was expecting %v but got %v", a, b)
 	}
@@ -412,17 +420,17 @@ func terminalErrorSetup(t *testing.T) (map[string]int, *Collection) {
 		Provide("S0", Cacheable(func(s s0) (s1, TerminalError, s1prime, s2bypass) {
 			counts["s1"]++
 			t.Logf("s1(s0=%s)", s)
-			s2b := "s2 value"
+			s2b := s2Value
 			if s0("s0 value") != s {
 				s2b = ""
 			}
-			return "s1 value", errorIfNotEqual(s0("s0 value"), s), "s1 prime", s2bypass(s2b)
+			return s1Value, errorIfNotEqual(s0("s0 value"), s), "s1 prime", s2bypass(s2b)
 		})),
 		Provide("S1", Cacheable(func(s s1) s2 {
 			counts["s2"]++
 			t.Logf("s2(s1=%s)", s)
-			require.Equal(t, s1("s1 value"), s)
-			return "s2 value"
+			require.Equal(t, s1Value, s)
+			return s2Value
 		})),
 
 		Desired(Provide("S9", func(inner func() s7) {
@@ -443,14 +451,14 @@ func terminalErrorSetup(t *testing.T) (map[string]int, *Collection) {
 		Provide("S4", func(s s3, s3p s3prime) (s4, TerminalError, s4prime) {
 			counts["s4"]++
 			t.Logf("s4(s3=%s, s3p=%s)", s, s3p)
-			require.Equal(t, s3("s3 value"), s)
-			return "s4 value", errorIfNotEqual(s3prime("s3 prime"), s3p), "s4 prime"
+			require.Equal(t, s3Value, s)
+			return s4Value, errorIfNotEqual(s3prime("s3 prime"), s3p), "s4 prime"
 		}),
 		Provide("S5", func(s s4, sp s1prime) (s5, s5prime, TerminalError) {
 			counts["s5"]++
 			t.Logf("s5(s4=%s, s1p=%s)", s, sp)
-			require.Equal(t, s4("s4 value"), s)
-			return "s5 value", "s5 prime", errorIfNotEqual(s1prime("s1 prime"), sp)
+			require.Equal(t, s4Value, s)
+			return s5Value, "s5 prime", errorIfNotEqual(s1prime("s1 prime"), sp)
 		}),
 		Provide("S6", func(s s2, sp s2prime, s2b s2bypass) (TerminalError, s6, s6prime) {
 			counts["s6"]++
@@ -461,8 +469,8 @@ func terminalErrorSetup(t *testing.T) (map[string]int, *Collection) {
 		Provide("S7", func(vs4 s4, s4p s4prime, vs5 s5, s5p s5prime, vs6 s6, s6p s6prime) (s7, s7prime) {
 			counts["s7"]++
 			t.Logf("s7(s4=%s, s4p=%s, s5=%s, s5p=%s, s6=%s, s6p=%s)", vs4, s4p, vs5, s5p, vs6, s6p)
-			require.Equal(t, s4("s4 value"), vs4)
-			require.Equal(t, s5("s5 value"), vs5)
+			require.Equal(t, s4Value, vs4)
+			require.Equal(t, s5Value, vs5)
 			require.Equal(t, s6("s6 value"), vs6)
 			require.Equal(t, s4prime("s4 prime"), s4p)
 			require.Equal(t, s5prime("s5 prime"), s5p)
@@ -491,59 +499,59 @@ func TestTerminalErrorMultiBinding(t *testing.T) {
 
 		debugln("------------------------ call      bind1Init ----------------")
 		bind1s1, bind1s1p, bind1e := bind1Init("s0 value")
-		require.Equal(t, s1("s1 value"), bind1s1)
+		require.Equal(t, s1Value, bind1s1)
 		require.Equal(t, s1prime("s1 prime"), bind1s1p)
 		require.NoError(t, bind1e)
 
 		debugln("------------------------ call bind1init (again) -------------")
 		bind1s1, bind1s1p, bind1e = bind1Init("ignored")
-		require.Equal(t, s1("s1 value"), bind1s1)
+		require.Equal(t, s1Value, bind1s1)
 		require.Equal(t, s1prime("s1 prime"), bind1s1p)
 		require.NoError(t, bind1e)
 
 		debugln("------------------------ call      bind2Init ----------------")
 		bind2s1, bind2s1p, bind2e := bind2Init("not s0 value")
-		require.Equal(t, s1("s1 value"), bind2s1)
+		require.Equal(t, s1Value, bind2s1)
 		require.Equal(t, s1prime("s1 prime"), bind2s1p)
 		require.Error(t, bind2e)
 
 		debugln("------------------------ call bind2init (again) -------------")
 		bind2s1, bind2s1p, bind2e = bind2Init("s0 value")
-		require.Equal(t, s1("s1 value"), bind2s1)
+		require.Equal(t, s1Value, bind2s1)
 		require.Equal(t, s1prime("s1 prime"), bind2s1p)
 		require.Error(t, bind2e)
 
 		debugln("------------------------ call invoke1 -----------------------")
 		debugln("invoke1(s3=s3 value, s1p=s1 prime, s2p=s2 prime, s3p=s3 prime)")
-		require.Equal(t, s7("s7 value"), bind1Invoke("s3 value", "s1 prime", "s2 prime", "s3 prime"))
+		require.Equal(t, s7("s7 value"), bind1Invoke(s3Value, "s1 prime", "s2 prime", "s3 prime"))
 
 		debugln("------------------------ call invoke1 -----------------------")
 		debugln("invoke1(s3=s3 value, s1p=s1 other, s2p=s2 prime, s3p=s3 prime)")
-		require.Equal(t, s7("error"), bind1Invoke("s3 value", "s1 other", "s2 prime", "s3 prime"))
+		require.Equal(t, s7("error"), bind1Invoke(s3Value, "s1 other", "s2 prime", "s3 prime"))
 
 		debugln("------------------------ call invoke1 -----------------------")
 		debugln("invoke1(s3=s3 value, s1p=s1 prime, s2p=s2 other, s3p=s3 prime)")
-		require.Equal(t, s7("error"), bind1Invoke("s3 value", "s1 prime", "s2 other", "s3 prime"))
+		require.Equal(t, s7("error"), bind1Invoke(s3Value, "s1 prime", "s2 other", "s3 prime"))
 
 		debugln("------------------------ call invoke1 -----------------------")
 		debugln("invoke1(s3=s3 value, s1p=s1 prime, s2p=s2 prime, s3p=s3 other)")
-		require.Equal(t, s7("error"), bind1Invoke("s3 value", "s1 prime", "s2 prime", "s3 other"))
+		require.Equal(t, s7("error"), bind1Invoke(s3Value, "s1 prime", "s2 prime", "s3 other"))
 
 		debugln("------------------------ call invoke2 -----------------------")
 		debugln("invoke2(s3=s3 value, s1p=s1 prime, s2p=s2 prime, s3p=s3 prime)")
-		require.Equal(t, s7prime("s7 prime"), bind2Invoke("s3 value", "s1 prime", "s2 prime", "s3 prime"))
+		require.Equal(t, s7prime("s7 prime"), bind2Invoke(s3Value, "s1 prime", "s2 prime", "s3 prime"))
 
 		debugln("------------------------ call invoke2 -----------------------")
 		debugln("invoke2(s3=s3 value, s1p=s1 other, s2p=s2 prime, s3p=s3 prime)")
-		require.Equal(t, s7prime(""), bind2Invoke("s3 value", "s1 other", "s2 prime", "s3 prime"))
+		require.Equal(t, s7prime(""), bind2Invoke(s3Value, "s1 other", "s2 prime", "s3 prime"))
 
 		debugln("------------------------ call invoke2 -----------------------")
 		debugln("invoke2(s3=s3 value, s1p=s1 prime, s2p=s2 other, s3p=s3 prime)")
-		require.Equal(t, s7prime(""), bind2Invoke("s3 value", "s1 prime", "s2 other", "s3 prime"))
+		require.Equal(t, s7prime(""), bind2Invoke(s3Value, "s1 prime", "s2 other", "s3 prime"))
 
 		debugln("------------------------ call invoke2 -----------------------")
 		debugln("invoke2(s3=s3 value, s1p=s1 prime, s2p=s2 prime, s3p=s3 other)")
-		require.Equal(t, s7prime(""), bind2Invoke("s3 value", "s1 prime", "s2 prime", "s3 other"))
+		require.Equal(t, s7prime(""), bind2Invoke(s3Value, "s1 prime", "s2 prime", "s3 other"))
 
 		assert.Equal(t, 2, counts["s1"], "count for S1")
 		assert.Equal(t, 1, counts["s2"], "count for S2")

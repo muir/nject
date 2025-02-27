@@ -23,8 +23,9 @@ func ExampleGenerateFromInjectionChain() {
 			func(before nject.Collection, after nject.Collection) (nject.Provider, error) {
 				full := before.Append("after", after)
 				inputs, outputs := full.DownFlows()
-				var n []interface{}
+				var n []any
 				for _, missing := range nject.ProvideRequireGap(outputs, inputs) {
+					//nolint:gocritic // invert condition
 					if missing.Kind() == reflect.Struct ||
 						(missing.Kind() == reflect.Ptr &&
 							missing.Elem().Kind() == reflect.Struct) {
@@ -111,7 +112,7 @@ func ExampleCollection_UpFlows() {
 	)
 	collection2 := nject.Sequence("two",
 		func() string {
-			return "yah"
+			return "yah1"
 		},
 		func(s string) {
 			fmt.Println(s)
@@ -120,13 +121,13 @@ func ExampleCollection_UpFlows() {
 	collection3 := nject.Sequence("three",
 		func(inner func() string) error {
 			s := inner()
-			if s == "foo" {
+			if s == "foo15" {
 				return fmt.Errorf("not wanting foo")
 			}
 			return nil
 		},
 		func() string {
-			return "foo"
+			return "foo15"
 		},
 	)
 	fmt.Println("collection1 returns error?", errorIsReturned(collection1))

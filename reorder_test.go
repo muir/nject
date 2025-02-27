@@ -8,17 +8,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type R00 string
-type R01 string
-type R02 string
-type R03 string
-type R04 string
-type R05 string
-type R06 string
-type R07 string
-type R08 string
-type R09 string
-type R10 string
+type (
+	R00 string
+	R01 string
+	R02 string
+	R03 string
+	R04 string
+	R05 string
+	R06 string
+	R07 string
+	R08 string
+	R09 string
+	R10 string
+)
 
 func TestReorderSimpleMove(t *testing.T) {
 	t.Parallel()
@@ -69,7 +71,7 @@ func TestReorderChaos(t *testing.T) {
 	t.Parallel()
 	var invoke func(R00) R10
 	require.NoError(t, Sequence("outer", Reorder(Sequence(t.Name(),
-		func(r03 R03, r04 R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
+		func(r03 R03, _ R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
 		func(r00 R00, r01 R01) R00 { return "<" + r00 + R00(r01) + ">B" },
 		func() R01 { return "<C>" },
 		func(r05 R05) (R06, R04) { return "<" + R06(r05) + ">D1", "<" + R04(r05) + ">D2" },
@@ -98,7 +100,7 @@ func TestReorderUnused(t *testing.T) {
 	var invoke func(R00) R08
 	var dd *Debugging
 	require.NoError(t, Sequence("outer", Reorder(Sequence(t.Name(),
-		func(r03 R03, r04 R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
+		func(r03 R03, _ R04) (R04, R06) { return "<" + R04(r03) + ">A1", "<" + R06(r03) + ">A1" },
 		func(r00 R00, r01 R01) R00 { return "<" + r00 + R00(r01) + ">B" },
 		func() R01 { return "<C>" },
 		func(r05 R05) (R06, R04) { return "<" + R06(r05) + ">D1", "<" + R04(r05) + ">D2" },

@@ -9,7 +9,7 @@ import (
 type PostActionFuncArg func(*postActionOption)
 
 type postActionOption struct {
-	function         interface{}
+	function         any
 	fill             bool
 	fillSet          bool
 	matchToInterface bool
@@ -96,7 +96,7 @@ func WithMethodCall(methodName string) FillerFuncArg {
 // passing a pointer to the tagged field to the function.  The
 // function must take as an input parameter a pointer to the type
 // of the field or it must take as an input paraemter an interface
-// type that the field implements.  interface{} is allowed.
+// type that the field implements.  any is allowed.
 // This function will be added to the injection chain after the
 // function that builds or fills the struct.  If there is also a
 // WithMethodCall, this function will run before that.
@@ -104,7 +104,7 @@ func WithMethodCall(methodName string) FillerFuncArg {
 // EXPERIMENTAL: this is currently considered experimental
 // and could be removed in a future release.  If you are using
 // this, please open a pull request to remove this comment.
-func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
+func PostActionByTag(tagValue string, function any, opts ...PostActionFuncArg) FillerFuncArg {
 	// Implementation note:
 	// There could be more than one field using the same type so
 	// the normal chain parameter passing methods won't work.
@@ -132,7 +132,7 @@ func PostActionByTag(tagValue string, function interface{}, opts ...PostActionFu
 // EXPERIMENTAL: this is currently considered experimental
 // and could be removed in a future release.  If you are using
 // this, please open a pull request to remove this comment.
-func PostActionByType(function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
+func PostActionByType(function any, opts ...PostActionFuncArg) FillerFuncArg {
 	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
 		o.postActionByType = append(o.postActionByType, options)
@@ -146,7 +146,7 @@ func PostActionByType(function interface{}, opts ...PostActionFuncArg) FillerFun
 // EXPERIMENTAL: this is currently considered experimental
 // and could be removed in a future release.  If you are using
 // this, please open a pull request to remove this comment.
-func PostActionByName(name string, function interface{}, opts ...PostActionFuncArg) FillerFuncArg {
+func PostActionByName(name string, function any, opts ...PostActionFuncArg) FillerFuncArg {
 	options := makePostActionOption(function, opts)
 	return func(o *fillerOptions) {
 		o.postActionByName[name] = options
@@ -164,7 +164,7 @@ func FillExisting(o *fillerOptions) {
 	o.create = false
 }
 
-func makePostActionOption(function interface{}, userOpts []PostActionFuncArg, typeOpts ...PostActionFuncArg) postActionOption {
+func makePostActionOption(function any, userOpts []PostActionFuncArg, typeOpts ...PostActionFuncArg) postActionOption {
 	options := postActionOption{
 		function: function,
 	}
@@ -195,7 +195,7 @@ func WithFill(b bool) PostActionFuncArg {
 }
 
 // MatchToOpenInterface requires that the post action function have exactly one
-// open interface type (interface{}) in its arguments list.  A pointer to the
+// open interface type (any) in its arguments list.  A pointer to the
 // field will be passed to the interface parameter.
 //
 // EXPERIMENTAL: this is currently considered experimental
@@ -203,7 +203,7 @@ func WithFill(b bool) PostActionFuncArg {
 // this, please open a pull request to remove this comment.
 func MatchToOpenInterface(b bool) PostActionFuncArg {
 	return func(o *postActionOption) {
-		o.matchToInterface = true
+		o.matchToInterface = b
 	}
 }
 
@@ -213,7 +213,7 @@ func MatchToOpenInterface(b bool) PostActionFuncArg {
 // EXPERIMENTAL: this is currently considered experimental
 // and could be removed in a future release.  If you are using
 // this, please open a pull request to remove this comment.
-func MustMakeStructBuilder(model interface{}, opts ...FillerFuncArg) Provider {
+func MustMakeStructBuilder(model any, opts ...FillerFuncArg) Provider {
 	p, err := MakeStructBuilder(model, opts...)
 	if err != nil {
 		panic(err.Error())

@@ -11,7 +11,7 @@ func TestSaveToInvalid(t *testing.T) {
 	f := func() {}
 	cases := []struct {
 		want  string
-		thing interface{}
+		thing any
 	}{
 		{
 			want: "not a valid pointer",
@@ -45,8 +45,8 @@ func TestSaveToValid(t *testing.T) {
 	var fooDst foo
 	var fooPtrDst *foo
 	cases := []struct {
-		inject interface{}
-		ptr    interface{}
+		inject any
+		ptr    any
 		check  func()
 	}{
 		{
@@ -78,7 +78,7 @@ func TestSaveToValid(t *testing.T) {
 func TestCurry(t *testing.T) {
 	t.Parallel()
 	seq := Sequence("available",
-		func() string { return "foo" },
+		func() string { return "foo8" },
 		func() int { return 3 },
 		func() uint { return 7 },
 	)
@@ -87,9 +87,9 @@ func TestCurry(t *testing.T) {
 	cases := []struct {
 		name     string
 		fail     string
-		curry    interface{}
+		curry    any
 		check    func(t *testing.T)
-		original interface{}
+		original any
 	}{
 		{
 			curry: &c1,
@@ -120,12 +120,12 @@ func TestCurry(t *testing.T) {
 		},
 		{
 			curry:    &c2,
-			original: func(b1 bool, s1 string, s2 string) string { return "" },
+			original: func(_ bool, _ string, _ string) string { return "" },
 			fail:     "curried function must take fewer arguments",
 		},
 		{
 			curry:    &c2,
-			original: func(b1 bool, b2 bool, b3 bool, s1 string, s2 string) string { return "" },
+			original: func(_ bool, _ bool, _ bool, _ string, _ string) string { return "" },
 			fail:     "original function takes more arguments of type bool",
 		},
 		{
@@ -135,19 +135,19 @@ func TestCurry(t *testing.T) {
 		},
 		{
 			name:     "no curry",
-			original: func(b1 bool, b2 bool, b3 bool, s1 string, s2 string) string { return "" },
+			original: func(_ bool, _ bool, _ bool, _ string, _ string) string { return "" },
 			fail:     "curried function is not a valid value",
 		},
 		{
 			name:     "non-pointer",
 			curry:    7,
-			original: func(b1 bool, b2 bool, b3 bool, s1 string, s2 string) string { return "" },
+			original: func(_ bool, _ bool, _ bool, _ string, _ string) string { return "" },
 			fail:     "pointer (to a function)",
 		},
 		{
 			name:     "non-func",
 			curry:    seq,
-			original: func(b1 bool, b2 bool, b3 bool, s1 string, s2 string) string { return "" },
+			original: func(_ bool, _ bool, _ bool, _ string, _ string) string { return "" },
 			fail:     "pointer to a function",
 		},
 		{
@@ -168,28 +168,28 @@ func TestCurry(t *testing.T) {
 		},
 		{
 			curry: &c2,
-			original: func(b1 bool, x int, b2 bool, s1 string, s2 string, u uint) int {
+			original: func(_ bool, _ int, _ bool, _ string, _ string, _ uint) int {
 				return 22
 			},
 			fail: "return value #1 has a different type",
 		},
 		{
 			curry: &c1,
-			original: func(i1 int, i2 int, s string) string {
-				return "foo"
+			original: func(_ int, _ int, _ string) string {
+				return "foo9"
 			},
 			fail: "cannot curry the same type (int) more than once",
 		},
 		{
 			curry: &c1,
 			original: func(uint, int) string {
-				return "foo"
+				return "foo10"
 			},
 			fail: "not all of the string inputs to the curried function were used",
 		},
 		{
 			curry: &c1,
-			original: func(s string, inner func(), i int) string {
+			original: func(s string, _ func(), i int) string {
 				return fmt.Sprintf("%s-%d", s, i)
 			},
 			fail: "may not be a function",
@@ -210,11 +210,10 @@ func TestCurry(t *testing.T) {
 					_ = MustCurry(tc.original, tc.curry)
 				}, "curry")
 				return
-			} else {
-				//nolint:testifylint
-				if !assert.NoError(t, err, "curry") {
-					return
-				}
+			}
+			//nolint:testifylint // assert is okay
+			if !assert.NoError(t, err, "curry") {
+				return
 			}
 			err = Run(name, seq, p, func() { called = true })
 			if tc.fail != "" {
