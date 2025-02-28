@@ -354,6 +354,44 @@ func NonFinal(fn any) Provider {
 	})
 }
 
+// AllowReturnShadowing annotates a provider (assumed to be a
+// wrapper/middleware) to say that it is okay for the wrapper to return
+// a type (usually error) that it does not in turn receive from
+// its call to inner(). This is only a footgun (and error) if a downstream
+// provider returns that type.
+//
+// A wrapper that returns a type overrides the value for that type that
+// was returned from further down the chain. To preserve the value from
+// down the chain, the wrapper must recevie the value in the return values
+// from the inner function that it calls.
+//
+// For example, in the following chain, "footgun" can loose the error
+// from the return to callSomething()
+//
+//	 err := nject.Run("bad",
+//		nject.Provide("footgun", func(inner func()) error {
+//			if someCondition {
+//				return fmt.Errorf("some condition happened")
+//			}
+//			inner()
+//			return nil
+//		}),
+//		func() error {
+//			return callSomething()
+//		},
+//	)
+//
+// Starting with version 2.0, nject rejects chains with shadowing.
+func AllowReturnShadowing[T any](fn any) Provider {
+	return newThing(fn).modify(func(fm *provider) {
+		if fm.shadowingAllowed == nil {
+			fm.shadowingAllowed = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.shadowingAllowed[getTypeCode(t)] = struct{}{}
+	})
+}
+
 // Bind expects to receive two function pointers for functions
 // that are not yet defined.  Bind defines the functions.  The
 // first function is called to invoke the Collection of providers.
