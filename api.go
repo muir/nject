@@ -518,14 +518,6 @@ func MustRun(name string, providers ...any) {
 
 // MustBindSimple binds a collection with an invoke function that takes no
 // arguments and returns no arguments.  It panic()s if Bind() returns error.
-//
-// Deprecated: use the method on Collection instead
-func MustBindSimple(c *Collection, _ string) func() {
-	return c.MustBindSimple()
-}
-
-// MustBindSimple binds a collection with an invoke function that takes no
-// arguments and returns no arguments.  It panic()s if Bind() returns error.
 func (c *Collection) MustBindSimple() func() {
 	var invoke func()
 	c.MustBind(&invoke, nil)
@@ -533,26 +525,10 @@ func (c *Collection) MustBindSimple() func() {
 }
 
 // MustBindSimpleError binds a collection with an invoke function that takes no
-// arguments and returns error.
-//
-// Deprecated: use the method on Collection instead
-func MustBindSimpleError(c *Collection, _ string) func() error {
-	return c.MustBindSimpleError()
-}
-
-// MustBindSimpleError binds a collection with an invoke function that takes no
-// arguments and returns no arguments.  It panic()s if Bind() returns error.
 func (c *Collection) MustBindSimpleError() func() error {
 	var invoke func() error
 	c.MustBind(&invoke, nil)
 	return invoke
-}
-
-// MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
-//
-// Deprecated: use the method on Collection instead
-func MustBind(c *Collection, invokeFunc any, initFunc any) {
-	c.MustBind(invokeFunc, initFunc)
 }
 
 // MustBind is a wrapper for Collection.Bind().  It panic()s if Bind() returns error.
@@ -561,13 +537,6 @@ func (c *Collection) MustBind(invokeFunc any, initFunc any) {
 	if err != nil {
 		panic(DetailedError(err))
 	}
-}
-
-// MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
-//
-// Deprecated: use the method on Collection instead
-func MustSetCallback(c *Collection, binderFunction any) {
-	c.MustSetCallback(binderFunction)
 }
 
 // MustSetCallback is a wrapper for Collection.SetCallback().  It panic()s if SetCallback() returns error.
