@@ -1,7 +1,5 @@
 package nject
 
-// TODO: Test MustBindSimple
-// TODO: Test MustBindSimpleError
 // TODO: write more examples
 // TODO: do a bunch of bind init and invoke in parallel to exercise the locks
 // TODO: test Then
@@ -233,7 +231,7 @@ func TestInitDependencyOnUnavailableData(t *testing.T) {
 		err := c.Bind(&shouldWorkInvoke, &shouldWorkInit)
 		require.Error(t, err)
 		assert.Panics(t, func() {
-			MustBind(c, &shouldWorkInvoke, &shouldWorkInit)
+			c.MustBind(&shouldWorkInvoke, &shouldWorkInit)
 		})
 	})
 }
@@ -332,7 +330,7 @@ func TestLiteral(t *testing.T) {
 		)
 		var shouldWorkInit func(s0) s2
 		var shouldWorkInvoke func(s3) s5
-		MustBind(c, &shouldWorkInvoke, &shouldWorkInit)
+		c.MustBind(&shouldWorkInvoke, &shouldWorkInit)
 		assert.Equal(t, s2Value, shouldWorkInit("s0 value"))
 		assert.Equal(t, s2Value, shouldWorkInit("ignored"))
 		assert.Equal(t, s5Value, shouldWorkInvoke(s3Value))
