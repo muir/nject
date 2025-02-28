@@ -1,10 +1,5 @@
 package nject
 
-import (
-	"fmt"
-	"reflect"
-)
-
 // OverridesError marks a provider that is okay for that provider to override
 // error returns.  Without this decorator, a wrapper that returns error but
 // does not expect to receive an error will cause the injection chain
@@ -49,37 +44,8 @@ import (
 //		}()
 //		return inner(thing)
 //	}
+//
+// Deprecated: use AllowReturnShadowing instead
 func OverridesError(fn any) Provider {
-	return newThing(fn).modify(func(fm *provider) {
-		fm.overridesError = true
-	})
-}
-
-func checkForMissingOverridesError(collection []*provider) error {
-	var errorReturnSeen bool
-	for i := len(collection) - 1; i >= 0; i-- {
-		fm := collection[i]
-		if errorReturnSeen && !fm.overridesError && fm.class == wrapperFunc {
-			consumes, returns := fm.UpFlows()
-			if hasError(returns) && !hasError(consumes) {
-				return fmt.Errorf("wrapper returns error but does not consume error.  Decorate with OverridesError() if this is intentional. %s", fm)
-			}
-		}
-		if !errorReturnSeen {
-			_, returns := fm.UpFlows()
-			if hasError(returns) {
-				errorReturnSeen = true
-			}
-		}
-	}
-	return nil
-}
-
-func hasError(types []reflect.Type) bool {
-	for _, typ := range types {
-		if typ == errorType {
-			return true
-		}
-	}
-	return false
+	return AllowReturnShadowing[error](fn)
 }

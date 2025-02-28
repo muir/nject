@@ -29,6 +29,10 @@ var noTypeCode = getTypeCode(noTypeExampleValue)
 
 var unusedTypeCode = getTypeCode(unusedType)
 
+var errorTypeCode = getTypeCode(errorType)
+
+var terminalErrorTypeCode = getTypeCode(terminalErrorType)
+
 // noNoType filters out noTypeCode from an array of typeCode
 func noNoType(types []typeCode) []typeCode {
 	found := -1
