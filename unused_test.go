@@ -79,6 +79,13 @@ func TestUnused(t *testing.T) {
 		callsExpected int
 	}{
 		{
+			name: "unused as constant",
+			chain: []any{
+				Unused{},
+				func() { called = true },
+			},
+		},
+		{
 			name: "add unused injector",
 			chain: []any{
 				17,

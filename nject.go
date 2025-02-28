@@ -26,7 +26,6 @@ type provider struct {
 	memoize             bool
 	loose               bool
 	reorder             bool
-	overridesError      bool
 	desired             bool
 	shun                bool
 	notCacheable        bool
@@ -38,6 +37,7 @@ type provider struct {
 	replaceByName       string
 	insertBeforeName    string
 	insertAfterName     string
+	shadowingAllowed    map[typeCode]struct{}
 
 	// added by characterize
 	memoized    bool
@@ -90,7 +90,6 @@ func (fm *provider) copy() *provider {
 		memoize:             fm.memoize,
 		loose:               fm.loose,
 		reorder:             fm.reorder,
-		overridesError:      fm.overridesError,
 		desired:             fm.desired,
 		shun:                fm.shun,
 		notCacheable:        fm.notCacheable,
@@ -108,6 +107,7 @@ func (fm *provider) copy() *provider {
 		replaceByName:       fm.replaceByName,
 		insertBeforeName:    fm.insertBeforeName,
 		insertAfterName:     fm.insertAfterName,
+		shadowingAllowed:    mapCopy(fm.shadowingAllowed),
 	}
 }
 

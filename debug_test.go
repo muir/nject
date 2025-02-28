@@ -93,7 +93,7 @@ func TestDetailedError(t *testing.T) {
 	require.NotEqual(t, -1, index, "contains 'func TestRegression'")
 	detailed = detailed[index:]
 
-	for _, word := range strings.Split("Desired Shun Required Cacheable MustCache Cluster Memoize OverridesError MustConsume ConsumptionOptional NonFinal", " ") {
+	for _, word := range strings.Split("Desired Shun Required Cacheable MustCache Cluster Memoize ShadowingAllowed\\[error\\] MustConsume ConsumptionOptional NonFinal", " ") {
 		re := regexp.MustCompile(fmt.Sprintf(`\b%s\(` /*)*/, word))
 		if !re.MatchString(detailed) {
 			t.Errorf("did not find %s( in reproduce output", word) // )

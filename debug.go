@@ -248,7 +248,6 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			"Memoize":             fm.memoize,
 			"Loose":               fm.loose,
 			"Reorder":             fm.reorder,
-			"OverridesError":      fm.overridesError,
 			"Desired":             fm.desired,
 			"Shun":                fm.shun,
 			"NotCacheable":        fm.notCacheable,
@@ -260,6 +259,10 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 				f += annotation + "("
 				closeParens += ")"
 			}
+		}
+		for tc := range fm.shadowingAllowed {
+			f += "ShadowingAllowed[" + tc.String() + "]("
+			closeParens += ")"
 		}
 		n := fm.origin
 		if fm.index != -1 {

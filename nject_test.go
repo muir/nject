@@ -73,6 +73,19 @@ func TestAnnotateLoose(t *testing.T) {
 	})
 }
 
+func TestAnnotateShadowing(t *testing.T) {
+	stc := getTypeCode("foo")
+	wrapTest(t, func(t *testing.T) {
+		var counter int
+		p := AllowReturnShadowing[string](func() { counter++ })
+		require.IsType(t, &provider{}, p)
+		require.NotNil(t, p.(*provider).shadowingAllowed)
+		require.Contains(t, p.(*provider).shadowingAllowed, stc)
+		require.NotNil(t, p.(*provider).copy().shadowingAllowed)
+		require.Contains(t, p.(*provider).copy().shadowingAllowed, stc)
+	})
+}
+
 func TestAnnotateDesired(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		var counter int
