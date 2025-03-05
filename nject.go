@@ -29,7 +29,7 @@ type provider struct {
 	desired             bool
 	shun                bool
 	notCacheable        bool
-	mustConsume         bool
+	mustConsume         map[typeCode]struct{}
 	consumptionOptional bool
 	singleton           bool
 	cluster             int32
@@ -93,7 +93,7 @@ func (fm *provider) copy() *provider {
 		desired:             fm.desired,
 		shun:                fm.shun,
 		notCacheable:        fm.notCacheable,
-		mustConsume:         fm.mustConsume,
+		mustConsume:         mapCopy(fm.mustConsume),
 		consumptionOptional: fm.consumptionOptional,
 		singleton:           fm.singleton,
 		cluster:             fm.cluster,

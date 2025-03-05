@@ -77,8 +77,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 	debugln("initial set of functions")
 	for _, fm := range funcs {
 		debugf("\t%s", fm)
-		fm.d.mustConsumeFlow = [lastFlowType]bool{}
-		if fm.mustConsume {
+		if fm.mustConsume != nil {
 			fm.d.mustConsumeFlow[outputParams] = true
 		}
 		if !fm.consumptionOptional {
@@ -308,6 +307,11 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 				}
 			Param:
 				for _, tc := range tclist {
+					if param == int(outputParams) {
+						if _, ok := fm.mustConsume[tc]; !ok {
+							continue
+						}
+					}
 					if tc == unusedTypeCode {
 						continue
 					}

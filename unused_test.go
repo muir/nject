@@ -131,14 +131,14 @@ func TestUnused(t *testing.T) {
 		{
 			name: "must consume Unused",
 			chain: []any{
-				MustConsume(Required(func() Unused { called = true; return Unused{} })),
+				MustConsume[Unused](Required(func() Unused { called = true; return Unused{} })),
 				func() {},
 			},
 		},
 		{
 			name: "must consume not used",
 			chain: []any{
-				MustConsume(Required(func() int { called = true; return 7 })),
+				MustConsume[int](Required(func() int { called = true; return 7 })),
 				func() {},
 			},
 			invalid: true,
@@ -146,7 +146,7 @@ func TestUnused(t *testing.T) {
 		{
 			name: "must consume provided down, wanted up",
 			chain: []any{
-				MustConsume(Required(func() Unused { callCount++; return Unused{} })),
+				MustConsume[Unused](Required(func() Unused { callCount++; return Unused{} })),
 				Required(func(inner func() Unused) {
 					_ = inner()
 					callCount++

@@ -46,11 +46,14 @@ func TestAnnotateNotCacheable(t *testing.T) {
 }
 
 func TestAnnotateMustConsume(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
-		p := MustConsume(func() {})
+		p := MustConsume[string](func() {})
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).mustConsume)
-		require.True(t, p.(*provider).copy().mustConsume)
+		require.NotNil(t, p.(*provider).mustConsume)
+		require.Contains(t, p.(*provider).mustConsume, stc)
+		require.NotNil(t, p.(*provider).copy().mustConsume)
+		require.Contains(t, p.(*provider).copy().mustConsume, stc)
 	})
 }
 

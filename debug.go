@@ -154,7 +154,7 @@ func dumpF(context string, fm *provider) {
 	} else if fm.desired {
 		out += "\n\tdesired"
 	}
-	if fm.mustConsume {
+	if fm.mustConsume != nil {
 		out += "\n\tmust consume"
 	}
 	if fm.memoized || fm.memoize {
@@ -250,7 +250,6 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			"Desired":             fm.desired,
 			"Shun":                fm.shun,
 			"NotCacheable":        fm.notCacheable,
-			"MustConsume":         fm.mustConsume,
 			"ConsumptionOptional": fm.consumptionOptional,
 			"Singleton":           fm.singleton,
 		} {
@@ -262,6 +261,7 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 		for anno, m := range map[string]map[typeCode]struct{}{
 			"ShadowingAllowed": fm.shadowingAllowed,
 			"Loose":            fm.loose,
+			"MustConsume":      fm.mustConsume,
 		} {
 			for tc := range m {
 				f += anno + "[" + tc.String() + "]("
