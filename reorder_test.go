@@ -51,9 +51,9 @@ func TestReorderWrappers(t *testing.T) {
 	var invoke func(R02) R03
 	require.NoError(t, Sequence(t.Name(),
 		Memoize(func(r00 R00) (R01, R04) { return R01(r00) + "A", R04(r00) + "A" }),
-		Reorder(func(inner func(r04 R04) R06, r04 R04) R05 {
+		AllowReturnShadowing[R05](Reorder(func(inner func(r04 R04) R06, r04 R04) R05 {
 			return R05(inner(r04+"C1")) + "C2"
-		}),
+		})),
 		Reorder(func(inner func(r04 R04) R05, r04 R04) {
 			_ = inner(r04 + "B1")
 		}),
@@ -79,9 +79,9 @@ func TestReorderChaos(t *testing.T) {
 			x := inner("<" + R07(r06) + ">E1")
 			return "<" + R09(x) + ">E2", "<" + R10(x) + ">E3"
 		},
-		func(inner func(R06) R09, r05 R05) R10 {
+		AllowReturnShadowing[R10](func(inner func(R06) R09, r05 R05) R10 {
 			return "<" + R10(inner("<"+R06(r05)+">F1")) + ">F2"
-		},
+		}),
 		func(r02 R02) R03 { return "<" + R03(r02) + ">G" },
 		func(r04 R04, r06 R06) R07 { return "<" + R07(r04) + "><" + R07(r06) + ">H" },
 		func(r03 R03) R06 { return "<" + R06(r03) + ">I" },
@@ -104,10 +104,10 @@ func TestReorderUnused(t *testing.T) {
 		func(r00 R00, r01 R01) R00 { return "<" + r00 + R00(r01) + ">B" },
 		func() R01 { return "<C>" },
 		func(r05 R05) (R06, R04) { return "<" + R06(r05) + ">D1", "<" + R04(r05) + ">D2" },
-		func(inner func(R07) R08, r06 R06) (R09, R10) {
+		AllowReturnShadowing[R10](func(inner func(R07) R08, r06 R06) (R09, R10) {
 			x := inner("<" + R07(r06) + ">E1")
 			return "<" + R09(x) + ">E2", "<" + R10(x) + ">E3"
-		},
+		}),
 		func(inner func(R06) R09, r05 R05) R10 {
 			return "<" + R10(inner("<"+R06(r05)+">F1")) + ">F2"
 		},

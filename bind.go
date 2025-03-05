@@ -31,11 +31,6 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 			return err
 		}
 
-		err = checkForMissingOverridesError(afterInvoke)
-		if err != nil {
-			return err
-		}
-
 		// Add debugging provider
 		{
 			//nolint:govet // err is shadowing, who cares?
@@ -122,6 +117,11 @@ func doBind(sc *Collection, originalInvokeF *provider, originalInitF *provider, 
 	// fm.whyIncluded, fm.include
 	var err error
 	funcs, err = computeDependenciesAndInclusion(funcs, initF)
+	if err != nil {
+		return err
+	}
+
+	err = checkForShadowing(funcs)
 	if err != nil {
 		return err
 	}
