@@ -337,7 +337,7 @@ func TestVariableImplementsInterfaceLoose(t *testing.T) {
 		var i2vimp i2imp
 		i2v = i2vimp
 		assert.NoError(t, Run("x",
-			Loose(i2v),
+			Loose[i2](i2v),
 			func(i2) {}))
 	})
 }
