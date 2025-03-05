@@ -64,12 +64,15 @@ func TestAnnotateConsumptionOptional(t *testing.T) {
 }
 
 func TestAnnotateLoose(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
 		var counter int
-		p := Loose(func() { counter++ })
+		p := Loose[string](func() { counter++ })
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).loose)
-		require.True(t, p.(*provider).copy().loose)
+		require.NotNil(t, p.(*provider).loose)
+		require.NotNil(t, p.(*provider).copy().loose)
+		require.Contains(t, p.(*provider).loose, stc)
+		require.Contains(t, p.(*provider).copy().loose, stc)
 	})
 }
 

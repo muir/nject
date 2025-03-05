@@ -324,7 +324,7 @@ func Parallel(fn any) Provider {
 // TODO: add ExampleLoose
 
 // Loose annotates a wrap function to indicate that when trying
-// to match types against the outputs and return values from this
+// to match types against an output or return values from this
 // provider, an in-exact match is acceptable.  This matters when inputs and
 // returned values are specified as interfaces.  With the Loose
 // annotation, an interface can be matched to the outputs and/or
@@ -332,9 +332,13 @@ func Parallel(fn any) Provider {
 // implements the interface.
 //
 // By default, an exact match of types is required for all providers.
-func Loose(fn any) Provider {
+func Loose[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.loose = true
+		if fm.loose == nil {
+			fm.loose = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.loose[getTypeCode(t)] = struct{}{}
 	})
 }
 
@@ -365,7 +369,7 @@ func NonFinal(fn any) Provider {
 // down the chain, the wrapper must recevie the value in the return values
 // from the inner function that it calls.
 //
-// For example, in the following chain, "footgun" can loose the error
+// For example, in the following chain, "footgun" can lose the error
 // from the return to callSomething()
 //
 //	 err := nject.Run("bad",
