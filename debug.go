@@ -246,7 +246,6 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			"Required":            fm.required,
 			"CallsInner":          fm.callsInner,
 			"Memoize":             fm.memoize,
-			"Loose":               fm.loose,
 			"Reorder":             fm.reorder,
 			"Desired":             fm.desired,
 			"Shun":                fm.shun,
@@ -260,9 +259,14 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 				closeParens += ")"
 			}
 		}
-		for tc := range fm.shadowingAllowed {
-			f += "ShadowingAllowed[" + tc.String() + "]("
-			closeParens += ")"
+		for anno, m := range map[string]map[typeCode]struct{}{
+			"ShadowingAllowed": fm.shadowingAllowed,
+			"Loose":            fm.loose,
+		} {
+			for tc := range m {
+				f += anno + "[" + tc.String() + "]("
+				closeParens += ")"
+			}
 		}
 		n := fm.origin
 		if fm.index != -1 {

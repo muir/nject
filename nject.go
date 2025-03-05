@@ -24,7 +24,7 @@ type provider struct {
 	required            bool
 	callsInner          bool
 	memoize             bool
-	loose               bool
+	loose               map[typeCode]struct{}
 	reorder             bool
 	desired             bool
 	shun                bool
@@ -88,7 +88,7 @@ func (fm *provider) copy() *provider {
 		required:            fm.required,
 		callsInner:          fm.callsInner,
 		memoize:             fm.memoize,
-		loose:               fm.loose,
+		loose:               mapCopy(fm.loose),
 		reorder:             fm.reorder,
 		desired:             fm.desired,
 		shun:                fm.shun,

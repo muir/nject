@@ -62,16 +62,19 @@ func TestBestMatch(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		for _, test := range bestMatchTests {
 			test := test
+			tc := getTypeCode(test.Find)
 			m := make(interfaceMap)
 			for typ, layer := range test.MapData {
 				t.Logf("%s: #%d get type code for %v", test.Name, layer, typ)
-				m.Add(getTypeCode(typ), layer, &provider{loose: true})
+				m.Add(getTypeCode(typ), layer, &provider{loose: map[typeCode]struct{}{
+					tc: {},
+				}})
 			}
 			f := func() {
 				for tc, d := range m {
 					t.Logf("\tm[%s] = %s (%s) %d", tc.Type(), d.name, d.typeCode.Type(), d.layer)
 				}
-				got, _, err := m.bestMatch(getTypeCode(test.Find), "searching for "+test.Name)
+				got, _, err := m.bestMatch(tc, "searching for "+test.Name)
 				require.NoError(t, err)
 				assert.Equal(t, test.Want.String(), got.Type().String(), test.Name)
 			}
