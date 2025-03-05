@@ -243,22 +243,22 @@ func Shun(fn any) Provider {
 // TODO: add ExampleMustConsume
 
 // MustConsume creates a new provider and annotates it as
-// needing to have all of its output values consumed.  If
-// any of its output values cannot be consumed then the
+// needing to have one of its output values consumed.  If
+// the output values cannot be consumed then the
 // provider will be excluded from the chain even if that
 // renders the chain invalid.
 //
-// A that is received by a provider and then provided by
+// A type that is received by a provider and then provided by
 // that same provider is not considered to have been consumed
 // by that provider.
 //
 // For example:
 //
-//	// All outputs of A must be consumed
-//	Provide("A", MustConsume(func() string) { return "" } ),
+//	// The string output of A must be consumed
+//	Provide("A", MustConsume[string](func() string) { return "" } ),
 //
 //	// Since B takes a string and provides a string it
-//	// does not count as suming the string that A provided.
+//	// does not count as consuming the string that A provided.
 //	Provide("B", func(string) string { return "" }),
 //
 //	// Since C takes a string but does not provide one, it
@@ -270,9 +270,16 @@ func Shun(fn any) Provider {
 // all values must be consumed.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func MustConsume(fn any) Provider {
+//
+// MustConsume may be called on the provider it returns creating a provider
+// that has multiple MustConsume annotations.
+func MustConsume[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.mustConsume = true
+		if fm.mustConsume == nil {
+			fm.mustConsume = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.mustConsume[getTypeCode(t)] = struct{}{}
 	})
 }
 

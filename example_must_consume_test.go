@@ -32,14 +32,14 @@ func openDBErrorReturnRequired(inner func(*sql.DB) error, driver driverName, nam
 // the close will happen too.
 type mustCloseDB bool // private type
 var openDBCollection = nject.Sequence("open-database",
-	nject.NotCacheable(nject.MustConsume(
+	nject.NotCacheable(nject.MustConsume[mustCloseDB](nject.MustConsume[*sql.DB](
 		func(driver driverName, name dataSourceName) (*sql.DB, mustCloseDB, nject.TerminalError) {
 			db, err := sql.Open(string(driver), string(name))
 			if err != nil {
 				return nil, false, err
 			}
 			return db, false, nil
-		})),
+		}))),
 	func(inner func(*sql.DB), db *sql.DB, _ mustCloseDB) {
 		defer db.Close()
 		inner(db)
