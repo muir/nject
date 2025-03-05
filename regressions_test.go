@@ -154,15 +154,15 @@ func TestOversizeRequestRegression1(t *testing.T) {
 							require.Fail(t, "Failing because DBOpen should not be called")
 							return "", nil
 						})),
-						MustConsume(Provide("DBClose", func(i func(s7), x s7) { i(x) })),
+						MustConsume[s7](Provide("DBClose", func(i func(s7), x s7) { i(x) })),
 					),
 					// Tx should be excluded from the chain because AsError is the only
 					// required match for error
-					MustConsume(Provide("Tx", func(i func(s8, s9) error, _ s1, _ s7, _ i3, _ i4prime) error {
+					MustConsume[s9](MustConsume[s8](Provide("Tx", func(i func(s8, s9) error, _ s1, _ s7, _ i3, _ i4prime) error {
 						txCalled = true
 						_ = i("", "")
 						return nil
-					})),
+					}))),
 					Provide("ParentTx", func(s8) s8prime { return "" }),
 				),
 			),
@@ -560,23 +560,23 @@ func TestRegressionPrior(t *testing.T) {
 					_ = inner()
 					return 0
 				}), // included
-				Provide("SaveRequest", func(_ i016, _ s017) (TerminalError, s023) { called["SaveRequest"]++; return nil, 0 }),            // included
-				Provide("ModifyContext", func(_ s017) s017 { called["ModifyContext"]++; return 0 }),                                      // included
-				MustConsume(NotCacheable(Provide("DBOpen", func(_ s017) (i029, TerminalError) { called["DBOpen"]++; return nil, nil }))), // included
-				MustConsume(Provide("DBClose", func(inner func(i029), _ i029) {
+				Provide("SaveRequest", func(_ i016, _ s017) (TerminalError, s023) { called["SaveRequest"]++; return nil, 0 }),                  // included
+				Provide("ModifyContext", func(_ s017) s017 { called["ModifyContext"]++; return 0 }),                                            // included
+				MustConsume[s017](NotCacheable(Provide("DBOpen", func(_ s017) (i029, TerminalError) { called["DBOpen"]++; return nil, nil }))), // included
+				MustConsume[i029](Provide("DBClose", func(inner func(i029), _ i029) {
 					called["DBClose"]++
 					inner(nil)
 				})), // included
 				Provide("TimeTravelHeader", func() s041 { called["TimeTravelHeader"]++; return 0 }),
-				Provide("ParseClientQuote", func(_ i019, _ s023) (TerminalError, s057) { called["ParseClientQuote"]++; return nil, 0 }),                        // included
-				MustConsume(Provide("ConverteCardToken", func(_ i019, _ s057, _ i035) (s057, TerminalError) { called["ConverteCardToken"]++; return 0, nil })), // included
-				MustConsume(Provide("Tx", func(inner func(i030, i031) error, _ s017, _ i029, _ i019, _ i020) error {
+				Provide("ParseClientQuote", func(_ i019, _ s023) (TerminalError, s057) { called["ParseClientQuote"]++; return nil, 0 }),                                                                    // included
+				MustConsume[i035](MustConsume[s057](MustConsume[i019](Provide("ConverteCardToken", func(_ i019, _ s057, _ i035) (s057, TerminalError) { called["ConverteCardToken"]++; return 0, nil })))), // included
+				MustConsume[i031](MustConsume[i030](Provide("Tx", func(inner func(i030, i031) error, _ s017, _ i029, _ i019, _ i020) error {
 					called["Tx"]++
 					_ = inner(nil, nil)
 					return nil
-				})),
+				}))),
 				Provide("ConsumeTxDone", func(_ i031) { called["ConsumeTxDone"]++ }),
-				MustConsume(Provide("ParentTx", func(_ i030) i032 { called["ParentTx"]++; return nil })),
+				MustConsume[i032](Provide("ParentTx", func(_ i030) i032 { called["ParentTx"]++; return nil })),
 				Provide("GetSessionID", func(_ i019, _ s017) (TerminalError, s043) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s044) error, _ i019, _ i029, _ s043) error {
 					called["AdvisoryLockQuote"]++
@@ -714,22 +714,22 @@ func TestRegression7642(t *testing.T) {
 					_ = inner()
 					return 0
 				}), // included
-				Provide("SaveRequest", func(_ i031, _ s032) (TerminalError, s038) { called["SaveRequest"]++; return nil, 0 }),            // included
-				NotCacheable(MustConsume(Provide("DBOpen", func(_ s032) (i044, TerminalError) { called["DBOpen"]++; return nil, nil }))), // included
-				MustConsume(Provide("DBClose", func(inner func(i044), _ i044) {
+				Provide("SaveRequest", func(_ i031, _ s032) (TerminalError, s038) { called["SaveRequest"]++; return nil, 0 }),                  // included
+				NotCacheable(MustConsume[s032](Provide("DBOpen", func(_ s032) (i044, TerminalError) { called["DBOpen"]++; return nil, nil }))), // included
+				MustConsume[i044](Provide("DBClose", func(inner func(i044), _ i044) {
 					called["DBClose"]++
 					inner(nil)
 				})), // included
 				Provide("TimeTravelHeader", func() s051 { called["TimeTravelHeader"]++; return 0 }),
-				MustConsume(Provide("ParseClientQuote", func(_ i034, _ s038) (TerminalError, s066) { called["ParseClientQuote"]++; return nil, 0 })), // included
+				MustConsume[s038](MustConsume[i034](Provide("ParseClientQuote", func(_ i034, _ s038) (TerminalError, s066) { called["ParseClientQuote"]++; return nil, 0 }))), // included
 				Provide("ConvertCardToken", func(_ i034, _ s066) (s066, TerminalError) { called["ConvertCardToken"]++; return 0, nil }),
-				MustConsume(Provide("Tx", func(inner func(i045, i046) error, _ s032, _ i044, _ i034, _ i035) error {
+				MustConsume[i046](MustConsume[i045](Provide("Tx", func(inner func(i045, i046) error, _ s032, _ i044, _ i034, _ i035) error {
 					called["Tx"]++
 					_ = inner(nil, nil)
 					return nil
-				})),
+				}))),
 				Provide("ConsumeTxDone", func(_ i046) { called["ConsumeTxDone"]++ }),
-				MustConsume(Provide("ParentTx", func(_ i045) i047 { called["ParentTx"]++; return nil })),
+				MustConsume[i045](Provide("ParentTx", func(_ i045) i047 { called["ParentTx"]++; return nil })),
 				Provide("GetSessionID", func(_ i034, _ s032) (TerminalError, s053) { called["GetSessionID"]++; return nil, 0 }), // included
 				Provide("AdvisoryLockQuote", func(inner func(s054) error, _ i034, _ i044, _ s053) error {
 					called["AdvisoryLockQuote"]++
@@ -737,7 +737,7 @@ func TestRegression7642(t *testing.T) {
 					return nil
 				}), // included
 				Provide("LoadSavedQuote", func(_ i034, _ s054, _ s053) (TerminalError, s067) { called["LoadSavedQuote"]++; return nil, 0 }), // included
-				Desired(MustConsume(Provide("PurchaseFailureAlerter", func(inner func(s068) error, _ i034, _ s067, _ s053) {
+				Desired(MustConsume[s068](Provide("PurchaseFailureAlerter", func(inner func(s068) error, _ i034, _ s067, _ s053) {
 					called["PurchaseFailureAlerter"]++
 					_ = inner(0)
 				}))),
