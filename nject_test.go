@@ -46,30 +46,39 @@ func TestAnnotateNotCacheable(t *testing.T) {
 }
 
 func TestAnnotateMustConsume(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
-		p := MustConsume(func() {})
+		p := MustConsume[string](func() {})
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).mustConsume)
-		require.True(t, p.(*provider).copy().mustConsume)
+		require.NotNil(t, p.(*provider).mustConsume)
+		require.Contains(t, p.(*provider).mustConsume, stc)
+		require.NotNil(t, p.(*provider).copy().mustConsume)
+		require.Contains(t, p.(*provider).copy().mustConsume, stc)
 	})
 }
 
 func TestAnnotateConsumptionOptional(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
-		p := ConsumptionOptional(func() {})
+		p := ConsumptionOptional[string](func() {})
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).consumptionOptional)
-		require.True(t, p.(*provider).copy().consumptionOptional)
+		require.NotNil(t, p.(*provider).consumptionOptional)
+		require.Contains(t, p.(*provider).consumptionOptional, stc)
+		require.NotNil(t, p.(*provider).copy().consumptionOptional)
+		require.Contains(t, p.(*provider).copy().consumptionOptional, stc)
 	})
 }
 
 func TestAnnotateLoose(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
 		var counter int
-		p := Loose(func() { counter++ })
+		p := Loose[string](func() { counter++ })
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).loose)
-		require.True(t, p.(*provider).copy().loose)
+		require.NotNil(t, p.(*provider).loose)
+		require.NotNil(t, p.(*provider).copy().loose)
+		require.Contains(t, p.(*provider).loose, stc)
+		require.Contains(t, p.(*provider).copy().loose, stc)
 	})
 }
 

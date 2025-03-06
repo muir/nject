@@ -91,17 +91,17 @@ func (m interfaceMap) bestMatch(match typeCode, purpose string) (typeCode, []*pr
 	if best.imd == nil {
 		return match, nil, fmt.Errorf("has no match for its %s parameter %s", purpose, match)
 	}
-	loose := looseOnly(best.imd.plist)
+	loose := looseOnly(match, best.imd.plist)
 	if len(loose) == 0 {
 		return match, nil, fmt.Errorf("has no match for its %s parameter %s (ignoring %s provided by %s)", purpose, match, best.imd.typeCode, best.imd.plist[0])
 	}
 	return best.tc, loose, nil
 }
 
-func looseOnly(plist []*provider) []*provider {
+func looseOnly(match typeCode, plist []*provider) []*provider {
 	loose := make([]*provider, 0, len(plist))
 	for _, fm := range plist {
-		if fm.loose {
+		if _, ok := fm.loose[match]; ok {
 			loose = append(loose, fm)
 		}
 	}

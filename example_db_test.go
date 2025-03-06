@@ -27,13 +27,13 @@ func InjectDB(driver, uri string, txOptions *sql.TxOptions) *nject.Collection {
 		// the database unless there is a consumer for it.  When a wrapper
 		// returns error, it should usually consume error too and pass
 		// that error along, otherwise it can mask a downstream error.
-		nject.MustConsume(nject.Provide("db", injectDB)),
+		nject.MustConsume[*sql.DB](nject.Provide("db", injectDB)),
 
 		// We tag the tx injector as MustConsume so that we don't inject
 		// the transaction unless there is a consumer for it.  When a wrapper
 		// returns error, it should usually consume error too and pass
 		// that error along, otherwise it can mask a downstream error.
-		nject.MustConsume(nject.Provide("tx", injectTx)),
+		nject.MustConsume[*sql.Tx](nject.Provide("tx", injectTx)),
 
 		// Since injectTx or injectDB consumes an error, this provider
 		// will supply that error if there is no other downstream supplier.

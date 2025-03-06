@@ -68,7 +68,7 @@ func TestDetailedError(t *testing.T) {
 		MustCache(func() string { return "foo1" }),
 		Cluster("c1",
 			Singleton(func(i int) int64 { return int64(i) }),
-			Loose(func(m MyType4) string { return m.String() }),
+			Loose[string](func(m MyType4) string { return m.String() }),
 		),
 		Cluster("c2",
 			Reorder(time.Now),
@@ -79,8 +79,8 @@ func TestDetailedError(t *testing.T) {
 		// CallsInner(func(i func()) { i() }),
 		Memoize(func(i int32) int32 { return i }),
 		OverridesError(func(_ func()) error { return nil }),
-		MustConsume(func(i int32) int64 { return int64(i) }),
-		ConsumptionOptional(func(i int64) float64 { return float64(i) }),
+		MustConsume[int64](func(i int32) int64 { return int64(i) }),
+		ConsumptionOptional[float64](func(i int64) float64 { return float64(i) }),
 		func(_ MyType5) error { return nil },
 		NonFinal(func() {}),
 	)
@@ -93,7 +93,7 @@ func TestDetailedError(t *testing.T) {
 	require.NotEqual(t, -1, index, "contains 'func TestRegression'")
 	detailed = detailed[index:]
 
-	for _, word := range strings.Split("Desired Shun Required Cacheable MustCache Cluster Memoize ShadowingAllowed\\[error\\] MustConsume ConsumptionOptional NonFinal", " ") {
+	for _, word := range strings.Split("Desired Shun Required Cacheable MustCache Cluster Memoize ShadowingAllowed\\[error\\] MustConsume\\[int64\\] ConsumptionOptional\\[float64\\] NonFinal Loose\\[string\\]", " ") {
 		re := regexp.MustCompile(fmt.Sprintf(`\b%s\(` /*)*/, word))
 		if !re.MatchString(detailed) {
 			t.Errorf("did not find %s( in reproduce output", word) // )

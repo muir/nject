@@ -243,22 +243,22 @@ func Shun(fn any) Provider {
 // TODO: add ExampleMustConsume
 
 // MustConsume creates a new provider and annotates it as
-// needing to have all of its output values consumed.  If
-// any of its output values cannot be consumed then the
+// needing to have one of its output values consumed.  If
+// the output values cannot be consumed then the
 // provider will be excluded from the chain even if that
 // renders the chain invalid.
 //
-// A that is received by a provider and then provided by
+// A type that is received by a provider and then provided by
 // that same provider is not considered to have been consumed
 // by that provider.
 //
 // For example:
 //
-//	// All outputs of A must be consumed
-//	Provide("A", MustConsume(func() string) { return "" } ),
+//	// The string output of A must be consumed
+//	Provide("A", MustConsume[string](func() string) { return "" } ),
 //
 //	// Since B takes a string and provides a string it
-//	// does not count as suming the string that A provided.
+//	// does not count as consuming the string that A provided.
 //	Provide("B", func(string) string { return "" }),
 //
 //	// Since C takes a string but does not provide one, it
@@ -270,25 +270,39 @@ func Shun(fn any) Provider {
 // all values must be consumed.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func MustConsume(fn any) Provider {
+//
+// MustConsume may be callled called on the provider it returns creating a provider
+// that has multiple MustConsume annotations.
+func MustConsume[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.mustConsume = true
+		if fm.mustConsume == nil {
+			fm.mustConsume = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.mustConsume[getTypeCode(t)] = struct{}{}
 	})
 }
 
 // TODO: add ExampleConsumptionOptional
 
 // ConsumptionOptional creates a new provider and annotates it as
-// allowed to have some of its return values ignored.
+// allowed to have one of its return values ignored.
 // Without this annotation, a wrap function will not be included
 // if some of its return values are not consumed.
 //
 // In the downward direction, optional consumption is the default.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func ConsumptionOptional(fn any) Provider {
+//
+// ConsumptionOptional calls may be called on the output of ConsumptionOptional calls
+// to mark more than one type as optional.
+func ConsumptionOptional[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.consumptionOptional = true
+		if fm.consumptionOptional == nil {
+			fm.consumptionOptional = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.consumptionOptional[getTypeCode(t)] = struct{}{}
 	})
 }
 
@@ -324,7 +338,7 @@ func Parallel(fn any) Provider {
 // TODO: add ExampleLoose
 
 // Loose annotates a wrap function to indicate that when trying
-// to match types against the outputs and return values from this
+// to match types against an output or return values from this
 // provider, an in-exact match is acceptable.  This matters when inputs and
 // returned values are specified as interfaces.  With the Loose
 // annotation, an interface can be matched to the outputs and/or
@@ -332,9 +346,13 @@ func Parallel(fn any) Provider {
 // implements the interface.
 //
 // By default, an exact match of types is required for all providers.
-func Loose(fn any) Provider {
+func Loose[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.loose = true
+		if fm.loose == nil {
+			fm.loose = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.loose[getTypeCode(t)] = struct{}{}
 	})
 }
 
@@ -365,7 +383,7 @@ func NonFinal(fn any) Provider {
 // down the chain, the wrapper must recevie the value in the return values
 // from the inner function that it calls.
 //
-// For example, in the following chain, "footgun" can loose the error
+// For example, in the following chain, "footgun" can lose the error
 // from the return to callSomething()
 //
 //	 err := nject.Run("bad",

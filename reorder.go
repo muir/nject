@@ -177,12 +177,13 @@ func reorder(funcs []*provider, initF *provider) ([]*provider, error) {
 			}
 			// if you return a T, you're not marked consumptionOptional, then you
 			// MUST be after a provider that receives a T as a returned value
+			_, consumptionOptional := fm.consumptionOptional[t]
 			if num, ok := upTypes[t]; ok {
-				aAfterB(!fm.consumptionOptional, i, num)
+				aAfterB(!consumptionOptional, i, num)
 			} else {
 				debugln("\tuptype", counter, t)
 				upTypes[t] = counter
-				aAfterB(!fm.consumptionOptional, i, counter)
+				aAfterB(!consumptionOptional, i, counter)
 				counter++
 			}
 			// if you return a T, then you SHOULD be be after all providers that
