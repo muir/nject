@@ -80,7 +80,7 @@ func computeDependenciesAndInclusion(funcs []*provider, initF *provider) ([]*pro
 		if fm.mustConsume != nil {
 			fm.d.mustConsumeFlow[outputParams] = true
 		}
-		if !fm.consumptionOptional {
+		if fm.consumptionOptional == nil {
 			fm.d.mustConsumeFlow[returnParams] = true
 		}
 		if fm.required {
@@ -307,9 +307,14 @@ func checkFlows(funcs []*provider, numFuncs int, canRemoveDesired bool) error {
 				}
 			Param:
 				for _, tc := range tclist {
-					if param == int(outputParams) {
+					switch flowType(param) {
+					case outputParams:
 						if _, ok := fm.mustConsume[tc]; !ok {
-							continue
+							continue Param
+						}
+					case returnParams:
+						if _, ok := fm.consumptionOptional[tc]; ok {
+							continue Param
 						}
 					}
 					if tc == unusedTypeCode {

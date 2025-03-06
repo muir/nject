@@ -286,16 +286,23 @@ func MustConsume[T any](fn any) Provider {
 // TODO: add ExampleConsumptionOptional
 
 // ConsumptionOptional creates a new provider and annotates it as
-// allowed to have some of its return values ignored.
+// allowed to have one of its return values ignored.
 // Without this annotation, a wrap function will not be included
 // if some of its return values are not consumed.
 //
 // In the downward direction, optional consumption is the default.
 //
 // When used on an existing Provider, it creates an annotated copy of that provider.
-func ConsumptionOptional(fn any) Provider {
+//
+// ConsumptionOptional calls may be called on the output of ConsumptionOptional calls
+// to mark more than one type as optional.
+func ConsumptionOptional[T any](fn any) Provider {
 	return newThing(fn).modify(func(fm *provider) {
-		fm.consumptionOptional = true
+		if fm.consumptionOptional == nil {
+			fm.consumptionOptional = make(map[typeCode]struct{})
+		}
+		t := reflect.TypeOf((*T)(nil)).Elem()
+		fm.consumptionOptional[getTypeCode(t)] = struct{}{}
 	})
 }
 

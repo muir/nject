@@ -240,18 +240,17 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 		f += "\t\t\t\t" + extraIndent
 		closeParens := ""
 		for annotation, active := range map[string]bool{
-			"NonFinal":            fm.nonFinal,
-			"Cacheable":           fm.cacheable,
-			"MustCache":           fm.mustCache,
-			"Required":            fm.required,
-			"CallsInner":          fm.callsInner,
-			"Memoize":             fm.memoize,
-			"Reorder":             fm.reorder,
-			"Desired":             fm.desired,
-			"Shun":                fm.shun,
-			"NotCacheable":        fm.notCacheable,
-			"ConsumptionOptional": fm.consumptionOptional,
-			"Singleton":           fm.singleton,
+			"NonFinal":     fm.nonFinal,
+			"Cacheable":    fm.cacheable,
+			"MustCache":    fm.mustCache,
+			"Required":     fm.required,
+			"CallsInner":   fm.callsInner,
+			"Memoize":      fm.memoize,
+			"Reorder":      fm.reorder,
+			"Desired":      fm.desired,
+			"Shun":         fm.shun,
+			"NotCacheable": fm.notCacheable,
+			"Singleton":    fm.singleton,
 		} {
 			if active {
 				f += annotation + "("
@@ -259,9 +258,10 @@ func generateReproduce(funcs []*provider, invokeF *provider, initF *provider) st
 			}
 		}
 		for anno, m := range map[string]map[typeCode]struct{}{
-			"ShadowingAllowed": fm.shadowingAllowed,
-			"Loose":            fm.loose,
-			"MustConsume":      fm.mustConsume,
+			"ShadowingAllowed":    fm.shadowingAllowed,
+			"Loose":               fm.loose,
+			"MustConsume":         fm.mustConsume,
+			"ConsumptionOptional": fm.consumptionOptional,
 		} {
 			for tc := range m {
 				f += anno + "[" + tc.String() + "]("

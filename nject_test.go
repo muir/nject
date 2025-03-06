@@ -58,11 +58,14 @@ func TestAnnotateMustConsume(t *testing.T) {
 }
 
 func TestAnnotateConsumptionOptional(t *testing.T) {
+	stc := getTypeCode("foo")
 	wrapTest(t, func(t *testing.T) {
-		p := ConsumptionOptional(func() {})
+		p := ConsumptionOptional[string](func() {})
 		require.IsType(t, &provider{}, p)
-		require.True(t, p.(*provider).consumptionOptional)
-		require.True(t, p.(*provider).copy().consumptionOptional)
+		require.NotNil(t, p.(*provider).consumptionOptional)
+		require.Contains(t, p.(*provider).consumptionOptional, stc)
+		require.NotNil(t, p.(*provider).copy().consumptionOptional)
+		require.Contains(t, p.(*provider).copy().consumptionOptional, stc)
 	})
 }
 
