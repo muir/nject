@@ -452,7 +452,9 @@ func makeUnusedInputProvider() (*provider, error) {
 	d.nonFinal = true
 	d.cacheable = true
 	d.mustCache = true
-	d.consumptionOptional = true
+	d.consumptionOptional = map[typeCode]struct{}{
+		unusedTypeCode: {},
+	}
 	d, err := characterizeFunc(d, charContext{inputsAreStatic: true})
 	if err != nil {
 		return nil, fmt.Errorf("internal error #328: problem with unused injectors: %w", err)
@@ -472,7 +474,9 @@ func makeUnusedReturnsProvider() (*provider, error) {
 	d.isSynthetic = true
 	d.shun = true
 	d.required = false
-	d.consumptionOptional = true
+	d.consumptionOptional = map[typeCode]struct{}{
+		unusedTypeCode: {},
+	}
 	return d, nil
 }
 
