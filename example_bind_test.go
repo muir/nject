@@ -3,7 +3,7 @@ package nject_test
 import (
 	"fmt"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 // Bind does as much work before invoke as possible.

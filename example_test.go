@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 // Example shows what gets included and what does not for several injection chains.

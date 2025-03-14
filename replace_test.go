@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

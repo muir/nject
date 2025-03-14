@@ -3,7 +3,7 @@ package nject_test
 import (
 	"database/sql"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 type (
