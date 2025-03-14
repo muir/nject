@@ -3,7 +3,7 @@ package nject_test
 import (
 	"fmt"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 // Memoize implies Chacheable.  To make sure that Memoize can actually function

@@ -3,7 +3,7 @@ package nject_test
 import (
 	"fmt"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 // Run is the simplest way to use the nject framework.

@@ -3,14 +3,16 @@ package nject_test
 import (
 	"testing"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 	"github.com/stretchr/testify/assert"
 )
 
-type PT01 string
-type PT02 string
-type PT03 string
-type PT04 string
+type (
+	PT01 string
+	PT02 string
+	PT03 string
+	PT04 string
+)
 
 func TestParallelCallsToInner(t *testing.T) {
 	t.Parallel()

@@ -3,7 +3,7 @@ package nject_test
 import (
 	"fmt"
 
-	"github.com/muir/nject"
+	"github.com/muir/nject/v2"
 )
 
 // This demonstrates how it to have a default that gets overridden by
