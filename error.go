@@ -19,6 +19,9 @@ func (ne *njectError) Error() string {
 // or something that called Bind() then it will return
 // a much more detailed error than just calling err.Error()
 func DetailedError(err error) string {
+	if err == nil {
+		return ""
+	}
 	var njectError *njectError
 	if errors.As(err, &njectError) {
 		dups := duplicateTypes()

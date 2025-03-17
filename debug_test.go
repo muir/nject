@@ -100,3 +100,9 @@ func TestDetailedError(t *testing.T) {
 		}
 	}
 }
+
+func TestNilDetailedError(t *testing.T) {
+	t.Parallel()
+	var err error
+	require.NoError(t, err, DetailedError(err))
+}
