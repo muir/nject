@@ -16,6 +16,7 @@ type provider struct {
 	index  int
 	fn     any
 	id     int32
+	fatal  error // set for delayed errors
 
 	// user annotations (match these in debug.go)
 	nonFinal            bool
@@ -143,7 +144,13 @@ func newProvider(fn any, index int, origin string) *provider {
 		if len(c.contents) == 1 {
 			return newProvider(c.contents[0], index, origin)
 		}
-		panic("Cannot turn Collection into a function")
+		return &provider{
+			origin: origin,
+			index:  index,
+			fn:     nil,
+			id:     atomic.AddInt32(&idCounter, 1),
+			fatal:  fmt.Errorf("cannot turn Collection into a function"),
+		}
 	}
 	return &provider{
 		origin: origin,
@@ -200,10 +207,14 @@ func (c Collection) characterizeAndFlatten(nonStaticTypes map[typeCode]bool) ([]
 	var mutated bool
 	for i := 0; i < len(c.contents); i++ {
 		fm := c.contents[i]
+		if fm.fatal != nil {
+			return nil, nil, fm.fatal
+		}
 		g, ok := fm.fn.(generatedFromInjectionChain)
 		if !ok {
 			continue
 		}
+		mutated = true
 		replacement, err := g.ReplaceSelf(
 			Collection{
 				name:     "before",
@@ -295,7 +306,12 @@ func newCollection(name string, funcs ...any) *Collection {
 		case provider:
 			contents = append(contents, v.renameIfEmpty(i, name))
 		default:
-			contents = append(contents, newProvider(fn, i, name))
+			p := newProvider(fn, i, name)
+			switch fmt.Sprintf("%T", fn) {
+			case "nject.Collection", "*nject.Collection", "nject.provider", "*nject.provider":
+				p.fatal = fmt.Errorf("multiple versions of nject detected -- not supported")
+			}
+			contents = append(contents, p)
 		}
 	}
 	return &Collection{
