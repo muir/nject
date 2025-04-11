@@ -63,7 +63,7 @@ func _() {
 	_ = x[lastFlowType-5]
 }
 
-const _flowType_name = "returnsoutputsinputsreceviedbypassUNUSED"
+const _flowType_name = "returnsoutputsinputsreceivedbypassUNUSED"
 
 var _flowType_index = [...]uint8{0, 7, 14, 20, 28, 34, 40}
 

@@ -1,13 +1,9 @@
 
 
 all:
-	go install golang.org/x/tools/...@latest
 	go generate
 	go test
 	golangci-lint run
-
-coverage: calculate_coverage
-	go tool cover -html=coverage.txt
 
 golanglint:
 	# binary will be $(go env GOPATH)/bin/golangci-lint
