@@ -414,12 +414,12 @@ func TestCharacterize(t *testing.T) {
 			}
 			for ft, ev := range test.flows {
 				t.Logf("flow %s: %s", flowType(ft), een(ev))
-				assert.EqualValuesf(t, een(ev), een(fm.flows[ft]), "%s flow: %s", flowType(ft), test.name)
+				assert.Equalf(t, een(ev), een(fm.flows[ft]), "%s flow: %s", flowType(ft), test.name)
 			}
 			for ft, gv := range fm.flows {
 				if test.flows[ft] == nil {
 					t.Logf("flow %s: %s", flowType(ft), een(gv))
-					assert.EqualValuesf(t, een(test.flows[ft]), een(gv), "%s flow %s", flowType(ft), test.name)
+					assert.Equalf(t, een(test.flows[ft]), een(gv), "%s flow %s", flowType(ft), test.name)
 				}
 			}
 		}
