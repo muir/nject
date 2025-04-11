@@ -49,7 +49,7 @@ func TestCondenseTerminalError(t *testing.T) {
 	assert.Equal(t, "2", c(2))
 	assert.Equal(t, "3", c(3))
 	assert.Equal(t, "4", c(4))
-	assert.Equal(t, "", c(0))
+	assert.Empty(t, c(0))
 }
 
 func TestCondenseErrorTreatment(t *testing.T) {

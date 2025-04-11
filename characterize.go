@@ -39,6 +39,7 @@ type predicates []predicateType
 
 func hasAnonymousFuncs(params []reflect.Type, ignoreFirst bool) bool {
 	for i, in := range params {
+		//nolint:staticcheck // QF1001: could apply De Morgan's law (staticcheck)
 		if in.Kind() == reflect.Func && in.Name() == "" && !(i == 0 && ignoreFirst) {
 			return true
 		}

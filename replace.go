@@ -127,11 +127,11 @@ func (c *Collection) handleReplaceByName() (err error) {
 	var lastName string
 	var lastFirstLast *firstLast
 	for n := head.next; n != tail; n = n.next {
-		switch {
-		case n.fm.origin == "":
+		switch n.fm.origin {
+		case "":
 			// nothing to do
 			lastName = ""
-		case n.fm.origin == lastName:
+		case lastName:
 			lastFirstLast.last = n
 		default:
 			lastFirstLast = &firstLast{

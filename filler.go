@@ -440,7 +440,7 @@ func addFieldFiller(
 	const bad = 1000000 // a number larger than the number of Methods that an interface might have
 	const convert = 750000
 	const assign = 500000
-	var score int = bad // negative is best
+	score := bad // negative is best
 	var inputIndex int
 	var addressOf bool
 	var needConvert bool
