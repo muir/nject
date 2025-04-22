@@ -2,17 +2,34 @@ name: Test and coverage
 
 on: [push]
 
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 2
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
         with:
-          go-version: '1.18'
+          go-version: '1.21'
       - name: Run coverage
-        run: go test ./... -race -coverprofile=coverage.txt -covermode=atomic -coverpkg github.com/muir/nject
+        run: go test -race -coverprofile=coverage.out -covermode=atomic
+
       - name: Upload coverage to Codecov
-        run: bash <(curl -s https://codecov.io/bash)
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          files: ./coverage.txt
+          flags: go_tests
+          name: go_tests
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
