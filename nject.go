@@ -331,7 +331,7 @@ func (c Collection) string(indent string) string {
 		if s, ok := fm.fn.(interface{ String() string }); ok {
 			_, _ = buf.WriteString(indent + s.String())
 		} else {
-			_, _ = buf.WriteString(fmt.Sprintf("%s %T\n", indent, fm.fn))
+			_, _ = fmt.Fprintf(&buf, "%s %T\n", indent, fm.fn)
 		}
 	}
 	return buf.String()
