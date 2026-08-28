@@ -14,3 +14,9 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      # The init/autobuild/analyze steps must stay on the same version, so they
+      # have to be bumped in a single pull request.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
