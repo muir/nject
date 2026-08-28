@@ -1,6 +1,6 @@
 module github.com/muir/nject/v2
 
-go 1.18
+go 1.23
 
 require (
 	github.com/muir/reflectutils v0.11.0
