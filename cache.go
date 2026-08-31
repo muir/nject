@@ -84,7 +84,6 @@ func canValueBeMapKey(v reflect.Value, recurseOkay bool) bool {
 func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 	var checkers []func([]reflect.Value) bool
 	for i, t := range in {
-		i := i
 		//nolint:exhaustive // on purpose
 		switch t.Kind() {
 		case reflect.Struct:

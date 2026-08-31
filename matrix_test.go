@@ -20,7 +20,6 @@ func TestParallelCallsToInner(t *testing.T) {
 		t,
 		nject.Parallel(func(inner func(*testing.T, PT01), t *testing.T) {
 			for _, s := range []PT01{"A1", "A2", "A3", "A4"} {
-				s := s
 				t.Run(string(s), func(t *testing.T) {
 					t.Log("branching")
 					t.Parallel()
@@ -30,7 +29,6 @@ func TestParallelCallsToInner(t *testing.T) {
 		}),
 		nject.Parallel(func(inner func(*testing.T, PT02), t *testing.T) {
 			for _, s := range []PT02{"B1", "B2", "B3", "B4"} {
-				s := s
 				t.Run(string(s), func(t *testing.T) {
 					t.Log("branching")
 					t.Parallel()
@@ -40,7 +38,6 @@ func TestParallelCallsToInner(t *testing.T) {
 		}),
 		nject.Parallel(func(inner func(*testing.T, PT03), t *testing.T) {
 			for _, s := range []PT03{"C1", "C2", "C3", "C4"} {
-				s := s
 				t.Run(string(s), func(t *testing.T) {
 					t.Log("branching")
 					t.Parallel()

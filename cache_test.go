@@ -121,7 +121,6 @@ func TestCanBeMapKey(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			va := make([]reflect.Value, len(tc.values))
 			ta := make([]reflect.Type, len(tc.values))
