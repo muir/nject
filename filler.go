@@ -201,7 +201,7 @@ func MakeStructBuilder(model any, optArgs ...FillerFuncArg) (Provider, error) {
 	var additionalReflectives []any
 	var mapStruct func(t reflect.Type, path []int) error
 	mapStruct = func(t reflect.Type, path []int) error {
-		for i := 0; i < t.NumField(); i++ {
+		for i := range t.NumField() {
 			field := t.Field(i)
 			np := copyIntSlice(path)
 			np = append(np, field.Index...)

@@ -52,7 +52,7 @@ func typesIn(t reflectType) []reflect.Type {
 		return nil
 	}
 	in := make([]reflect.Type, t.NumIn())
-	for i := 0; i < t.NumIn(); i++ {
+	for i := range t.NumIn() {
 		in[i] = t.In(i)
 	}
 	return in
@@ -63,7 +63,7 @@ func typesOut(t reflectType) []reflect.Type {
 		return nil
 	}
 	out := make([]reflect.Type, t.NumOut())
-	for i := 0; i < t.NumOut(); i++ {
+	for i := range t.NumOut() {
 		out[i] = t.Out(i)
 	}
 	return out
