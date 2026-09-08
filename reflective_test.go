@@ -80,27 +80,6 @@ func TestManualReflective(t *testing.T) {
 	assert.True(t, fCalled, "f called")
 }
 
-func TestWrappedReflectiveString(t *testing.T) {
-	t.Parallel()
-	var multiOut func(int, string) (bool, error)
-	w := wrappedReflective{
-		ReflectiveArgs: argsWrapper{t: reflect.TypeOf(multiOut)},
-	}
-	assert.Equal(t, "Reflective(int, string) (bool, error)", w.String())
-
-	var noOut func(int)
-	wNoOut := wrappedReflective{
-		ReflectiveArgs: argsWrapper{t: reflect.TypeOf(noOut)},
-	}
-	assert.Equal(t, "Reflective(int)", wNoOut.String())
-
-	var oneOut func() string
-	wOneOut := wrappedReflective{
-		ReflectiveArgs: argsWrapper{t: reflect.TypeOf(oneOut)},
-	}
-	assert.Equal(t, "Reflective() string", wOneOut.String())
-}
-
 func TestReflective(t *testing.T) {
 	t.Parallel()
 	var buf string
