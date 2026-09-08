@@ -147,6 +147,22 @@ func TestCanBeMapKey(t *testing.T) {
 	}
 }
 
+func TestCanValueBeMapKeyStruct(t *testing.T) {
+	type inner struct {
+		X int
+	}
+	type outer struct {
+		A int
+		B inner
+	}
+	assert.True(t, canValueBeMapKey(reflect.ValueOf(outer{A: 1, B: inner{X: 2}}), true))
+
+	type bad struct {
+		M map[string]int
+	}
+	assert.False(t, canValueBeMapKey(reflect.ValueOf(bad{}), true))
+}
+
 func TestCacheSizes(t *testing.T) {
 	type CS00 string
 	type CS01 string
