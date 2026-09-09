@@ -497,7 +497,7 @@ func (c *Collection) SetCallback(setCallbackFunc any) error {
 	if setterType.NumOut() > 0 {
 		return fmt.Errorf("SetCallback function argument must return nothing")
 	}
-	for i := 0; i < setterType.NumIn(); i++ {
+	for i := range setterType.NumIn() {
 		if setterType.In(i).Kind() != reflect.Func {
 			return fmt.Errorf("SetCallback function argument #%d must be a function", i+1)
 		}

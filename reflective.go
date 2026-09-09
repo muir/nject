@@ -198,11 +198,11 @@ func (w wrappedReflective) Elem() reflect.Type { panic("call not expected") }
 
 func (w wrappedReflective) String() string {
 	in := make([]string, w.NumIn())
-	for i := 0; i < w.NumIn(); i++ {
+	for i := range w.NumIn() {
 		in[i] = w.In(i).String()
 	}
 	out := make([]string, w.NumOut())
-	for i := 0; i < w.NumOut(); i++ {
+	for i := range w.NumOut() {
 		out[i] = w.Out(i).String()
 	}
 	switch len(out) {

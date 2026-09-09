@@ -50,7 +50,6 @@ func TestStripUnused(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := stripUnused(tc.input)
 			assert.Equal(t, tc.want, got, "types")
@@ -188,7 +187,6 @@ func TestUnused(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			called = false
 			callCount = 0

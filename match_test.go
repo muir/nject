@@ -61,7 +61,6 @@ var bestMatchTests = []struct {
 func TestBestMatch(t *testing.T) {
 	wrapTest(t, func(t *testing.T) {
 		for _, test := range bestMatchTests {
-			test := test
 			tc := getTypeCode(test.Find)
 			m := make(interfaceMap)
 			for typ, layer := range test.MapData {

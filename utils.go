@@ -53,7 +53,7 @@ func Curry(originalFunction any, pointerToCurriedFunction any) (Provider, error)
 
 	// Figure out the set of input types for the curried function
 	ntypes := make(map[reflect.Type][]int)
-	for i := 0; i < n.Type().Elem().NumIn(); i++ {
+	for i := range n.Type().Elem().NumIn() {
 		t := n.Type().Elem().In(i)
 		ntypes[t] = append(ntypes[t], i)
 	}
@@ -70,7 +70,7 @@ func Curry(originalFunction any, pointerToCurriedFunction any) (Provider, error)
 	alreadyCurried := make(map[reflect.Type]struct{}) // to prevent double-dipping
 	curryMap := make([]int, 0, curryCount)            // maps position from injected inputs to to original
 	passMap := make([]int, n.Type().Elem().NumIn())   // maps position from curried to original
-	for i := 0; i < o.Type().NumIn(); i++ {
+	for i := range o.Type().NumIn() {
 		t := o.Type().In(i)
 		if plist, ok := ntypes[t]; ok {
 			if used[t] < len(plist) {

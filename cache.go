@@ -65,7 +65,7 @@ func canValueBeMapKey(v reflect.Value, recurseOkay bool) bool {
 		value := reflect.ValueOf(iface)
 		return canValueBeMapKey(value, false)
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			if !canValueBeMapKey(v.Field(i), true) {
 				return false
 			}
@@ -84,11 +84,10 @@ func canValueBeMapKey(v reflect.Value, recurseOkay bool) bool {
 func canBeMapKey(in []reflect.Type) (bool, func([]reflect.Value) bool) {
 	var checkers []func([]reflect.Value) bool
 	for i, t := range in {
-		i := i
 		//nolint:exhaustive // on purpose
 		switch t.Kind() {
 		case reflect.Struct:
-			for j := 0; j < t.NumField(); j++ {
+			for j := range t.NumField() {
 				f := t.Field(j)
 				ok, check := canBeMapKey([]reflect.Type{f.Type})
 				if !ok {
